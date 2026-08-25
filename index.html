@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>위험한 초대 - 실시간 플라잉 체어 (멀티플레이)</title>
-    <!-- PeerJS for WebRTC Multiplayer -->
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <!-- Socket.io for Multiplayer -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         :root {
             --bg-main: #1a1a24;
@@ -25,8 +25,14 @@
         body { background-color: var(--bg-main); color: var(--text-main); height: 100vh; height: 100dvh; display: flex; overflow: hidden; }
 
         /* Layout */
-        .sidebar { width: 25%; min-width: 280px; background-color: var(--bg-panel); border-right: 2px solid var(--bg-darker); display: flex; flex-direction: column; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.3); z-index: 20; }
-        .main-area { flex: 1; display: flex; flex-direction: column; position: relative; }
+        .sidebar { width: 25%; min-width: 250px; background-color: var(--bg-panel); border-right: 2px solid var(--bg-darker); display: flex; flex-direction: column; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.3); z-index: 20; transition: width 0.3s, min-width 0.3s, padding 0.3s; position: relative; }
+        body.state-playing .sidebar { width: 60px; min-width: 60px; padding: 15px 5px; align-items: center; cursor: pointer; }
+        body.state-playing .sidebar > *:not(#btn-sidebar-leave) { display: none !important; }
+        
+        #btn-sidebar-leave { display: none; width: 100%; text-align: center; font-size: 0.8rem; padding: 10px 0; background: var(--accent); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        body.state-playing #btn-sidebar-leave { display: block !important; }
+        
+        .main-area { flex: 1; display: flex; flex-direction: column; position: relative; overflow: hidden; }
 
         h1.title { color: var(--accent); font-size: 2.2rem; text-align: center; font-weight: 900; font-style: italic; text-shadow: 2px 2px 0px #fff; margin-bottom: 25px; letter-spacing: -1px; }
         h2, h3 { margin-bottom: 15px; color: #fff; }
@@ -47,15 +53,19 @@
         .hidden { display: none !important; }
 
         /* Stage */
-        .stage { height: 65%; position: relative; background: #87CEEB; overflow: hidden; display: flex; flex-direction: column; }
-        .pool { flex: 1; background: linear-gradient(to bottom, var(--pool-light), var(--pool-dark)); position: relative; border-bottom: 3px solid rgba(255,255,255,0.5); z-index: 1; }
-        .pool::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: repeating-linear-gradient(0deg, transparent, transparent 20px, rgba(255,255,255,0.1) 20px, rgba(255,255,255,0.1) 22px); }
-        .wave { position: absolute; background: rgba(255,255,255,0.2); border-radius: 50%; }
-        .wave1 { width: 400px; height: 30px; bottom: 20px; left: -100px; animation: wave-anim 4s infinite alternate ease-in-out; }
-        .wave2 { width: 500px; height: 40px; bottom: 60px; right: -100px; animation: wave-anim 5s infinite alternate-reverse ease-in-out; }
+        .stage { height: 65%; position: relative; background: linear-gradient(to bottom, #87CEEB, #e0f6ff); overflow: hidden; display: flex; flex-direction: column; }
+        .pool { flex: 1; background: linear-gradient(180deg, #1cb5e0 0%, #006eb3 100%); position: relative; z-index: 1; overflow: hidden; }
+        .pool::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noise)" opacity="0.2"/></svg>'); pointer-events: none; mix-blend-mode: overlay; }
+        
+        .wave-bottom { position: absolute; bottom: -2px; left: 0; width: 100%; height: 30px; background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 1440 320" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"><path fill="%23e6d3a8" d="M0,256L48,229.3C96,203,192,149,288,149.3C384,149,480,203,576,224C672,245,768,235,864,208C960,181,1056,139,1152,138.7C1248,139,1344,181,1392,202.7L1440,224L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') center bottom/100% 100% no-repeat; z-index: 2; opacity: 0.9; }
+
+        .wave { position: absolute; background: rgba(255,255,255,0.15); border-radius: 50%; }
+        .wave1 { width: 400px; height: 25px; bottom: 30px; left: -100px; animation: wave-anim 4s infinite alternate ease-in-out; }
+        .wave2 { width: 500px; height: 30px; bottom: 50px; right: -100px; animation: wave-anim 5s infinite alternate-reverse ease-in-out; }
         @keyframes wave-anim { 0% { transform: translateX(0); } 100% { transform: translateX(40px); } }
 
-        .deck { height: 35%; background: linear-gradient(to bottom, var(--deck-color), var(--deck-dark)); position: relative; z-index: 10; display: flex; justify-content: center; align-items: flex-end; padding-bottom: 10px; gap: 80px; }
+        .deck { height: 180px; flex-shrink: 0; background: #e6d3a8; position: relative; z-index: 10; display: flex; justify-content: center; align-items: flex-end; padding-bottom: 15px; gap: 80px; }
+        .deck::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noise)" opacity="0.08"/></svg>'); pointer-events: none; }
 
         .chair-slot { width: 80px; height: 120px; position: relative; }
         .chair-base { position: absolute; bottom: 0; left: 50%; margin-left: -35px; width: 70px; height: 60px; background: linear-gradient(to bottom, #666, #333); border-radius: 6px; border: 2px solid #222; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform-origin: bottom center; }
@@ -97,24 +107,28 @@
 
         /* Bottom Panel */
         .bottom-panel { height: 35%; display: flex; background: var(--bg-main); border-top: 2px solid var(--bg-darker); }
-        .words-section { width: 60%; padding: 15px; overflow-y: auto; border-right: 2px solid var(--bg-darker); }
-        .words-grid { display: flex; flex-wrap: wrap; gap: 15px; }
-        .word-card { background: var(--bg-panel); border-radius: 8px; padding: 12px; min-width: 140px; border: 2px solid transparent; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .words-section { width: 30%; padding: 10px; overflow-y: auto; border-right: 2px solid var(--bg-darker); }
+        .words-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+        .word-card { background: var(--bg-panel); border-radius: 8px; padding: 8px; min-width: 90px; max-width: 120px; flex: 1; border: 2px solid transparent; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .word-card.my-card { border-color: var(--accent); background: rgba(255, 71, 87, 0.1); }
-        .word-card .c-name { font-weight: bold; font-size: 1rem; margin-bottom: 10px; color: #fff; border-bottom: 1px solid #444; padding-bottom: 5px; }
+        .word-card .c-name { font-weight: bold; font-size: 0.85rem; margin-bottom: 5px; color: #fff; border-bottom: 1px solid #444; padding-bottom: 3px; text-align: center; }
         .word-list { list-style: none; }
-        .word-list li { background: var(--bg-darker); margin-bottom: 5px; padding: 6px; border-radius: 4px; text-align: center; font-weight: bold; color: #e1b12c; font-size: 1.1rem; }
-        .word-list li.blind { background: repeating-linear-gradient(45deg, #444, #444 5px, #555 5px, #555 10px); color: #aaa; letter-spacing: 2px; }
+        .word-list li { background: var(--bg-darker); margin-bottom: 3px; padding: 4px; border-radius: 4px; text-align: center; font-weight: bold; color: #e1b12c; font-size: 0.9rem; }
+        .word-list li.blind { background: repeating-linear-gradient(45deg, #444, #444 5px, #555 5px, #555 10px); color: #aaa; letter-spacing: 1px; }
 
-        .chat-section { width: 40%; display: flex; flex-direction: column; background: var(--bg-panel); }
-        .chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .msg { max-width: 85%; line-height: 1.4; }
-        .msg.sys { max-width: 100%; background: rgba(255, 71, 87, 0.15); color: #ff6b81; font-weight: bold; text-align: center; padding: 8px; border-radius: 6px; border: 1px dashed var(--accent); align-self: center; width: 90%; }
-        .msg.user { align-self: flex-end; text-align: right; }
-        .msg.other { align-self: flex-start; text-align: left; }
-        .msg .sender { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 3px; }
-        .msg .bubble { display: inline-block; padding: 10px 14px; border-radius: 12px; background: var(--bg-darker); color: #fff; word-break: break-all; }
-        .msg.user .bubble { background: var(--pool-dark); }
+        .chat-section { width: 70%; display: flex; flex-direction: column; background: var(--bg-main); }
+        .chat-messages { flex: 1; padding: 15px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+        .msg { max-width: 80%; display: flex; flex-direction: column; }
+        .msg.sys { max-width: 100%; background: rgba(255, 255, 255, 0.05); color: #aaa; font-size: 0.85rem; text-align: center; padding: 6px 15px; border-radius: 20px; align-self: center; width: max-content; }
+        .msg.user { align-self: flex-end; }
+        .msg.other { align-self: flex-start; }
+        .msg .sender { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; margin-left: 4px; }
+        .msg .msg-content { display: flex; align-items: flex-end; gap: 6px; }
+        .msg.user .msg-content { flex-direction: row-reverse; }
+        .msg .bubble { display: inline-block; padding: 10px 14px; border-radius: 16px; background: var(--bg-panel); color: #fff; word-break: break-all; font-size: 0.95rem; box-shadow: 0 1px 2px rgba(0,0,0,0.15); line-height: 1.4; }
+        .msg.user .bubble { background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+        .msg.other .bubble { border-bottom-left-radius: 4px; }
+        .msg .time { font-size: 0.7rem; color: #888; margin-bottom: 2px; white-space: nowrap; }
 
         .chat-input-area { display: flex; padding: 12px; background: var(--bg-darker); }
         .chat-input-area input { flex: 1; padding: 10px; border: 1px solid #444; border-radius: 6px; background: var(--bg-panel); color: #fff; margin-right: 8px; font-size: 1rem; }
@@ -172,6 +186,7 @@
 
     <!-- Sidebar -->
     <aside class="sidebar">
+        <button id="btn-sidebar-leave" onclick="leaveRoom()">나가기</button>
         <h1 class="title">위험한 초대</h1>
 
         <!-- Lobby View -->
@@ -227,7 +242,7 @@
             </div>
             
             <hr>
-            <button class="btn btn-secondary" onclick="leaveRoom()">방 나가기 / 리셋</button>
+            <button class="btn btn-secondary" onclick="leaveRoom()">방 나가기</button>
         </div>
     </aside>
 
@@ -235,7 +250,11 @@
     <main class="main-area">
         <div class="stage" id="stage">
             <button id="mobile-leave-btn" class="btn btn-danger" style="position: absolute; top: 10px; left: 10px; z-index: 100; width: auto; padding: 5px 10px; font-size: 0.8rem; display: none;" onclick="leaveRoom()">방 나가기</button>
-            <div class="pool"><div class="wave wave1"></div><div class="wave wave2"></div></div>
+            <div class="pool">
+                <div class="wave wave1"></div>
+                <div class="wave wave2"></div>
+                <div class="wave-bottom"></div>
+            </div>
             <div class="deck"><div id="chairs-container" style="display:flex; gap:20px; align-items:flex-end;"></div></div>
             <div id="subtitle-layer" class="subtitle-layer"></div>
         </div>
@@ -284,9 +303,10 @@
         const MODE_GUEST = 'GUEST';
 
         let currentMode = MODE_BOT;
-        let peer = null;
-        let connections = [];
-        let hostConnection = null;
+        const SOCKET_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+                           ? 'http://localhost:3000' 
+                           : 'https://flyingchair-backend.onrender.com'; // Backend URL (Update later)
+        let socket = null;
         let roomCode = '';
         let botInterval = null;
         let afkInterval = null;
@@ -342,9 +362,11 @@
             document.getElementById('join-input-area').classList.remove('hidden');
         }
 
-        // --- Network Logic (PeerJS) ---
+        // --- Network Logic (Socket.io) ---
         function broadcast(data) {
-            connections.forEach(conn => conn.send(data));
+            if (socket && currentMode === MODE_HOST) {
+                socket.emit('BROADCAST_TO_ROOM', { roomCode, type: data.type, payload: data.payload });
+            }
         }
         function broadcastState() {
             broadcast({ type: 'SYNC_STATE', payload: { state: state } });
@@ -355,103 +377,112 @@
             const myName = els.nickname.value.trim() || '방장';
             const myGender = els.gender.value;
             
-            roomCode = Math.floor(1000 + Math.random() * 9000).toString();
-            const peerId = 'flying-chair-' + roomCode;
-            
             sysChat('서버 연결 중...');
-            peer = new Peer(peerId);
+            if (socket) socket.disconnect();
+            socket = io(SOCKET_URL);
             
-            peer.on('open', (id) => {
-                currentMode = MODE_HOST;
-                state.myId = peerId + '-host';
-                state.room = { status: 'waiting', title: '멀티플레이 방' };
-                updateBodyState();
-                state.players = [{ id: state.myId, name: myName, gender: myGender, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, splashCount: 0, status: 'idle' }];
-                
-                switchView('room-view');
-                updateRoomUI();
-                renderStage();
-                
-                document.getElementById('room-code-display').classList.remove('hidden');
-                document.getElementById('room-code-text').textContent = roomCode;
-                document.getElementById('host-controls').classList.remove('hidden');
-                
-                sysChat(`방이 생성되었습니다! 친구들에게 방 코드 [${roomCode}] 를 알려주세요.`);
-            });
-            
-            peer.on('connection', (conn) => {
-                connections.push(conn);
-                conn.on('data', (data) => handleDataFromGuest(conn, data));
-                conn.on('close', () => {
-                    connections = connections.filter(c => c !== conn);
-                    const pId = conn.metadata?.id;
-                    if(pId) {
-                        state.players = state.players.filter(p => p.id !== pId);
-                        broadcastState();
-                        sysChat(`참가자가 퇴장했습니다.`);
+            socket.on('connect', () => {
+                socket.emit('CREATE_ROOM', (response) => {
+                    if (response.success) {
+                        roomCode = response.roomCode;
+                        currentMode = MODE_HOST;
+                        state.myId = 'host';
+                        state.room = { status: 'waiting', title: '멀티플레이 방' };
+                        updateBodyState();
+                        state.players = [{ id: state.myId, name: myName, gender: myGender, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, splashCount: 0, status: 'idle' }];
+                        
+                        switchView('room-view');
                         updateRoomUI();
                         renderStage();
-                        if (typeof checkAllWordsSubmitted === 'function' && state.room.status === 'word_setting') {
-                            checkAllWordsSubmitted();
-                        }
+                        
+                        document.getElementById('room-code-display').classList.remove('hidden');
+                        document.getElementById('room-code-text').textContent = roomCode;
+                        document.getElementById('host-controls').classList.remove('hidden');
+                        
+                        sysChat(`방이 생성되었습니다! 친구들에게 방 코드 [${roomCode}] 를 알려주세요.`);
                     }
                 });
             });
-            
-            peer.on('error', (err) => alert('방 생성 오류: ' + err.type));
+
+            socket.on('GUEST_JOINING', (data) => {
+                handleDataFromGuest(data.guestId, { type: 'JOIN', payload: data.payload });
+            });
+
+            socket.on('DATA_FROM_GUEST', (data) => {
+                handleDataFromGuest(data.guestId, { type: data.type, payload: data.payload });
+            });
+
+            socket.on('GUEST_DISCONNECTED', (data) => {
+                const pId = data.guestId;
+                state.players = state.players.filter(p => p.id !== pId);
+                broadcastState();
+                sysChat(`참가자가 퇴장했습니다.`);
+                updateRoomUI();
+                renderStage();
+                if (typeof checkAllWordsSubmitted === 'function' && state.room.status === 'word_setting') {
+                    checkAllWordsSubmitted();
+                }
+            });
+
+            socket.on('connect_error', () => {
+                sysChat('서버 연결 오류. 잠시 후 다시 시도해주세요.');
+            });
         }
 
         function joinMultiplayerRoom() {
             audioCtx.resume();
-            roomCode = document.getElementById('join-room-code').value.trim();
+            roomCode = document.getElementById('join-room-code').value.trim().toUpperCase();
             if(!roomCode) return alert('방 코드를 입력하세요.');
             
-            const targetPeerId = 'flying-chair-' + roomCode;
-            peer = new Peer();
+            sysChat('방장과 연결 중...');
+            if (socket) socket.disconnect();
+            socket = io(SOCKET_URL);
             
-            peer.on('open', (id) => {
-                currentMode = MODE_GUEST;
-                state.myId = id;
-                
+            socket.on('connect', () => {
                 const myName = els.nickname.value.trim() || '게스트';
                 const myGender = els.gender.value;
-                
-                hostConnection = peer.connect(targetPeerId, { metadata: { id: id } });
-                
-                hostConnection.on('open', () => {
-                    hostConnection.send({ type: 'JOIN', payload: { id: id, name: myName, gender: myGender } });
-                    switchView('room-view');
-                    document.getElementById('host-controls').classList.add('hidden');
-                    document.getElementById('guest-controls').classList.remove('hidden');
-                    sysChat('방장과 연결되었습니다. 데이터 동기화 중...');
-                });
-                
-                hostConnection.on('data', handleDataFromHost);
-                hostConnection.on('close', () => {
-                    alert('방장과의 연결이 끊어졌습니다.');
-                    leaveRoom();
+                state.myId = socket.id;
+
+                socket.emit('JOIN_ROOM', { roomCode, payload: { name: myName, gender: myGender } }, (response) => {
+                    if (response.success) {
+                        currentMode = MODE_GUEST;
+                        // switchView('room-view'); <- 삭제: 호스트 승인 후 SYNC_STATE를 받을 때 전환
+                        sysChat('방장과 연결되었습니다. 데이터 동기화 중...');
+                    } else {
+                        alert(response.message);
+                        socket.disconnect();
+                    }
                 });
             });
-            
-            peer.on('error', (err) => alert('연결 오류: 방 코드를 확인해주세요.'));
+
+            socket.on('DATA_FROM_HOST', handleDataFromHost);
+
+            socket.on('HOST_DISCONNECTED', () => {
+                alert('방장과의 연결이 끊어졌습니다.');
+                leaveRoom();
+            });
+
+            socket.on('connect_error', () => {
+                sysChat('서버 연결 오류. 잠시 후 다시 시도해주세요.');
+            });
         }
 
-        function handleDataFromGuest(conn, data) {
+        function handleDataFromGuest(guestId, data) {
             if (data.type === 'JOIN') {
-                if (state.room.status !== 'waiting') return conn.send({ type: 'REJECT_JOIN', payload: { reason: '이미 게임이 시작되어 입장할 수 없습니다.' } });
-                if (state.players.length >= 6) return conn.send({ type: 'REJECT_JOIN', payload: { reason: '방이 꽉 찼습니다.' } });
-                state.players.push({ ...data.payload, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, splashCount: 0, status: 'idle' });
+                if (state.room.status !== 'waiting') return socket.emit('SEND_TO_GUEST', { guestId, type: 'REJECT_JOIN', payload: { reason: '이미 게임이 시작되어 입장할 수 없습니다.' } });
+                if (state.players.length >= 6) return socket.emit('SEND_TO_GUEST', { guestId, type: 'REJECT_JOIN', payload: { reason: '방이 꽉 찼습니다.' } });
+                state.players.push({ ...data.payload, id: guestId, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, splashCount: 0, status: 'idle' });
                 broadcastState();
                 sysChat(`${data.payload.name} 님이 참가했습니다.`);
                 broadcast({ type: 'EVENT_SYS', payload: { text: `${data.payload.name} 님이 참가했습니다.` } });
                 updateRoomUI();
                 renderStage();
             } else if (data.type === 'CHAT') {
-                sendChat(data.payload.id, data.payload.text);
+                sendChat(guestId, data.payload.text);
             } else if (data.type === 'SUBMIT_WORDS') {
-                if (typeof applySubmittedWords === 'function') applySubmittedWords(data.payload.id, data.payload.targetWords);
+                if (typeof applySubmittedWords === 'function') applySubmittedWords(guestId, data.payload.targetWords);
             } else if (data.type === 'TOGGLE_READY') {
-                const p = state.players.find(x => x.id === data.payload.id);
+                const p = state.players.find(x => x.id === guestId);
                 if (p) p.isReady = data.payload.isReady;
                 broadcastState();
                 updateRoomUI();
@@ -464,6 +495,12 @@
                 alert(data.payload.reason);
                 leaveRoom();
             } else if (data.type === 'SYNC_STATE') {
+                if (!document.getElementById('lobby-view').classList.contains('hidden')) {
+                    switchView('room-view');
+                    document.getElementById('host-controls').classList.add('hidden');
+                    document.getElementById('guest-controls').classList.remove('hidden');
+                }
+                
                 state.room = data.payload.state.room;
                 updateBodyState();
                 state.players = data.payload.state.players;
@@ -520,8 +557,8 @@
         }
 
         function leaveRoom() {
-            if (peer) { peer.destroy(); peer = null; }
-            connections = []; hostConnection = null;
+            if (socket) { socket.disconnect(); socket = null; }
+            currentMode = null;
             state.room.status = 'lobby';
             updateBodyState();
             state.players = [];
@@ -531,6 +568,7 @@
             els.chatInput.disabled = true; els.chatSend.disabled = true;
             if(botInterval) clearInterval(botInterval);
             if(afkInterval) clearInterval(afkInterval);
+            if(chatUiInterval) clearInterval(chatUiInterval);
             document.getElementById('room-code-display').classList.add('hidden');
             document.getElementById('join-input-area').classList.add('hidden');
             switchView('lobby-view');
@@ -545,7 +583,7 @@
                 btn.className = me.isReady ? 'btn btn-secondary' : 'btn btn-success';
             }
             if (currentMode === MODE_GUEST) {
-                hostConnection.send({ type: 'TOGGLE_READY', payload: { id: state.myId, isReady: me.isReady } });
+                socket.emit('SEND_TO_HOST', { roomCode, type: 'TOGGLE_READY', payload: { isReady: me.isReady } });
             } else {
                 broadcastState();
                 updateRoomUI();
@@ -564,7 +602,7 @@
                 list.appendChild(li);
             });
             
-            if (currentMode === MODE_HOST) {
+            if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
                 const guests = state.players.filter(p => !p.isBot && p.id !== state.myId);
                 const allReady = guests.every(p => p.isReady);
                 const startBtn = document.getElementById('btn-start-game');
@@ -696,7 +734,7 @@
             document.getElementById('submit-words-btn').style.display = 'none';
             
             if (currentMode === MODE_GUEST) {
-                hostConnection.send({ type: 'SUBMIT_WORDS', payload: { id: state.myId, targetWords: myTargetWords } });
+                socket.emit('SEND_TO_HOST', { roomCode, type: 'SUBMIT_WORDS', payload: { targetWords: myTargetWords } });
             } else {
                 applySubmittedWords(state.myId, myTargetWords);
             }
@@ -743,6 +781,7 @@
             }
         }
 
+        let chatUiInterval = null;
         function finalizeStart() {
             els.wordSettingModal.classList.add('hidden');
             sysChat('게임이 시작되었습니다! 채팅을 자유롭게 시작하세요.');
@@ -750,6 +789,9 @@
             els.chatSend.disabled = false;
             els.chatInput.focus();
             renderWordsPanel();
+            
+            if (chatUiInterval) clearInterval(chatUiInterval);
+            chatUiInterval = setInterval(updateChatUI, 1000);
             
             state.players.forEach(p => p.lastChatTime = Date.now());
             if (currentMode === MODE_HOST) {
@@ -789,10 +831,16 @@
         function appendChatUI(sender, text) {
             if (!sender) return;
             const isMe = sender.id === state.myId;
+            const now = new Date();
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            
             els.chatMessages.innerHTML += `
                 <div class="msg ${isMe ? 'user' : 'other'}">
-                    <div class="sender">${sender.name}</div>
-                    <div class="bubble">${text}</div>
+                    ${!isMe ? `<div class="sender">${sender.name}</div>` : ''}
+                    <div class="msg-content">
+                        <div class="bubble">${text}</div>
+                        <div class="time">${timeStr}</div>
+                    </div>
                 </div>`;
             els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
             showSpeechBubble(sender.id, text);
@@ -826,7 +874,7 @@
             const val = els.chatInput.value.trim();
             if (!val) return;
             if (currentMode === MODE_GUEST) {
-                hostConnection.send({ type: 'CHAT', payload: { id: state.myId, text: val } });
+                socket.emit('SEND_TO_HOST', { roomCode, type: 'CHAT', payload: { text: val } });
             } else {
                 sendChat(state.myId, val);
             }
@@ -922,14 +970,222 @@
             blood.style.animation = 'blood-anim 2s forwards';
             setTimeout(() => blood.remove(), 2000);
         }
+
+        function getSharkSvg() {
+            return `
+            <svg viewBox="0 0 200 150" style="width:100%; height:100%; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5));">
+                <g id="shark-fin">
+                    <path d="M 120 120 Q 150 70 160 50 Q 150 100 180 120 Z" fill="#4b6584"/>
+                    <ellipse cx="150" cy="120" rx="40" ry="8" fill="none" stroke="#fff" stroke-width="2" opacity="0.6"/>
+                </g>
+                <g id="shark-jaw" style="display:none;">
+                    <!-- Body/Upper head -->
+                    <path d="M 180 60 Q 100 30 20 80 Q 80 80 140 90 Z" fill="#4b6584"/>
+                    <circle cx="60" cy="65" r="4" fill="black"/>
+                    <!-- Upper teeth -->
+                    <path d="M 30 79 L 35 88 L 45 80 L 50 89 L 60 81 L 65 90 L 75 82 L 80 91 L 90 84" fill="white" stroke="#333" stroke-width="1"/>
+                    
+                    <!-- Lower jaw -->
+                    <g id="shark-lower" style="transform-origin: 140px 90px; transform: rotate(15deg); transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+                        <path d="M 140 90 Q 80 130 30 110 Q 80 100 140 90 Z" fill="#778ca3"/>
+                        <!-- Lower teeth -->
+                        <path d="M 35 107 L 40 98 L 50 105 L 55 96 L 65 103 L 70 94 L 80 101 L 85 92 L 95 99" fill="white" stroke="#333" stroke-width="1"/>
+                    </g>
+                </g>
+            </svg>`;
+        }
+
+        function getGatorSvg() {
+            return `
+            <svg viewBox="0 0 100 120" style="width:100%; height:100%; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5));">
+                <!-- Left Jaw -->
+                <g id="gator-left" style="transition: transform 0.15s ease-in; transform-origin: 50px 90px; transform: rotate(-35deg);">
+                    <path d="M 50 90 L 30 20 Q 50 10 50 25 Z" fill="#2ecc71" stroke="#27ae60" stroke-width="1"/>
+                    <path d="M 50 30 L 55 35 L 50 45 L 55 50 L 50 60 L 55 65 L 50 75" fill="white" stroke="#27ae60" stroke-width="1"/>
+                    <circle cx="35" cy="70" r="5" fill="#f1c40f"/><circle cx="35" cy="68" r="2" fill="#000"/>
+                </g>
+                <!-- Right Jaw -->
+                <g id="gator-right" style="transition: transform 0.15s ease-in; transform-origin: 50px 90px; transform: rotate(35deg);">
+                    <path d="M 50 90 L 70 20 Q 50 10 50 25 Z" fill="#2ecc71" stroke="#27ae60" stroke-width="1"/>
+                    <path d="M 50 30 L 45 35 L 50 45 L 45 50 L 50 60 L 45 65 L 50 75" fill="white" stroke="#27ae60" stroke-width="1"/>
+                    <circle cx="65" cy="70" r="5" fill="#f1c40f"/><circle cx="65" cy="68" r="2" fill="#000"/>
+                </g>
+                <path d="M 30 90 Q 50 110 70 90 Z" fill="#2ecc71"/>
+            </svg>`;
+        }
+
+        function createSharkAnimation(x, y, callback) {
+            const container = document.createElement('div');
+            container.style.position = 'absolute';
+            container.style.width = '200px';
+            container.style.height = '150px';
+            container.style.left = (x + 100) + 'px'; // Start to the right
+            container.style.top = (y - 50) + 'px'; // Positioned so mouth hits center
+            container.style.zIndex = '25';
+            container.innerHTML = getSharkSvg();
+            document.getElementById('stage').appendChild(container);
+
+            const fin = container.querySelector('#shark-fin');
+            const jaw = container.querySelector('#shark-jaw');
+            const lowerJaw = container.querySelector('#shark-lower');
+
+            // 1. Fin swims horizontally
+            container.style.transition = 'left 1s linear';
+            void container.offsetWidth;
+            container.style.left = (x - 20) + 'px'; // Moves left towards character
+
+            setTimeout(() => {
+                // 2. Bite!
+                fin.style.display = 'none';
+                jaw.style.display = 'block';
+                
+                container.style.transition = 'top 0.2s ease-out';
+                container.style.top = (y - 80) + 'px'; 
+                
+                setTimeout(() => {
+                    // Snap lower jaw
+                    lowerJaw.style.transform = 'rotate(-15deg)';
+                    
+                    if (callback) callback();
+                    
+                    // 3. Sink down
+                    setTimeout(() => {
+                        container.style.transition = 'top 0.8s ease-in, opacity 0.8s ease-in';
+                        container.style.top = (y + 50) + 'px';
+                        container.style.opacity = '0';
+                        setTimeout(() => container.remove(), 800);
+                    }, 400);
+                }, 200);
+            }, 1000);
+        }
+
+        function createGatorAnimation(x, y, callback) {
+            const container = document.createElement('div');
+            container.style.position = 'absolute';
+            container.style.width = '120px';
+            container.style.height = '140px';
+            container.style.left = (x - 40) + 'px'; // Centered on player
+            container.style.top = (y + 100) + 'px'; // Start deep underwater
+            container.style.zIndex = '25';
+            container.innerHTML = getGatorSvg();
+            document.getElementById('stage').appendChild(container);
+
+            const leftJaw = container.querySelector('#gator-left');
+            const rightJaw = container.querySelector('#gator-right');
+
+            // 1. Pop up with open V-mouth
+            container.style.transition = 'top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+            void container.offsetWidth;
+            container.style.top = (y - 50) + 'px';
+
+            setTimeout(() => {
+                // 2. Snap shut
+                leftJaw.style.transform = 'rotate(0deg)';
+                rightJaw.style.transform = 'rotate(0deg)';
+                
+                if (callback) callback();
+
+                // 3. Sink down
+                setTimeout(() => {
+                    container.style.transition = 'top 0.6s ease-in, opacity 0.6s ease-in';
+                    container.style.top = (y + 150) + 'px';
+                    container.style.opacity = '0';
+                    setTimeout(() => container.remove(), 600);
+                }, 300);
+            }, 400);
+        }
+
+        function getGullSvg() {
+            return `
+            <svg viewBox="0 0 150 100" style="width:100%; height:100%; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5));">
+                <!-- Wing Back -->
+                <path id="gull-wing-b" d="M 60 40 Q 40 0 90 0 Q 70 20 60 40 Z" fill="#b2bec3"/>
+                <!-- Body -->
+                <path d="M 40 50 Q 10 50 10 30 Q 30 20 50 30 Q 80 40 100 30 Q 120 50 80 60 Q 60 65 40 50 Z" fill="white"/>
+                <!-- Tail -->
+                <path d="M 15 35 L 0 25 L 5 45 Z" fill="white"/>
+                <!-- Head -->
+                <circle cx="100" cy="35" r="14" fill="white"/>
+                <!-- Eye -->
+                <circle cx="105" cy="32" r="2.5" fill="black"/>
+                <!-- Beak -->
+                <path d="M 112 35 L 135 40 L 110 43 Z" fill="#f1c40f"/>
+                <!-- Wing Front -->
+                <path id="gull-wing-f" d="M 65 45 Q 45 -10 100 -10 Q 75 15 65 45 Z" fill="#dfe6e9" stroke="#b2bec3" stroke-width="1"/>
+                <!-- Talons -->
+                <path d="M 50 60 L 50 80 M 45 80 L 55 80 M 60 60 L 60 80 M 55 80 L 65 80" stroke="#e67e22" stroke-width="4" stroke-linecap="round" fill="none"/>
+            </svg>`;
+        }
+
+        function createGullAnimation(playerId, x, y, callback) {
+            const container = document.createElement('div');
+            container.style.position = 'absolute';
+            container.style.width = '150px';
+            container.style.height = '100px';
+            container.style.left = (x - 150) + 'px'; // Swoop in from top left
+            container.style.top = '-100px'; // Offscreen top
+            container.style.zIndex = '30';
+            container.innerHTML = getGullSvg();
+            
+            const style = document.createElement('style');
+            style.innerHTML = `
+                @keyframes flap-f { 0% { transform: rotate(0deg); } 50% { transform: rotate(45deg); } 100% { transform: rotate(0deg); } }
+                @keyframes flap-b { 0% { transform: rotate(0deg); } 50% { transform: rotate(35deg); } 100% { transform: rotate(0deg); } }
+                #gull-wing-f { transform-origin: 65px 45px; animation: flap-f 0.3s infinite; }
+                #gull-wing-b { transform-origin: 60px 40px; animation: flap-b 0.3s infinite; }
+            `;
+            container.appendChild(style);
+            document.getElementById('stage').appendChild(container);
+
+            // 1. Swoop down
+            container.style.transition = 'top 0.6s cubic-bezier(0.5, 0, 0.8, 1), left 0.6s linear';
+            void container.offsetWidth;
+            container.style.top = (y - 70) + 'px'; // Land talons on head
+            container.style.left = (x - 55) + 'px';
+
+            setTimeout(() => {
+                // 2. Grab character and fly up!
+                if (callback) callback();
+
+                const wrap = document.getElementById(`char-wrap-${playerId}`);
+                if (wrap) {
+                    wrap.style.animation = 'none'; 
+                    wrap.style.transition = 'transform 2.5s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 2s ease-in';
+                    wrap.style.transform = 'translateY(-800px) scale(0.5)';
+                    wrap.style.opacity = '0';
+                }
+                
+                container.style.transition = 'top 2.5s cubic-bezier(0.2, 0.8, 0.2, 1), left 2.5s linear, transform 2.5s ease-in, opacity 2s ease-in';
+                container.style.top = (y - 870) + 'px';
+                container.style.left = (x + 100) + 'px'; // Fly away to top right
+                container.style.transform = 'scale(0.5)';
+                container.style.opacity = '0';
+                
+                setTimeout(() => container.remove(), 2500);
+
+            }, 600);
+        }
         
         function updateChatUI() {
             if (state.room.status !== 'playing') return;
             const me = state.players.find(p => p.id === state.myId);
             if (!me) return;
+            
+            let remainText = "";
+            if (me.penaltyEndTime) {
+                const remainSec = Math.max(0, Math.ceil((me.penaltyEndTime - Date.now()) / 1000));
+                if (remainSec > 0) remainText = ` (남은 시간: ${remainSec}초)`;
+            }
+
             if (me.status === 'snatched') {
                 els.chatInput.disabled = true; els.chatSend.disabled = true;
-                els.chatInput.placeholder = "🦅 갈매기에게 납치됨... (1분 금지)";
+                els.chatInput.placeholder = `🦅 갈매기에게 납치됨...${remainText}`;
+            } else if (me.status === 'dead') {
+                els.chatInput.disabled = true; els.chatSend.disabled = true;
+                els.chatInput.placeholder = `🦈 상어에게 물려 기절 중...${remainText}`;
+            } else if (me.status === 'dead-gator') {
+                els.chatInput.disabled = true; els.chatSend.disabled = true;
+                els.chatInput.placeholder = `🐊 악어 떼의 습격으로 기절 중...${remainText}`;
             } else {
                 els.chatInput.disabled = false; els.chatSend.disabled = false;
                 els.chatInput.placeholder = "메시지 입력...";
@@ -975,25 +1231,34 @@
             wrap.style.animation = 'none';
             void wrap.offsetWidth;
 
-            chair.classList.add('tilted');
-            playFlySound();
-            
             if (specialEvent === 'gull') {
-                wrap.style.animation = 'gull-snatch 2.5s forwards';
-                sysChat(`🦅 [비상] 거대한 갈매기가 ${player.name} 님을 낚아챘습니다! (1분 채팅 금지)`);
-                updateStatus(playerId, 'snatched');
+                const rect = wrap.getBoundingClientRect();
+                const stageRect = document.getElementById('stage').getBoundingClientRect();
+                const x = rect.left - stageRect.left + 35;
+                const y = rect.top - stageRect.top + 45;
+
+                createGullAnimation(playerId, x, y, () => {
+                    chair.classList.add('tilted');
+                    playFlySound();
+                    sysChat(`🦅 [비상] 거대한 부산 갈매기가 ${player.name} 님을 낚아챘습니다! (1분 채팅 금지)`);
+                    player.penaltyEndTime = Date.now() + 60000;
+                    updateStatus(playerId, 'snatched');
+                });
                 
                 addTimer(() => {
                     sysChat(`✨ ${player.name} 님이 갈매기 둥지에서 탈출해 돌아왔습니다!`);
                     chair.classList.remove('tilted');
-                    wrap.style.animation = 'none';
+                    wrap.style.transition = 'none';
                     wrap.style.transform = `translate(0px, 0px) scale(1)`;
                     wrap.style.opacity = '1';
+                    player.penaltyEndTime = null;
                     updateStatus(playerId, 'idle');
                 }, 60000);
                 return;
             }
 
+            chair.classList.add('tilted');
+            playFlySound();
             wrap.style.animation = 'fly-parabola 1s forwards';
 
             addTimer(() => {
@@ -1009,23 +1274,28 @@
                 
                 if (specialEvent === 'shark') {
                     playSharkSound();
-                    createBloodEffect(rect.left - stageRect.left + 35, rect.top - stageRect.top + 45);
-                    sysChat(`🦈 [충격] ${player.name} 님이 상어에게 물려 심해로 가라앉았습니다... (30초 후 부활)`);
-                    updateStatus(playerId, 'dead');
                     
-                    wrap.style.transition = 'transform 5s ease-in, opacity 4s linear';
-                    wrap.style.transform = `translate(0px, 50px) scale(0.5)`;
-                    wrap.style.opacity = '0';
-                    
-                    addTimer(() => {
-                        sysChat(`✨ ${player.name} 님이 기적적으로 부활했습니다!`);
-                        chair.classList.remove('tilted');
-                        wrap.style.transition = 'none';
-                        wrap.style.transform = `translate(0px, 0px) scale(1)`;
-                        wrap.style.opacity = '1';
-                        wrap.style.animation = 'blink-anim 1.5s infinite';
-                        addTimer(() => { wrap.style.animation = 'none'; updateStatus(playerId, 'idle'); }, 3000);
-                    }, 30000);
+                    createSharkAnimation(rect.left - stageRect.left + 35, rect.top - stageRect.top + 45, () => {
+                        createBloodEffect(rect.left - stageRect.left + 35, rect.top - stageRect.top + 45);
+                        sysChat(`🦈 [충격] ${player.name} 님이 상어에게 물려 심해로 가라앉았습니다... (30초 후 부활)`);
+                        player.penaltyEndTime = Date.now() + 30000;
+                        updateStatus(playerId, 'dead');
+                        
+                        wrap.style.transition = 'transform 5s ease-in, opacity 4s linear';
+                        wrap.style.transform = `translate(0px, 50px) scale(0.5)`;
+                        wrap.style.opacity = '0';
+                        
+                        addTimer(() => {
+                            sysChat(`✨ ${player.name} 님이 기적적으로 부활했습니다!`);
+                            chair.classList.remove('tilted');
+                            wrap.style.transition = 'none';
+                            wrap.style.transform = `translate(0px, 0px) scale(1)`;
+                            wrap.style.opacity = '1';
+                            wrap.style.animation = 'blink-anim 1.5s infinite';
+                            player.penaltyEndTime = null;
+                            addTimer(() => { wrap.style.animation = 'none'; updateStatus(playerId, 'idle'); }, 3000);
+                        }, 30000);
+                    });
                     
                 } else {
                     updateStatus(playerId, 'swimming');
@@ -1037,28 +1307,33 @@
                         addTimer(() => {
                             wrap.style.transition = 'none';
                             playSharkSound();
-                            createBloodEffect(rect.left - stageRect.left + swimOffsetX + 35, rect.top - stageRect.top + 45);
-                            sysChat(`🐊 [경악] 복귀 중이던 ${player.name} 님이 악어 떼의 습격을 받았습니다! (15초 후 부활)`);
-                            updateStatus(playerId, 'dead-gator');
                             
-                            wrap.style.transition = 'transform 1s ease-out';
-                            wrap.style.transform = `translate(${swimOffsetX}px, -190px) rotate(90deg) scale(0.7)`;
-                            wrap.style.opacity = '1';
-                            
-                            addTimer(() => {
-                                wrap.style.transition = 'opacity 5s ease-in';
-                                wrap.style.opacity = '0';
+                            createGatorAnimation(rect.left - stageRect.left + swimOffsetX + 35, rect.top - stageRect.top + 45, () => {
+                                createBloodEffect(rect.left - stageRect.left + swimOffsetX + 35, rect.top - stageRect.top + 45);
+                                sysChat(`🐊 [경악] 복귀 중이던 ${player.name} 님이 악어 떼의 습격을 받았습니다! (15초 후 부활)`);
+                                player.penaltyEndTime = Date.now() + 15000;
+                                updateStatus(playerId, 'dead-gator');
+                                
+                                wrap.style.transition = 'transform 1s ease-out';
+                                wrap.style.transform = `translate(${swimOffsetX}px, -190px) rotate(90deg) scale(0.7)`;
+                                wrap.style.opacity = '1';
                                 
                                 addTimer(() => {
-                                    sysChat(`✨ ${player.name} 님이 악어 떼를 뿌리치고 부활했습니다!`);
-                                    chair.classList.remove('tilted');
-                                    wrap.style.transition = 'none';
-                                    wrap.style.transform = `translate(0px, 0px) scale(1) rotate(0deg)`;
-                                    wrap.style.opacity = '1';
-                                    wrap.style.animation = 'blink-anim 1.5s infinite';
-                                    addTimer(() => { wrap.style.animation = 'none'; updateStatus(playerId, 'idle'); }, 3000);
-                                }, 5000);
-                            }, 10000);
+                                    wrap.style.transition = 'opacity 5s ease-in';
+                                    wrap.style.opacity = '0';
+                                    
+                                    addTimer(() => {
+                                        sysChat(`✨ ${player.name} 님이 악어 떼를 뿌리치고 부활했습니다!`);
+                                        chair.classList.remove('tilted');
+                                        wrap.style.transition = 'none';
+                                        wrap.style.transform = `translate(0px, 0px) scale(1) rotate(0deg)`;
+                                        wrap.style.opacity = '1';
+                                        wrap.style.animation = 'blink-anim 1.5s infinite';
+                                        player.penaltyEndTime = null;
+                                        addTimer(() => { wrap.style.animation = 'none'; updateStatus(playerId, 'idle'); }, 3000);
+                                    }, 5000);
+                                }, 10000);
+                            });
                         }, 750);
                     } else {
                         addTimer(() => {
