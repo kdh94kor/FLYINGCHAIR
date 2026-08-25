@@ -203,6 +203,14 @@
                     <option value="F">여성</option>
                 </select>
             </div>
+            <div class="form-group">
+                <label>1인당 금기어 개수</label>
+                <select id="lobby-words-count">
+                    <option value="1">1개</option>
+                    <option value="2">2개</option>
+                    <option value="3">3개</option>
+                </select>
+            </div>
             <hr>
             
             <div style="display:flex; gap:10px; margin-bottom:15px;">
@@ -376,6 +384,7 @@
             audioCtx.resume();
             const myName = els.nickname.value.trim() || '방장';
             const myGender = els.gender.value;
+            const wordsPerPlayer = parseInt(document.getElementById('lobby-words-count').value, 10) || 1;
             
             sysChat('서버 연결 중...');
             if (socket) socket.disconnect();
@@ -387,7 +396,7 @@
                         roomCode = response.roomCode;
                         currentMode = MODE_HOST;
                         state.myId = 'host';
-                        state.room = { status: 'waiting', title: '멀티플레이 방' };
+                        state.room = { status: 'waiting', title: '멀티플레이 방', wordsPerPlayer };
                         updateBodyState();
                         state.players = [{ id: state.myId, name: myName, gender: myGender, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, splashCount: 0, status: 'idle' }];
                         
@@ -527,7 +536,8 @@
             audioCtx.resume();
             currentMode = MODE_BOT;
             state.myId = 'player-local';
-            state.room = { status: 'waiting', title: '시뮬레이션 방' };
+            const wordsPerPlayer = parseInt(document.getElementById('lobby-words-count').value, 10) || 1;
+            state.room = { status: 'waiting', title: '시뮬레이션 방', wordsPerPlayer };
             updateBodyState();
             state.players = [{ id: state.myId, name: els.nickname.value.trim() || '게스트', gender: els.gender.value, isBot: false, words: {}, splashCount: 0, status: 'idle' }];
             
@@ -678,11 +688,17 @@
             document.getElementById('guest-controls').classList.add('hidden');
             
             const dictionary = ['아니', '진짜', '근데', '바보', '왜요', '대박', '뭐야', '저기', '그치만', '설마', '혹시'];
+            const wordsPerPlayer = state.room.wordsPerPlayer || 1;
             state.players.forEach(bot => {
                 bot.hasSubmittedWords = bot.isBot;
                 if (bot.isBot) {
                     state.players.forEach(target => {
-                        if (bot.id !== target.id) target.words[bot.id] = dictionary[Math.floor(Math.random() * dictionary.length)];
+                        if (bot.id !== target.id) {
+                            target.words[bot.id] = [];
+                            for(let i=0; i<wordsPerPlayer; i++) {
+                                target.words[bot.id].push(dictionary[Math.floor(Math.random() * dictionary.length)]);
+                            }
+                        }
                     });
                 }
             });
@@ -699,11 +715,17 @@
             
             const list = document.getElementById('word-setting-list');
             list.innerHTML = '';
+            const wordsPerPlayer = state.room.wordsPerPlayer || 1;
+            
             state.players.forEach(p => {
                 if (p.id !== state.myId) {
                     const div = document.createElement('div');
                     div.className = 'form-group';
-                    div.innerHTML = `<label>${p.name}의 금기어</label><input type="text" id="word-for-${p.id}" placeholder="예: 아니, 진짜, 바보">`;
+                    let inputsHTML = '';
+                    for (let i = 0; i < wordsPerPlayer; i++) {
+                        inputsHTML += `<input type="text" id="word-for-${p.id}-${i}" placeholder="${p.name}의 금기어 ${i + 1}" style="margin-bottom:5px;">`;
+                    }
+                    div.innerHTML = `<label>${p.name}의 금기어</label>${inputsHTML}`;
                     list.appendChild(div);
                 }
             });
@@ -718,15 +740,23 @@
         function submitWords() {
             const myTargetWords = {};
             let allFilled = true;
+            const wordsPerPlayer = state.room.wordsPerPlayer || 1;
+            
             state.players.forEach(p => {
                 if (p.id !== state.myId) {
-                    const input = document.getElementById(`word-for-${p.id}`);
-                    if (input && input.value.trim().length >= 2) myTargetWords[p.id] = input.value.trim();
-                    else allFilled = false;
+                    myTargetWords[p.id] = [];
+                    for (let i = 0; i < wordsPerPlayer; i++) {
+                        const input = document.getElementById(`word-for-${p.id}-${i}`);
+                        if (input && input.value.trim().length >= 2) {
+                            myTargetWords[p.id].push(input.value.trim());
+                        } else {
+                            allFilled = false;
+                        }
+                    }
                 }
             });
             
-            if (!allFilled) return alert('모든 플레이어의 금기어를 2글자 이상으로 입력해주세요!');
+            if (!allFilled) return alert('모든 플레이어의 금기어를 각각 2글자 이상으로 입력해주세요!');
             
             document.getElementById('modal-title').textContent = '대기 중...';
             document.getElementById('modal-desc').style.display = 'none';
@@ -811,7 +841,8 @@
                 card.innerHTML = `<div class="c-name">${p.name} ${isMe ? '(나)' : ''}</div>`;
                 const list = document.createElement('ul');
                 list.className = 'word-list';
-                Object.values(p.words).forEach(w => {
+                // Using .flat() since p.words values are arrays now
+                Object.values(p.words).flat().forEach(w => {
                     const li = document.createElement('li');
                     if (isMe) { li.className = 'blind'; li.textContent = '???'; } 
                     else { li.textContent = w; }
@@ -893,7 +924,7 @@
                 
                 if (Math.random() < 0.6) {
                     const allWords = [];
-                    state.players.forEach(p => Object.values(p.words).forEach(w => allWords.push(w)));
+                    state.players.forEach(p => Object.values(p.words).flat().forEach(w => allWords.push(w)));
                     const templates = ["이거 너무 재밌네요 ㅋㅋ", "누가 먼저 빠질까요?", "조심하세요!", "저는 안 빠집니다", "{word} 조심하세요", "설마 {word} 하시는건가요?", "진짜 {word} 하네", "아까 {word} 라고 했죠?"];
                     let msg = templates[Math.floor(Math.random() * templates.length)];
                     if (msg.includes('{word}') && allWords.length > 0) {
@@ -926,8 +957,13 @@
 
             let triggeredWord = null;
             for (const setterId in sender.words) {
-                const word = sender.words[setterId];
-                if (word && msg.includes(word)) { triggeredWord = word; break; }
+                const wordsArray = sender.words[setterId];
+                if (Array.isArray(wordsArray)) {
+                    for (const word of wordsArray) {
+                        if (word && msg.includes(word)) { triggeredWord = word; break; }
+                    }
+                }
+                if (triggeredWord) break;
             }
 
             if (triggeredWord) triggerRandomFly(senderId, triggeredWord);
