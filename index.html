@@ -52,8 +52,17 @@
         hr { border: 0; border-top: 1px solid #444; margin: 20px 0; }
         .hidden { display: none !important; }
 
+        /* Room option rows */
+        .option-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; background: rgba(255,255,255,0.04); border-radius: 8px; margin-bottom: 8px; }
+        .option-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+        .option-label { font-size: 0.9rem; font-weight: bold; color: var(--text-main); cursor: pointer; flex: 1; }
+        .stepper { display: flex; align-items: center; gap: 6px; }
+        .stepper span { min-width: 28px; text-align: center; font-size: 1.1rem; font-weight: bold; color: var(--accent); }
+        .stepper-btn { width: 28px; height: 28px; border: none; border-radius: 6px; background: #444; color: #fff; font-size: 1.2rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
+        .stepper-btn:hover { background: var(--accent); }
+
         /* Stage */
-        .stage { height: 65%; position: relative; background: linear-gradient(to bottom, #87CEEB, #e0f6ff); overflow: hidden; display: flex; flex-direction: column; }
+        .stage { flex: 1; position: relative; background: linear-gradient(to bottom, #87CEEB, #e0f6ff); overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
         .pool { flex: 1; background: linear-gradient(180deg, #1cb5e0 0%, #006eb3 100%); position: relative; z-index: 1; overflow: hidden; }
         .pool::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noise)" opacity="0.2"/></svg>'); pointer-events: none; mix-blend-mode: overlay; }
         
@@ -105,18 +114,18 @@
         .subtitle { display: inline-block; background: rgba(0,0,0,0.8); color: #ff4757; font-size: 1.5rem; font-weight: 900; padding: 10px 25px; border-radius: 10px; border: 3px solid #ff4757; transform: scale(0); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-shadow: 1px 1px 0 #fff; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
         .subtitle.show { transform: scale(1); }
 
-        /* Bottom Panel */
-        .bottom-panel { height: 35%; display: flex; background: var(--bg-main); border-top: 2px solid var(--bg-darker); }
-        .words-section { width: 30%; padding: 10px; overflow-y: auto; border-right: 2px solid var(--bg-darker); }
-        .words-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-        .word-card { background: var(--bg-panel); border-radius: 8px; padding: 8px; min-width: 90px; max-width: 120px; flex: 1; border: 2px solid transparent; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .word-card.my-card { border-color: var(--accent); background: rgba(255, 71, 87, 0.1); }
-        .word-card .c-name { font-weight: bold; font-size: 0.85rem; margin-bottom: 5px; color: #fff; border-bottom: 1px solid #444; padding-bottom: 3px; text-align: center; }
-        .word-list { list-style: none; }
-        .word-list li { background: var(--bg-darker); margin-bottom: 3px; padding: 4px; border-radius: 4px; text-align: center; font-weight: bold; color: #e1b12c; font-size: 0.9rem; }
-        .word-list li.blind { background: repeating-linear-gradient(45deg, #444, #444 5px, #555 5px, #555 10px); color: #aaa; letter-spacing: 1px; }
+        /* Words top bar */
+        .words-bar { width: 100%; background: var(--bg-darker); border-bottom: 1px solid #333; padding: 3px 8px; display: flex; flex-direction: column; gap: 2px; z-index: 50; flex-shrink: 0; }
+        .words-row { display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; overflow: hidden; white-space: nowrap; min-width: 0; }
+        .words-row-name { font-size: 0.72rem; color: var(--text-muted); font-weight: bold; flex-shrink: 0; }
+        .words-row-sep { font-size: 0.72rem; color: #555; flex-shrink: 0; }
+        .words-row-words { display: flex; gap: 4px; flex-wrap: nowrap; overflow: hidden; min-width: 0; }
+        .word-chip { font-size: 0.72rem; background: var(--bg-panel); border: 1px solid #444; border-radius: 4px; padding: 1px 6px; color: #e1b12c; font-weight: bold; white-space: nowrap; flex-shrink: 0; }
+        .word-chip.mine { border-color: var(--accent); background: rgba(255,71,87,0.1); color: #aaa; }
 
-        .chat-section { width: 70%; display: flex; flex-direction: column; background: var(--bg-main); }
+        /* Bottom Panel (chat only) */
+        .bottom-panel { height: 35%; flex-shrink: 0; display: flex; flex-direction: column; background: var(--bg-main); border-top: 2px solid var(--bg-darker); }
+        .chat-section { flex: 1; display: flex; flex-direction: column; background: var(--bg-main); min-height: 0; }
         .chat-messages { flex: 1; padding: 15px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
         .msg { max-width: 80%; display: flex; flex-direction: column; }
         .msg.sys { max-width: 100%; background: rgba(255, 255, 255, 0.05); color: #aaa; font-size: 0.85rem; text-align: center; padding: 6px 15px; border-radius: 20px; align-self: center; width: max-content; }
@@ -130,7 +139,7 @@
         .msg.other .bubble { border-bottom-left-radius: 4px; }
         .msg .time { font-size: 0.7rem; color: #888; margin-bottom: 2px; white-space: nowrap; }
 
-        .chat-input-area { display: flex; padding: 12px; background: var(--bg-darker); }
+        .chat-input-area { display: flex; padding: 12px; background: var(--bg-darker); flex-shrink: 0; }
         .chat-input-area input { flex: 1; padding: 10px; border: 1px solid #444; border-radius: 6px; background: var(--bg-panel); color: #fff; margin-right: 8px; font-size: 1rem; }
         .chat-input-area input:disabled { opacity: 0.5; cursor: not-allowed; }
         .chat-input-area button { padding: 0 20px; border: none; border-radius: 6px; background: var(--accent); color: #fff; font-weight: bold; cursor: pointer; }
@@ -156,17 +165,15 @@
             body.state-playing .main-area { height: 100%; flex: 1; }
             body.state-playing #mobile-leave-btn { display: block !important; }
             
-            .bottom-panel { flex-direction: column; height: 50%; }
-            .words-section { width: 100%; height: 30%; border-right: none; border-bottom: 2px solid var(--bg-darker); padding: 5px; }
-            .words-grid { flex-wrap: nowrap; overflow-x: auto; gap: 8px; padding-bottom: 5px; align-items: stretch; }
-            .word-card { min-width: 110px; padding: 6px; display: flex; flex-direction: column; }
-            .word-card .c-name { font-size: 0.85rem; margin-bottom: 5px; text-align: center; }
-            .word-list li { font-size: 0.85rem; padding: 3px; margin-bottom: 3px; }
-            
-            .chat-section { width: 100%; height: 70%; }
-            .chat-messages { padding: 10px; padding-bottom: 70px; gap: 5px; }
-            .chat-input-area { position: fixed; bottom: 0; left: 0; right: 0; padding: 10px; z-index: 1000; background: var(--bg-darker); box-shadow: 0 -2px 10px rgba(0,0,0,0.5); }
-            
+            /* Mobile: stage fills remaining space, bottom-panel fixed, no keyboard shift */
+            body.state-playing .stage { flex: 1; height: auto; min-height: 0; }
+            .bottom-panel { height: 220px; flex-shrink: 0; }
+            .chat-messages { padding: 8px 12px; padding-bottom: 60px; gap: 6px; }
+            .chat-input-area { position: fixed; bottom: 0; left: 0; right: 0; padding: 8px 10px; z-index: 1000; background: var(--bg-darker); box-shadow: 0 -2px 10px rgba(0,0,0,0.5); }
+
+            .words-bar { padding: 4px 6px; gap: 4px; min-height: 26px; }
+            .word-badge { font-size: 0.65rem; padding: 2px 5px; }
+
             .deck { gap: 20px; padding-bottom: 5px; }
             .chair-slot { width: 50px; height: 80px; }
             .chair-base { width: 50px; height: 40px; margin-left: -25px; }
@@ -203,15 +210,28 @@
                     <option value="F">여성</option>
                 </select>
             </div>
-            <div class="form-group">
-                <label>1인당 금기어 개수</label>
-                <select id="lobby-words-count">
-                    <option value="1">1개</option>
-                    <option value="2">2개</option>
-                    <option value="3">3개</option>
-                </select>
-            </div>
             <hr>
+            <h3 style="font-size:0.95rem; color: var(--text-muted); margin-bottom: 12px;">🎮 방 옵션 (방장만 설정)</h3>
+
+            <div class="option-row" id="opt-words-row">
+                <input type="checkbox" id="opt-words-check" onchange="toggleOption('words')">
+                <label for="opt-words-check" class="option-label">1인당 금기어 개수</label>
+                <div class="stepper hidden" id="opt-words-stepper">
+                    <button class="stepper-btn" onclick="changeWords(-1)">−</button>
+                    <span id="words-count-display">1</span>
+                    <button class="stepper-btn" onclick="changeWords(1)">+</button>
+                </div>
+            </div>
+
+            <div class="option-row" id="opt-afk-row">
+                <input type="checkbox" id="opt-afk-check" onchange="toggleOption('afk')">
+                <label for="opt-afk-check" class="option-label">침묵 시 발사</label>
+                <div class="hidden" id="opt-afk-input" style="display:flex; align-items:center; gap:6px; margin-top:6px;">
+                    <input type="number" id="opt-afk-secs" value="60" min="30" max="300" style="width:65px; padding:5px; text-align:center;">
+                    <span style="font-size:0.85rem; color:var(--text-muted);">초 후 발사</span>
+                </div>
+            </div>
+
             
             <div style="display:flex; gap:10px; margin-bottom:15px;">
                 <button class="btn btn-success" onclick="createMultiplayerRoom()">👑 방 만들기</button>
@@ -256,6 +276,12 @@
 
     <!-- Main Content -->
     <main class="main-area">
+        <!-- Words top bar (shown only when playing) -->
+        <div class="words-bar" id="forbidden-words-panel">
+            <span class="words-bar-label">🚫</span>
+            <span style="color:var(--text-muted); font-size:0.7rem;">게임이 시작되면 금기어가 표시됩니다.</span>
+        </div>
+
         <div class="stage" id="stage">
             <button id="mobile-leave-btn" class="btn btn-danger" style="position: absolute; top: 10px; left: 10px; z-index: 100; width: auto; padding: 5px 10px; font-size: 0.8rem; display: none;" onclick="leaveRoom()">방 나가기</button>
             <div class="pool">
@@ -268,12 +294,6 @@
         </div>
 
         <div class="bottom-panel">
-            <div class="words-section">
-                <h3 style="margin-bottom: 10px; font-size:1.1rem;">🚫 현재 금기어 현황</h3>
-                <div class="words-grid" id="forbidden-words-panel">
-                    <p style="color:var(--text-muted); font-size:0.9rem;">게임이 시작되면 이곳에 금기어가 표시됩니다.</p>
-                </div>
-            </div>
             <div class="chat-section">
                 <div class="chat-messages" id="chat-messages">
                     <div class="msg sys">방에 입장했습니다.</div>
@@ -370,6 +390,39 @@
             document.getElementById('join-input-area').classList.remove('hidden');
         }
 
+        // --- Room Option Helpers ---
+        let wordsCountValue = 1;
+
+        function toggleOption(type) {
+            if (type === 'words') {
+                const checked = document.getElementById('opt-words-check').checked;
+                document.getElementById('opt-words-stepper').classList.toggle('hidden', !checked);
+            } else if (type === 'afk') {
+                const checked = document.getElementById('opt-afk-check').checked;
+                const el = document.getElementById('opt-afk-input');
+                // toggle: remove hidden and set display flex, or add hidden
+                if (checked) { el.classList.remove('hidden'); el.style.display = 'flex'; }
+                else { el.classList.add('hidden'); }
+            }
+        }
+
+        function changeWords(delta) {
+            wordsCountValue = Math.min(3, Math.max(1, wordsCountValue + delta));
+            document.getElementById('words-count-display').textContent = wordsCountValue;
+        }
+
+        function getRoomOptions() {
+            const wordsChecked = document.getElementById('opt-words-check').checked;
+            const afkChecked = document.getElementById('opt-afk-check').checked;
+            const wordsPerPlayer = wordsChecked ? wordsCountValue : 1;
+            let afkSeconds = 60;
+            if (afkChecked) {
+                afkSeconds = parseInt(document.getElementById('opt-afk-secs').value, 10);
+                if (isNaN(afkSeconds) || afkSeconds < 30) afkSeconds = 30;
+            }
+            return { wordsPerPlayer, afkEnabled: afkChecked, afkSeconds };
+        }
+
         // --- Network Logic (Socket.io) ---
         function broadcast(data) {
             if (socket && currentMode === MODE_HOST) {
@@ -384,19 +437,32 @@
             audioCtx.resume();
             const myName = els.nickname.value.trim() || '방장';
             const myGender = els.gender.value;
-            const wordsPerPlayer = parseInt(document.getElementById('lobby-words-count').value, 10) || 1;
+            const { wordsPerPlayer, afkEnabled, afkSeconds } = getRoomOptions();
             
             sysChat('서버 연결 중...');
             if (socket) socket.disconnect();
-            socket = io(SOCKET_URL);
+            socket = io(SOCKET_URL, { reconnection: true, reconnectionAttempts: 10, reconnectionDelay: 2000 });
+            
+            socket.on('disconnect', (reason) => {
+                if (reason === 'io server disconnect') {
+                    leaveRoom();
+                } else {
+                    sysChat('서버와의 연결이 끊겼습니다. 재연결 시도 중...');
+                }
+            });
             
             socket.on('connect', () => {
+                // Only create a room if we don't already have one (prevents re-creation on mobile reconnect)
+                if (roomCode) {
+                    sysChat('서버와 재연결되었습니다.');
+                    return;
+                }
                 socket.emit('CREATE_ROOM', (response) => {
                     if (response.success) {
                         roomCode = response.roomCode;
                         currentMode = MODE_HOST;
                         state.myId = 'host';
-                        state.room = { status: 'waiting', title: '멀티플레이 방', wordsPerPlayer };
+                        state.room = { status: 'waiting', title: '멀티플레이 방', wordsPerPlayer, afkEnabled, afkSeconds };
                         updateBodyState();
                         state.players = [{ id: state.myId, name: myName, gender: myGender, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, splashCount: 0, status: 'idle' }];
                         
@@ -423,11 +489,24 @@
 
             socket.on('GUEST_DISCONNECTED', (data) => {
                 const pId = data.guestId;
+                const departed = state.players.find(p => p.id === pId);
+                const deptName = departed ? departed.name : '참가자';
+                
+                // Remove departed player from list
                 state.players = state.players.filter(p => p.id !== pId);
+                
+                // Remove the departed player's assigned words from all remaining players
+                state.players.forEach(p => {
+                    if (p.words && p.words[pId]) {
+                        delete p.words[pId];
+                    }
+                });
+                
                 broadcastState();
-                sysChat(`참가자가 퇴장했습니다.`);
+                sysChat(`${deptName} 님이 퇴장했습니다.`);
                 updateRoomUI();
                 renderStage();
+                if (state.room.status === 'playing') renderWordsPanel();
                 if (typeof checkAllWordsSubmitted === 'function' && state.room.status === 'word_setting') {
                     checkAllWordsSubmitted();
                 }
@@ -443,20 +522,25 @@
             roomCode = document.getElementById('join-room-code').value.trim().toUpperCase();
             if(!roomCode) return alert('방 코드를 입력하세요.');
             
+            const myName = els.nickname.value.trim() || '게스트';
+            const myGender = els.gender.value;
+            
             sysChat('방장과 연결 중...');
             if (socket) socket.disconnect();
-            socket = io(SOCKET_URL);
+            socket = io(SOCKET_URL, { reconnection: true, reconnectionAttempts: 10, reconnectionDelay: 2000 });
             
             socket.on('connect', () => {
-                const myName = els.nickname.value.trim() || '게스트';
-                const myGender = els.gender.value;
-                state.myId = socket.id;
+                const isReconnect = (currentMode === MODE_GUEST && state.myId);
+                state.myId = socket.id; // socket ID changes on reconnect
 
                 socket.emit('JOIN_ROOM', { roomCode, payload: { name: myName, gender: myGender } }, (response) => {
                     if (response.success) {
                         currentMode = MODE_GUEST;
-                        // switchView('room-view'); <- 삭제: 호스트 승인 후 SYNC_STATE를 받을 때 전환
-                        sysChat('방장과 연결되었습니다. 데이터 동기화 중...');
+                        if (isReconnect) {
+                            sysChat('서버와 재연결되었습니다.');
+                        } else {
+                            sysChat('방장과 연결되었습니다. 데이터 동기화 중...');
+                        }
                     } else {
                         alert(response.message);
                         socket.disconnect();
@@ -471,8 +555,16 @@
                 leaveRoom();
             });
 
+            socket.on('disconnect', (reason) => {
+                if (reason === 'io server disconnect') {
+                    // Server forcibly disconnected — do not reconnect
+                    leaveRoom();
+                }
+                // Otherwise socket.io auto-reconnects
+            });
+
             socket.on('connect_error', () => {
-                sysChat('서버 연결 오류. 잠시 후 다시 시도해주세요.');
+                sysChat('서버 연결 오류. 재연결 시도 중...');
             });
         }
 
@@ -515,7 +607,7 @@
                 state.players = data.payload.state.players;
                 updateRoomUI();
                 if (typeof updateMissingPlayersUI === 'function') updateMissingPlayersUI();
-                if (state.room.status !== 'playing') renderStage();
+                renderStage(); // always re-render to keep seats in sync after player leaves
                 if (state.room.status === 'playing') renderWordsPanel();
             } else if (data.type === 'CHAT_BROADCAST') {
                 const sender = state.players.find(p => p.id === data.payload.senderId);
@@ -536,8 +628,8 @@
             audioCtx.resume();
             currentMode = MODE_BOT;
             state.myId = 'player-local';
-            const wordsPerPlayer = parseInt(document.getElementById('lobby-words-count').value, 10) || 1;
-            state.room = { status: 'waiting', title: '시뮬레이션 방', wordsPerPlayer };
+            const { wordsPerPlayer, afkEnabled, afkSeconds } = getRoomOptions();
+            state.room = { status: 'waiting', title: '시뮬레이션 방', wordsPerPlayer, afkEnabled, afkSeconds };
             updateBodyState();
             state.players = [{ id: state.myId, name: els.nickname.value.trim() || '게스트', gender: els.gender.value, isBot: false, words: {}, splashCount: 0, status: 'idle' }];
             
@@ -572,7 +664,7 @@
             state.room.status = 'lobby';
             updateBodyState();
             state.players = [];
-            els.wordsPanel.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem;">게임이 시작되면 이곳에 금기어가 표시됩니다.</p>';
+            els.wordsPanel.innerHTML = '';
             els.chatMessages.innerHTML = '';
             els.chairsContainer.innerHTML = '';
             els.chatInput.disabled = true; els.chatSend.disabled = true;
@@ -834,29 +926,52 @@
 
         function renderWordsPanel() {
             els.wordsPanel.innerHTML = '';
+            let hasAny = false;
             state.players.forEach(p => {
                 const isMe = p.id === state.myId;
-                const card = document.createElement('div');
-                card.className = `word-card ${isMe ? 'my-card' : ''}`;
-                card.innerHTML = `<div class="c-name">${p.name} ${isMe ? '(나)' : ''}</div>`;
-                const list = document.createElement('ul');
-                list.className = 'word-list';
-                // Using .flat() since p.words values are arrays now
-                Object.values(p.words).flat().forEach(w => {
-                    const li = document.createElement('li');
-                    if (isMe) { li.className = 'blind'; li.textContent = '???'; } 
-                    else { li.textContent = w; }
-                    list.appendChild(li);
+                const allWords = Object.values(p.words).flat();
+                if (allWords.length === 0) return;
+                hasAny = true;
+
+                const row = document.createElement('div');
+                row.className = 'words-row';
+
+                const nameEl = document.createElement('span');
+                nameEl.className = 'words-row-name';
+                nameEl.textContent = p.name + (isMe ? ' (나)' : '');
+                row.appendChild(nameEl);
+
+                const sepEl = document.createElement('span');
+                sepEl.className = 'words-row-sep';
+                sepEl.textContent = '—';
+                row.appendChild(sepEl);
+
+                const wordsEl = document.createElement('div');
+                wordsEl.className = 'words-row-words';
+                allWords.forEach(w => {
+                    const chip = document.createElement('span');
+                    chip.className = isMe ? 'word-chip mine' : 'word-chip';
+                    chip.textContent = isMe ? '???' : w;
+                    wordsEl.appendChild(chip);
                 });
-                card.appendChild(list);
-                els.wordsPanel.appendChild(card);
+                row.appendChild(wordsEl);
+                els.wordsPanel.appendChild(row);
             });
+
+            if (!hasAny) {
+                const empty = document.createElement('span');
+                empty.style.cssText = 'font-size:0.7rem; color:var(--text-muted); padding:2px 0;';
+                empty.textContent = '게임이 시작되면 금기어가 표시됩니다.';
+                els.wordsPanel.appendChild(empty);
+            }
         }
 
-        // --- Chat & Bot Logic ---
         function sysChat(text) {
-            els.chatMessages.innerHTML += `<div class="msg sys">${text}</div>`;
-            els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
+            const isScrolledToBottom = els.chatMessages.scrollHeight - els.chatMessages.clientHeight <= els.chatMessages.scrollTop + 10;
+            els.chatMessages.insertAdjacentHTML('beforeend', `<div class="msg sys">${text}</div>`);
+            if (isScrolledToBottom) {
+                els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
+            }
         }
 
         function appendChatUI(sender, text) {
@@ -865,15 +980,20 @@
             const now = new Date();
             const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
             
-            els.chatMessages.innerHTML += `
+            const isScrolledToBottom = els.chatMessages.scrollHeight - els.chatMessages.clientHeight <= els.chatMessages.scrollTop + 10;
+            
+            els.chatMessages.insertAdjacentHTML('beforeend', `
                 <div class="msg ${isMe ? 'user' : 'other'}">
                     ${!isMe ? `<div class="sender">${sender.name}</div>` : ''}
                     <div class="msg-content">
                         <div class="bubble">${text}</div>
                         <div class="time">${timeStr}</div>
                     </div>
-                </div>`;
-            els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
+                </div>`);
+                
+            if (isScrolledToBottom) {
+                els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
+            }
             showSpeechBubble(sender.id, text);
         }
 
@@ -971,11 +1091,13 @@
 
         function checkAFK() {
             if (state.room.status !== 'playing') return;
+            if (!state.room.afkEnabled) return; // AFK 옵션 비활성화 시 체크 안 함
+            const afkMs = (state.room.afkSeconds || 60) * 1000;
             const now = Date.now();
             state.players.forEach(p => {
-                if (!p.isBot && p.status === 'idle' && (now - p.lastChatTime > 30000)) {
+                if (!p.isBot && p.status === 'idle' && (now - p.lastChatTime > afkMs)) {
                     p.lastChatTime = now;
-                    triggerRandomFly(p.id, '[30초 침묵]');
+                    triggerRandomFly(p.id, `[${state.room.afkSeconds || 60}초 침묵]`);
                 }
             });
         }
