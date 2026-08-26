@@ -91,11 +91,10 @@
 
         .avatar-svg { width: 100%; height: 100%; drop-shadow: 2px 2px 2px rgba(0,0,0,0.3); }
         .exp-idle, .exp-fly, .exp-water, .exp-dead { display: none; }
-        .status-idle .exp-idle, .status-walking .exp-idle, .status-dead .exp-idle { display: block; }
+        .status-idle .exp-idle, .status-walking .exp-idle { display: block; }
         .status-flying .exp-fly { display: block; }
         .status-swimming .exp-water { display: block; }
-        .status-dead-gator .exp-idle { display: none; }
-        .status-dead-gator .exp-dead { display: block; }
+        .status-dead .exp-dead, .status-dead-gator .exp-dead, .status-snatched .exp-dead { display: block; }
 
         @keyframes fly-parabola {
             0% { transform: translateY(0) rotate(0) scale(1); animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
@@ -109,6 +108,8 @@
         @keyframes blood-anim { 0% { transform: translate(-50%, -50%) scale(0.3); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; } }
         @keyframes blink-anim { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
         @keyframes gull-snatch { 0% { transform: translateY(0) scale(1) rotate(0deg); } 30% { transform: translateY(-150px) scale(0.9) rotate(10deg); } 100% { transform: translate(300px, -600px) scale(0.5) rotate(45deg); opacity: 0; } }
+        @keyframes boom { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; background: #f1c40f; } 50% { transform: translate(-50%, -50%) scale(15); opacity: 0.8; background: #e74c3c; } 100% { transform: translate(-50%, -50%) scale(25); opacity: 0; } }
+        @keyframes boom-ring { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; border-width: 15px; border-color: #f39c12; } 100% { transform: translate(-50%, -50%) scale(20); opacity: 0; border-width: 0px; border-color: #c0392b; } }
 
         .subtitle-layer { position: absolute; top: 15px; left: 0; width: 100%; text-align: center; pointer-events: none; z-index: 100; }
         .subtitle { display: inline-block; background: rgba(0,0,0,0.8); color: #ff4757; font-size: 1.5rem; font-weight: 900; padding: 10px 25px; border-radius: 10px; border: 3px solid #ff4757; transform: scale(0); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-shadow: 1px 1px 0 #fff; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
@@ -145,6 +146,12 @@
         .chat-input-area button { padding: 0 20px; border: none; border-radius: 6px; background: var(--accent); color: #fff; font-weight: bold; cursor: pointer; }
         .chat-input-area button:disabled { background: #555; cursor: not-allowed; }
 
+        .item-btn { background: #444; border: 1px solid #555; border-radius: 4px; padding: 4px 8px; color: #fff; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+        .item-btn:hover { background: #555; }
+        .item-btn.missile { background: rgba(255,71,87,0.2); border-color: rgba(255,71,87,0.5); color: #ff4757; }
+        .item-btn.shield { background: rgba(30,144,255,0.2); border-color: rgba(30,144,255,0.5); color: #1e90ff; }
+        .item-btn.word_change { background: rgba(46,213,115,0.2); border-color: rgba(46,213,115,0.5); color: #2ed573; }
+
         /* Modals */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(3px); }
         .modal { background: var(--bg-panel); padding: 30px; border-radius: 12px; width: 400px; max-width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #444; }
@@ -153,13 +160,16 @@
         /* Mobile Responsive Styles */
         @media (max-width: 768px) {
             body { flex-direction: column; }
+            .sidebar { width: 100% !important; min-width: 100% !important; }
             
             body.state-lobby .sidebar { height: 100%; flex: 1; border-right: none; }
             body.state-lobby .main-area { display: none; }
             
-            body.state-waiting .sidebar, body.state-word_setting .sidebar { height: 55%; overflow-y: auto; padding: 10px; border-right: none; border-bottom: 2px solid var(--bg-darker); }
+            body.state-waiting .sidebar, body.state-word_setting .sidebar { height: 55%; width: 100%; overflow-y: auto; padding: 10px; border-right: none; border-bottom: 2px solid var(--bg-darker); }
             body.state-waiting .main-area, body.state-word_setting .main-area { height: 45%; }
             body.state-waiting h1.title, body.state-word_setting h1.title { font-size: 1.5rem; margin-bottom: 10px; }
+            body.state-waiting .stage, body.state-word_setting .stage { display: none; }
+            body.state-waiting .bottom-panel, body.state-word_setting .bottom-panel { height: 100%; }
             
             body.state-playing .sidebar { display: none; }
             body.state-playing .main-area { height: 100%; flex: 1; }
@@ -168,8 +178,9 @@
             /* Mobile: stage fills remaining space, bottom-panel fixed, no keyboard shift */
             body.state-playing .stage { flex: 1; height: auto; min-height: 0; }
             .bottom-panel { height: 260px; flex-shrink: 0; }
-            .chat-messages { padding: 8px 12px; padding-bottom: 60px; gap: 6px; }
+            .chat-messages { padding: 8px 12px; padding-bottom: 95px; gap: 6px; }
             .chat-input-area { position: fixed; bottom: 0; left: 0; right: 0; padding: 8px 10px; z-index: 1000; background: var(--bg-darker); box-shadow: 0 -2px 10px rgba(0,0,0,0.5); }
+            .inventory-bar { position: fixed; bottom: 53px; left: 0; right: 0; z-index: 1000; box-shadow: 0 -2px 10px rgba(0,0,0,0.5); }
 
             .words-bar { padding: 4px 6px; gap: 4px; }
             .word-chip { font-size: 0.65rem; padding: 1px 5px; }
@@ -187,6 +198,7 @@
             .modal { padding: 15px; }
             .modal h2 { font-size: 1.2rem; margin-bottom: 15px; padding-bottom: 10px; }
         }
+        /* ... DevTools Blocking ... */
     </style>
 </head>
 <body class="state-lobby">
@@ -201,14 +213,15 @@
             <h3>입장 설정</h3>
             <div class="form-group">
                 <label>닉네임</label>
-                <input type="text" id="lobby-nickname" placeholder="게스트" value="게스트">
+                <input type="text" id="lobby-nickname" placeholder="닉네임을 입력해주세요">
             </div>
             <div class="form-group">
-                <label>성별</label>
-                <select id="lobby-gender">
-                    <option value="M">남성</option>
-                    <option value="F">여성</option>
-                </select>
+                <label>캐릭터</label>
+                <div id="lobby-gender" style="display:flex; gap:15px; align-items:center;">
+                    <label style="display:flex; align-items:center; gap:5px; white-space:nowrap;"><input type="radio" name="gender" value="M" checked> 남성</label>
+                    <label style="display:flex; align-items:center; gap:5px; white-space:nowrap;"><input type="radio" name="gender" value="F"> 여성</label>
+                    <label style="display:flex; align-items:center; gap:5px; white-space:nowrap;"><input type="radio" name="gender" value="A"> 외계인</label>
+                </div>
             </div>
             <hr>
             <h3 style="font-size:0.95rem; color: var(--text-muted); margin-bottom: 12px;">🎮 방 옵션 (방장만 설정)</h3>
@@ -230,6 +243,11 @@
                     <input type="number" id="opt-afk-secs" value="60" min="30" max="300" style="width:65px; padding:5px; text-align:center;">
                     <span style="font-size:0.85rem; color:var(--text-muted);">초 후 발사</span>
                 </div>
+            </div>
+
+            <div class="option-row" id="opt-item-row">
+                <input type="checkbox" id="opt-item-check">
+                <label for="opt-item-check" class="option-label">아이템 모드 (5분마다 랜덤 아이템)</label>
             </div>
 
             
@@ -284,6 +302,7 @@
 
         <div class="stage" id="stage">
             <button id="mobile-leave-btn" class="btn btn-danger" style="position: absolute; top: 10px; left: 10px; z-index: 100; width: auto; padding: 5px 10px; font-size: 0.8rem; display: none;" onclick="leaveRoom()">방 나가기</button>
+            <div id="item-timer" class="hidden" style="position: absolute; top: 15px; right: 20px; background: rgba(0,0,0,0.6); padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; border: 1px solid #f39c12; color: #f39c12; z-index: 100;"></div>
             <div class="pool">
                 <div class="wave wave1"></div>
                 <div class="wave wave2"></div>
@@ -297,6 +316,11 @@
             <div class="chat-section">
                 <div class="chat-messages" id="chat-messages">
                     <div class="msg sys">방에 입장했습니다.</div>
+                </div>
+                <!-- Inventory Bar -->
+                <div class="inventory-bar hidden" id="inventory-bar" style="background:var(--bg-panel); padding:6px 12px; display:flex; gap:8px; border-top:1px solid #333; align-items:center; overflow-x:auto;">
+                    <span style="font-size:0.75rem; color:var(--text-muted); white-space:nowrap;">가방:</span>
+                    <div id="inventory-items" style="display:flex; gap:6px;"></div>
                 </div>
                 <div class="chat-input-area">
                     <input type="text" id="chat-input" placeholder="메시지 입력..." disabled>
@@ -319,13 +343,52 @@
         </div>
     </div>
 
+    <!-- Target Selection Modal -->
+    <div id="modal-target-selection" class="modal-overlay hidden">
+        <div class="modal" style="width: 320px;">
+            <h2>타깃 선택</h2>
+            <p style="font-size:0.9rem; color:#ccc; margin-bottom:15px; text-align:center;">
+                아이템을 사용할 대상을 선택하세요.
+            </p>
+            <div id="target-selection-list" style="display:flex; flex-direction:column; gap:10px; margin-bottom:15px;"></div>
+            <button class="btn btn-secondary" onclick="closeTargetModal()">취소</button>
+        </div>
+    </div>
+
+    <!-- Word Add Modal -->
+    <div id="modal-word-add" class="modal-overlay hidden">
+        <div class="modal">
+            <h2>금기어 추가</h2>
+            <p style="font-size:0.9rem; color:#ccc; margin-bottom:20px; text-align:center;">
+                각 참가자에게 추가할 금기어를 입력하세요.
+            </p>
+            <div id="word-add-list"></div>
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button class="btn" onclick="submitWordAdd()">추가하기</button>
+                <button class="btn btn-secondary" onclick="closeWordAddModal()">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Word Change Modal -->
+    <div id="modal-word-change" class="modal-overlay hidden">
+        <div class="modal">
+            <h2>금기어 변경</h2>
+            <p style="font-size:0.9rem; color:#ccc; margin-bottom:20px; text-align:center;">
+                변경할 단어 <strong>1개만</strong> 지우고 새 단어로 수정하세요.
+            </p>
+            <div id="word-change-list" style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;"></div>
+            <div style="display:flex; gap:10px;">
+                <button class="btn" onclick="submitWordChange()">변경하기</button>
+                <button class="btn btn-secondary" onclick="closeWordChangeModal()">취소</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script>
+    (() => {
         // --- Globals & State ---
-        function updateBodyState() {
-            document.body.className = `state-${state.room.status}`;
-        }
-
         const MODE_BOT = 'BOT';
         const MODE_HOST = 'HOST';
         const MODE_GUEST = 'GUEST';
@@ -338,12 +401,18 @@
         let roomCode = '';
         let botInterval = null;
         let afkInterval = null;
+        let itemInterval = null;
 
         const state = {
             myId: 'player-' + Math.floor(Math.random()*10000),
             room: { status: 'lobby', title: '' },
             players: []
         };
+        
+        function updateBodyState() {
+            document.body.className = `state-${state.room.status}`;
+        }
+        
         // --- DOM Elements ---
         const els = {
             lobbyView: document.getElementById('lobby-view'),
@@ -385,6 +454,10 @@
             els.lobbyView.classList.add('hidden');
             els.roomView.classList.add('hidden');
             document.getElementById(viewId).classList.remove('hidden');
+            if (viewId === 'room-view') {
+                els.chatInput.disabled = false;
+                els.chatSend.disabled = false;
+            }
         }
         function showJoinInput() {
             document.getElementById('join-input-area').classList.remove('hidden');
@@ -414,13 +487,14 @@
         function getRoomOptions() {
             const wordsChecked = document.getElementById('opt-words-check').checked;
             const afkChecked = document.getElementById('opt-afk-check').checked;
+            const itemChecked = document.getElementById('opt-item-check').checked;
             const wordsPerPlayer = wordsChecked ? wordsCountValue : 1;
             let afkSeconds = 60;
             if (afkChecked) {
                 afkSeconds = parseInt(document.getElementById('opt-afk-secs').value, 10);
                 if (isNaN(afkSeconds) || afkSeconds < 30) afkSeconds = 30;
             }
-            return { wordsPerPlayer, afkEnabled: afkChecked, afkSeconds };
+            return { wordsPerPlayer, afkEnabled: afkChecked, afkSeconds, itemEnabled: itemChecked };
         }
 
         // --- Network Logic (Socket.io) ---
@@ -430,14 +504,40 @@
             }
         }
         function broadcastState() {
-            broadcast({ type: 'SYNC_STATE', payload: { state: state } });
+            if (!socket || currentMode !== MODE_HOST) return;
+            
+            // Send sanitized state to each guest individually
+            state.players.forEach(p => {
+                if (p.id !== state.myId && !p.isBot) {
+                    // Deep copy state
+                    const sanitized = JSON.parse(JSON.stringify(state));
+                    
+                    // Sanitize
+                    sanitized.players.forEach(sp => {
+                        // 1. Hide the guest's own words from themselves
+                        if (sp.id === p.id && sp.words) {
+                            Object.keys(sp.words).forEach(k => {
+                                if (Array.isArray(sp.words[k])) {
+                                    sp.words[k] = sp.words[k].map(() => '???');
+                                }
+                            });
+                        }
+                        // 2. Hide other players' items from the guest
+                        if (sp.id !== p.id && sp.items) {
+                            sp.items = [];
+                        }
+                    });
+                    
+                    socket.emit('SEND_TO_GUEST', { guestId: p.id, type: 'SYNC_STATE', payload: { state: sanitized } });
+                }
+            });
         }
 
         function createMultiplayerRoom() {
             audioCtx.resume();
             const myName = els.nickname.value.trim() || '방장';
-            const myGender = els.gender.value;
-            const { wordsPerPlayer, afkEnabled, afkSeconds } = getRoomOptions();
+            const myGender = document.querySelector('input[name="gender"]:checked').value;
+            const { wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled } = getRoomOptions();
             
             sysChat('서버 연결 중...');
             if (socket) socket.disconnect();
@@ -462,9 +562,9 @@
                         roomCode = response.roomCode;
                         currentMode = MODE_HOST;
                         state.myId = 'host';
-                        state.room = { status: 'waiting', title: '멀티플레이 방', wordsPerPlayer, afkEnabled, afkSeconds };
+                        state.room = { status: 'waiting', title: '멀티플레이 방', wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled };
                         updateBodyState();
-                        state.players = [{ id: state.myId, name: myName, gender: myGender, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, splashCount: 0, status: 'idle' }];
+                        state.players = [{ id: state.myId, name: myName, gender: myGender, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, splashCount: 0, status: 'idle', items: [] }];
                         
                         switchView('room-view');
                         updateRoomUI();
@@ -502,13 +602,15 @@
                     }
                 });
                 
-                broadcastState();
-                sysChat(`${deptName} 님이 퇴장했습니다.`);
                 updateRoomUI();
                 renderStage();
-                if (state.room.status === 'playing') renderWordsPanel();
-                if (typeof checkAllWordsSubmitted === 'function' && state.room.status === 'word_setting') {
-                    checkAllWordsSubmitted();
+                sysChat(`[시스템] ${deptName}님이 퇴장했습니다.`);
+                
+                if (state.room.status === 'word_setting' || state.room.status === 'playing') {
+                    broadcastState();
+                    if (state.room.status === 'word_setting') checkAllWordsSubmitted();
+                } else if (state.room.status === 'waiting') {
+                    broadcastState();
                 }
             });
 
@@ -519,30 +621,26 @@
 
         function joinMultiplayerRoom() {
             audioCtx.resume();
-            roomCode = document.getElementById('join-room-code').value.trim().toUpperCase();
-            if(!roomCode) return alert('방 코드를 입력하세요.');
+            const code = document.getElementById('join-room-code').value.trim().toUpperCase();
+            if (!code) return alert('방 코드를 입력하세요.');
             
             const myName = els.nickname.value.trim() || '게스트';
-            const myGender = els.gender.value;
+            const myGender = document.querySelector('input[name="gender"]:checked').value;
             
-            sysChat('방장과 연결 중...');
+            sysChat('서버 연결 중...');
             if (socket) socket.disconnect();
             socket = io(SOCKET_URL, { reconnection: true, reconnectionAttempts: 10, reconnectionDelay: 2000 });
             
             socket.on('connect', () => {
-                const isReconnect = (currentMode === MODE_GUEST && state.myId);
-                state.myId = socket.id; // socket ID changes on reconnect
-
-                socket.emit('JOIN_ROOM', { roomCode, payload: { name: myName, gender: myGender } }, (response) => {
+                socket.emit('JOIN_ROOM', { roomCode: code, payload: { name: myName, gender: myGender } }, (response) => {
                     if (response.success) {
+                        roomCode = code;
                         currentMode = MODE_GUEST;
-                        if (isReconnect) {
-                            sysChat('서버와 재연결되었습니다.');
-                        } else {
-                            sysChat('방장과 연결되었습니다. 데이터 동기화 중...');
-                        }
+                        state.myId = socket.id; // Server uses socket.id
+                        document.getElementById('room-code-display').classList.remove('hidden');
+                        document.getElementById('room-code-text').textContent = roomCode;
                     } else {
-                        alert(response.message);
+                        alert(response.reason || '방 입장에 실패했습니다.');
                         socket.disconnect();
                     }
                 });
@@ -572,12 +670,12 @@
             if (data.type === 'JOIN') {
                 if (state.room.status !== 'waiting') return socket.emit('SEND_TO_GUEST', { guestId, type: 'REJECT_JOIN', payload: { reason: '이미 게임이 시작되어 입장할 수 없습니다.' } });
                 if (state.players.length >= 6) return socket.emit('SEND_TO_GUEST', { guestId, type: 'REJECT_JOIN', payload: { reason: '방이 꽉 찼습니다.' } });
-                state.players.push({ ...data.payload, id: guestId, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, splashCount: 0, status: 'idle' });
+                state.players.push({ ...data.payload, id: guestId, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, splashCount: 0, status: 'idle', items: [] });
                 broadcastState();
-                sysChat(`${data.payload.name} 님이 참가했습니다.`);
-                broadcast({ type: 'EVENT_SYS', payload: { text: `${data.payload.name} 님이 참가했습니다.` } });
                 updateRoomUI();
                 renderStage();
+                sysChat(`[시스템] ${data.payload.name}님이 입장했습니다.`);
+                broadcast({ type: 'EVENT_SYS', payload: { text: `[시스템] ${data.payload.name}님이 입장했습니다.` } });
             } else if (data.type === 'CHAT') {
                 sendChat(guestId, data.payload.text);
             } else if (data.type === 'SUBMIT_WORDS') {
@@ -588,14 +686,13 @@
                 broadcastState();
                 updateRoomUI();
                 renderStage();
+            } else if (data.type === 'USE_ITEM') {
+                executeItem(guestId, data.payload.item, data.payload.index, data.payload.targetId, data.payload.extraData);
             }
         }
 
         function handleDataFromHost(data) {
-            if (data.type === 'REJECT_JOIN') {
-                alert(data.payload.reason);
-                leaveRoom();
-            } else if (data.type === 'SYNC_STATE') {
+            if (data.type === 'SYNC_STATE') {
                 if (!document.getElementById('lobby-view').classList.contains('hidden')) {
                     switchView('room-view');
                     document.getElementById('host-controls').classList.add('hidden');
@@ -608,7 +705,10 @@
                 updateRoomUI();
                 if (typeof updateMissingPlayersUI === 'function') updateMissingPlayersUI();
                 renderStage(); // always re-render to keep seats in sync after player leaves
-                if (state.room.status === 'playing') renderWordsPanel();
+                if (state.room.status === 'playing') {
+                    renderWordsPanel();
+                    renderInventory();
+                }
             } else if (data.type === 'CHAT_BROADCAST') {
                 const sender = state.players.find(p => p.id === data.payload.senderId);
                 appendChatUI(sender, data.payload.text);
@@ -616,6 +716,8 @@
                 triggerFly(data.payload.playerId, data.payload.word, data.payload.specialEvent);
             } else if (data.type === 'EVENT_SYS') {
                 sysChat(data.payload.text);
+            } else if (data.type === 'EVENT_ITEM') {
+                playItemEvent(data.payload.senderId, data.payload.item, data.payload.targetId, data.payload.extraData);
             } else if (data.type === 'START_WORD_SETTING') {
                 openWordSettingModal();
             } else if (data.type === 'START_PLAYING') {
@@ -628,10 +730,10 @@
             audioCtx.resume();
             currentMode = MODE_BOT;
             state.myId = 'player-local';
-            const { wordsPerPlayer, afkEnabled, afkSeconds } = getRoomOptions();
-            state.room = { status: 'waiting', title: '시뮬레이션 방', wordsPerPlayer, afkEnabled, afkSeconds };
+            const { wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled } = getRoomOptions();
+            state.room = { status: 'waiting', title: '시뮬레이션 방', wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled };
             updateBodyState();
-            state.players = [{ id: state.myId, name: els.nickname.value.trim() || '게스트', gender: els.gender.value, isBot: false, words: {}, splashCount: 0, status: 'idle' }];
+            state.players = [{ id: state.myId, name: els.nickname.value.trim() || '게스트', gender: document.querySelector('input[name="gender"]:checked').value, isBot: false, words: {}, splashCount: 0, status: 'idle', items: [] }];
             
             switchView('room-view');
             document.getElementById('host-controls').classList.remove('hidden');
@@ -645,9 +747,11 @@
             if (state.players.length >= 6) return alert('최대 6명까지 가능합니다.');
             const botNum = state.players.filter(p => p.isBot).length + 1;
             const botId = 'bot-' + Math.random().toString(36).substr(2, 5);
+            const r = Math.random();
+            const botGender = r < 0.33 ? 'M' : (r < 0.66 ? 'F' : 'A');
             state.players.push({
-                id: botId, name: `봇 ${botNum}호`, gender: Math.random() > 0.5 ? 'M' : 'F',
-                isBot: true, words: {}, splashCount: 0, status: 'idle'
+                id: botId, name: `봇 ${botNum}호`, gender: botGender,
+                isBot: true, words: {}, splashCount: 0, status: 'idle', items: []
             });
             updateRoomUI();
             renderStage();
@@ -670,7 +774,11 @@
             els.chatInput.disabled = true; els.chatSend.disabled = true;
             if(botInterval) clearInterval(botInterval);
             if(afkInterval) clearInterval(afkInterval);
+            if(itemInterval) clearInterval(itemInterval);
             if(chatUiInterval) clearInterval(chatUiInterval);
+            document.getElementById('inventory-bar').classList.add('hidden');
+            document.getElementById('item-timer').classList.add('hidden');
+            document.getElementById('inventory-items').innerHTML = '';
             document.getElementById('room-code-display').classList.add('hidden');
             document.getElementById('join-input-area').classList.add('hidden');
             switchView('lobby-view');
@@ -730,16 +838,30 @@
 
         function getAvatarSvg(gender) {
             const isM = gender === 'M';
-            const skin = '#fadcce', hair = isM ? '#333' : '#6a3b14', body = isM ? '#4a90e2' : '#e24a8d';
+            const isA = gender === 'A';
             
-            const backHair = isM ? '' : `<path d="M 15 45 Q 50 -10 85 45 Q 95 70 85 85 Q 50 80 15 85 Q 5 70 15 45 Z" fill="${hair}"/>`;
-            const frontHair = isM 
-                ? `<path d="M 15 45 Q 50 -10 85 45 Q 60 20 15 45 Z" fill="${hair}"/>` 
-                : `<path d="M 15 45 Q 50 -10 85 45 Q 50 35 15 45 Z" fill="${hair}"/>`;
+            let skin, hairColor, body, backHair = '', frontHair = '', antennas = '';
+            
+            if (isA) {
+                skin = '#2ecc71'; body = '#8e44ad';
+                antennas = `
+                    <path d="M 35 20 Q 25 5 15 10" stroke="#2ecc71" stroke-width="3" fill="none" stroke-linecap="round"/>
+                    <circle cx="15" cy="10" r="4" fill="#e74c3c"/>
+                    <path d="M 65 20 Q 75 5 85 10" stroke="#2ecc71" stroke-width="3" fill="none" stroke-linecap="round"/>
+                    <circle cx="85" cy="10" r="4" fill="#e74c3c"/>
+                `;
+            } else {
+                skin = '#fadcce'; hairColor = isM ? '#333' : '#6a3b14'; body = isM ? '#4a90e2' : '#e24a8d';
+                backHair = isM ? '' : `<path d="M 15 45 Q 50 -10 85 45 Q 95 70 85 85 Q 50 80 15 85 Q 5 70 15 45 Z" fill="${hairColor}"/>`;
+                frontHair = isM 
+                    ? `<path d="M 15 45 Q 50 -10 85 45 Q 60 20 15 45 Z" fill="${hairColor}"/>` 
+                    : `<path d="M 15 45 Q 50 -10 85 45 Q 50 35 15 45 Z" fill="${hairColor}"/>`;
+            }
                 
             return `
             <svg viewBox="0 0 100 100" class="avatar-svg">
                 ${backHair}
+                ${antennas}
                 <circle cx="50" cy="45" r="28" fill="${skin}"/>
                 ${frontHair}
                 <rect x="25" y="70" width="50" height="40" rx="10" fill="${body}"/>
@@ -906,11 +1028,13 @@
         let chatUiInterval = null;
         function finalizeStart() {
             els.wordSettingModal.classList.add('hidden');
+            els.chatMessages.innerHTML = '';
             sysChat('게임이 시작되었습니다! 채팅을 자유롭게 시작하세요.');
             els.chatInput.disabled = false;
             els.chatSend.disabled = false;
             els.chatInput.focus();
             renderWordsPanel();
+            renderInventory();
             
             if (chatUiInterval) clearInterval(chatUiInterval);
             chatUiInterval = setInterval(updateChatUI, 1000);
@@ -921,7 +1045,40 @@
                 afkInterval = setInterval(checkAFK, 1000);
             }
             
-            if (currentMode === MODE_HOST || currentMode === MODE_BOT) startBotChat();
+            if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
+                if (itemInterval) clearInterval(itemInterval);
+                if (state.room.itemEnabled) {
+                    const dropInterval = currentMode === MODE_BOT ? 30000 : 300000;
+                    state.room.nextItemDropTime = Date.now() + dropInterval;
+                    if (currentMode === MODE_HOST) broadcastState();
+                    itemInterval = setInterval(distributeItems, dropInterval);
+                }
+                startBotChat();
+            }
+        }
+        
+        function distributeItems() {
+            const dropInterval = currentMode === MODE_BOT ? 30000 : 300000;
+            state.room.nextItemDropTime = Date.now() + dropInterval;
+            
+            const alivePlayers = state.players.filter(p => p.status !== 'dead' && p.status !== 'dead-gator' && p.status !== 'snatched');
+            if (alivePlayers.length === 0) {
+                broadcastState();
+                return;
+            }
+            
+            const itemTypes = ['missile', 'shield', 'word_change', 'word_add'];
+            alivePlayers.forEach(p => {
+                const randomItem = itemTypes[Math.floor(Math.random() * itemTypes.length)];
+                if (!p.items) p.items = [];
+                p.items.push(randomItem);
+            });
+            
+            broadcastState();
+            sysChat('🎁 보급품이 도착했습니다! 가방을 확인하세요.');
+            broadcast({ type: 'EVENT_SYS', payload: { text: '🎁 보급품이 도착했습니다! 가방을 확인하세요.' } });
+            
+            if (currentMode === MODE_BOT) renderInventory();
         }
 
         function renderWordsPanel() {
@@ -963,6 +1120,348 @@
                 empty.style.cssText = 'font-size:0.7rem; color:var(--text-muted); padding:2px 0;';
                 empty.textContent = '게임이 시작되면 금기어가 표시됩니다.';
                 els.wordsPanel.appendChild(empty);
+            }
+        }
+
+        function renderInventory() {
+            const bar = document.getElementById('inventory-bar');
+            const itemsContainer = document.getElementById('inventory-items');
+            itemsContainer.innerHTML = '';
+            
+            if (state.room.status !== 'playing' || !state.room.itemEnabled) {
+                bar.classList.add('hidden');
+                return;
+            }
+            
+            bar.classList.remove('hidden');
+            const me = state.players.find(p => p.id === state.myId);
+            
+            if (!me || !me.items || me.items.length === 0) {
+                const emptyMsg = document.createElement('span');
+                emptyMsg.style.cssText = 'font-size:0.75rem; color:#666; font-style:italic;';
+                emptyMsg.textContent = '아이템 없음';
+                itemsContainer.appendChild(emptyMsg);
+                return;
+            }
+            
+            const itemLabels = { 'missile': '🚀 미사일', 'shield': '🛡️ 방패', 'word_change': '🃏 변경권', 'word_add': '➕ 추가권' };
+            
+            const grouped = {};
+            me.items.forEach(item => {
+                grouped[item] = (grouped[item] || 0) + 1;
+            });
+            
+            Object.entries(grouped).forEach(([item, count]) => {
+                const btn = document.createElement('button');
+                btn.className = `item-btn ${item}`;
+                btn.textContent = (itemLabels[item] || item) + (count > 1 ? ` x${count}` : '');
+                btn.onclick = () => handleItemClick(item);
+                itemsContainer.appendChild(btn);
+            });
+        }
+        
+        let pendingItemUse = null;
+        function handleItemClick(item) {
+            const me = state.players.find(p => p.id === state.myId);
+            const index = me.items.indexOf(item);
+            if (index === -1) return;
+            
+            // Allow word_change and word_add even if dead
+            if (me.status !== 'idle' && item !== 'word_change' && item !== 'word_add') {
+                return sysChat('행동 불능 상태에서는 미사일 등 공격 아이템을 사용할 수 없습니다.');
+            }
+            if (item === 'shield') {
+                sysChat('방패는 패시브 아이템입니다. 해로운 효과를 1회 자동 방어합니다.');
+            } else if (item === 'missile' || item === 'word_change') {
+                pendingItemUse = { item, index };
+                openTargetModal();
+            } else if (item === 'word_add') {
+                pendingItemUse = { item, index };
+                openWordAddModal();
+            }
+        }
+        
+        function openWordAddModal() {
+            const list = document.getElementById('word-add-list');
+            list.innerHTML = '';
+            
+            state.players.forEach(p => {
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;';
+                
+                const label = document.createElement('span');
+                label.style.fontWeight = 'bold';
+                label.textContent = p.id === state.myId ? `${p.name} (나)` : p.name;
+                
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.dataset.targetId = p.id;
+                input.placeholder = '추가할 단어';
+                input.style.cssText = 'padding:8px; border-radius:4px; border:1px solid #555; background:#222; color:#fff; width:150px;';
+                
+                row.appendChild(label);
+                row.appendChild(input);
+                list.appendChild(row);
+            });
+            
+            document.getElementById('modal-word-add').classList.remove('hidden');
+        }
+        
+        function closeWordAddModal() {
+            document.getElementById('modal-word-add').classList.add('hidden');
+            pendingItemUse = null;
+        }
+        
+        function submitWordAdd() {
+            if (!pendingItemUse) return;
+            const { item, index } = pendingItemUse;
+            
+            const list = document.getElementById('word-add-list');
+            const inputs = list.querySelectorAll('input');
+            const wordMap = {};
+            
+            let allFilled = true;
+            inputs.forEach(input => {
+                const val = input.value.trim();
+                if (!val) allFilled = false;
+                wordMap[input.dataset.targetId] = val;
+            });
+            
+            if (!allFilled) {
+                alert('모든 참가자의 금기어를 입력해주세요.');
+                return;
+            }
+            
+            closeWordAddModal();
+            
+            const extraData = { wordMap };
+            if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
+                executeItem(state.myId, item, index, null, extraData);
+            } else {
+                socket.emit('SEND_TO_HOST', { type: 'USE_ITEM', payload: { item, index, targetId: null, extraData } });
+            }
+        }
+        
+        function openTargetModal() {
+            const list = document.getElementById('target-selection-list');
+            list.innerHTML = '';
+            const item = pendingItemUse ? pendingItemUse.item : null;
+            
+            let targets;
+            if (item === 'word_change') {
+                // Word change can target anyone, including dead players and yourself
+                targets = state.players;
+            } else {
+                // Missile etc.
+                targets = state.players.filter(p => p.id !== state.myId && p.status !== 'dead' && p.status !== 'dead-gator' && p.status !== 'snatched');
+            }
+            
+            if (targets.length === 0) {
+                list.innerHTML = '<span style="color:#aaa; text-align:center;">타깃이 없습니다.</span>';
+            } else {
+                targets.forEach(p => {
+                    const btn = document.createElement('button');
+                    btn.className = 'btn';
+                    btn.style.background = '#444';
+                    btn.textContent = p.id === state.myId ? `${p.name} (나)` : p.name;
+                    btn.onclick = () => selectTarget(p.id);
+                    list.appendChild(btn);
+                });
+            }
+            document.getElementById('modal-target-selection').classList.remove('hidden');
+        }
+        
+        function closeTargetModal() {
+            document.getElementById('modal-target-selection').classList.add('hidden');
+            pendingItemUse = null;
+        }
+        
+        function selectTarget(targetId) {
+            if (!pendingItemUse) return;
+            const { item, index } = pendingItemUse;
+            closeTargetModal();
+            
+            if (item === 'word_change') {
+                pendingItemUse.targetId = targetId; // Save targetId for the next step
+                openWordChangeModal(targetId);
+                return; // Stop here, wait for modal submit
+            }
+            
+            // For other targeted items (like missile)
+            if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
+                // Host executing directly
+                executeItem(state.myId, item, index, targetId, null);
+            } else {
+                socket.emit('SEND_TO_HOST', { type: 'USE_ITEM', payload: { item, index, targetId, extraData: null } });
+            }
+        }
+        
+        function openWordChangeModal(targetId) {
+            const list = document.getElementById('word-change-list');
+            list.innerHTML = '';
+            
+            const target = state.players.find(p => p.id === targetId);
+            const allWords = Object.values(target.words).flat();
+            const isMe = targetId === state.myId;
+            
+            allWords.forEach((w, idx) => {
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex; justify-content:space-between; align-items:center;';
+                
+                const label = document.createElement('span');
+                label.style.fontWeight = 'bold';
+                label.textContent = `단어 ${idx + 1}`;
+                
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'word-change-input';
+                input.dataset.idx = idx;
+                input.value = isMe ? '???' : w;
+                input.dataset.initialValue = input.value; // Store initial value
+                input.style.cssText = 'padding:8px; border-radius:4px; border:1px solid #555; background:#222; color:#fff; width:150px;';
+                
+                input.addEventListener('input', (e) => {
+                    const inputs = document.querySelectorAll('.word-change-input');
+                    const hasChanged = Array.from(inputs).some(inp => inp.value !== inp.dataset.initialValue);
+                    
+                    inputs.forEach(inp => {
+                        if (hasChanged && inp.value === inp.dataset.initialValue) {
+                            inp.disabled = true; // Lock others
+                            inp.style.opacity = '0.5';
+                        } else {
+                            inp.disabled = false;
+                            inp.style.opacity = '1';
+                        }
+                    });
+                });
+                
+                row.appendChild(label);
+                row.appendChild(input);
+                list.appendChild(row);
+            });
+            
+            document.getElementById('modal-word-change').classList.remove('hidden');
+        }
+        
+        function closeWordChangeModal() {
+            document.getElementById('modal-word-change').classList.add('hidden');
+            pendingItemUse = null;
+        }
+        
+        function submitWordChange() {
+            if (!pendingItemUse || !pendingItemUse.targetId) return;
+            const { item, index, targetId } = pendingItemUse;
+            
+            const inputs = document.querySelectorAll('.word-change-input');
+            let changedIdx = -1;
+            let newWord = '';
+            
+            inputs.forEach((inp) => {
+                if (inp.value !== inp.dataset.initialValue) {
+                    changedIdx = parseInt(inp.dataset.idx, 10);
+                    newWord = inp.value.trim();
+                }
+            });
+            
+            if (changedIdx === -1 || !newWord) {
+                alert('단어를 변경해주세요.');
+                return;
+            }
+            
+            closeWordChangeModal();
+            
+            const extraData = { wordIdx: changedIdx, newWord };
+            if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
+                executeItem(state.myId, item, index, targetId, extraData);
+            } else {
+                socket.emit('SEND_TO_HOST', { type: 'USE_ITEM', payload: { item, index, targetId, extraData } });
+            }
+        }
+
+        function executeItem(senderId, item, index, targetId, extraData = null) {
+            // Host logic to process item use
+            const sender = state.players.find(p => p.id === senderId);
+            if (!sender || !sender.items || sender.items[index] !== item) return; // Validation failed
+            
+            // Consume item
+            sender.items.splice(index, 1);
+            if (currentMode === MODE_HOST) broadcastState(); // Sync removed item
+            if (senderId === state.myId) renderInventory(); // Update local UI for Host/Bot
+            
+            // Broadcast event to trigger animation
+            if (currentMode === MODE_HOST) {
+                broadcast({ type: 'EVENT_ITEM', payload: { senderId, item, targetId, extraData } });
+            }
+            
+            // Local fallback for Host/Bot
+            if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
+                playItemEvent(senderId, item, targetId, extraData);
+            }
+        }
+        
+        function playItemEvent(senderId, item, targetId, extraData = null) {
+            const sender = state.players.find(p => p.id === senderId);
+            const target = targetId ? state.players.find(p => p.id === targetId) : null;
+            if (!sender) return;
+
+            if (item === 'missile') {
+                if (!target) return;
+                createMissileAnimation(senderId, targetId, () => {
+                    // Explosion logic
+                    if (target.items && target.items.includes('shield')) {
+                        // Shield block
+                        target.items.splice(target.items.indexOf('shield'), 1);
+                        sysChat(`🛡️ ${target.name}님이 방패로 미사일을 막아냈습니다!`);
+                        createShieldEffect(targetId);
+                        if (currentMode === MODE_HOST || currentMode === MODE_BOT) broadcastState();
+                    } else {
+                        // Hit penalty
+                        sysChat(`💥 ${target.name}님이 미사일에 격추되었습니다! (30초 기절)`);
+                        if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
+                            target.penaltyEndTime = Date.now() + 30000;
+                            updateStatus(targetId, 'dead');
+                            broadcastState();
+                            const wrap = document.getElementById(`char-wrap-${targetId}`);
+                            if (wrap) {
+                                wrap.style.transition = 'transform 1s ease-out';
+                                wrap.style.transform = `translate(0, -100px) rotate(180deg) scale(0.7)`;
+                                setTimeout(() => {
+                                    wrap.style.transition = 'none';
+                                    wrap.style.transform = 'translate(0, 0) scale(1)';
+                                    updateStatus(targetId, 'idle');
+                                    broadcastState();
+                                }, 30000);
+                            }
+                        }
+                    }
+                });
+            } else if (item === 'word_change') {
+                if (!target || !extraData) return;
+                sysChat(`🃏 ${target.name}님의 금기어가 변경되었습니다.`);
+                if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
+                    const allWords = Object.values(target.words).flat();
+                    if (allWords.length > extraData.wordIdx) {
+                        allWords[extraData.wordIdx] = extraData.newWord;
+                    }
+                    target.words = { 'system': allWords }; // Replace the entire map to prevent appending
+                    broadcastState();
+                    renderWordsPanel();
+                }
+            } else if (item === 'word_add') {
+                if (!extraData || !extraData.wordMap) return;
+                sysChat(`➕ 참가자들에게 각각 새로운 금기어가 1개씩 추가되었습니다.`);
+                if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
+                    state.players.forEach(p => {
+                        const newWord = extraData.wordMap[p.id];
+                        if (newWord) {
+                            if (!p.words) p.words = {};
+                            if (!p.words['system']) p.words['system'] = [];
+                            p.words['system'].push(newWord);
+                        }
+                    });
+                    broadcastState();
+                    renderWordsPanel();
+                }
             }
         }
 
@@ -1280,8 +1779,8 @@
             container.style.position = 'absolute';
             container.style.width = '150px';
             container.style.height = '100px';
-            container.style.left = (x - 150) + 'px'; // Swoop in from top left
-            container.style.top = '-100px'; // Offscreen top
+            container.style.left = (x - 300) + 'px'; // Swoop in from further top left
+            container.style.top = '-200px'; // Offscreen top
             container.style.zIndex = '30';
             container.innerHTML = getGullSvg();
             
@@ -1295,33 +1794,36 @@
             container.appendChild(style);
             document.getElementById('stage').appendChild(container);
 
-            // 1. Swoop down
-            container.style.transition = 'top 0.6s cubic-bezier(0.5, 0, 0.8, 1), left 0.6s linear';
+            // 1. Swoop down and slow down sharply at the head (ease-out)
+            container.style.transition = 'top 0.8s cubic-bezier(0.1, 0.8, 0.3, 1), left 0.8s ease-out';
             void container.offsetWidth;
             container.style.top = (y - 70) + 'px'; // Land talons on head
             container.style.left = (x - 55) + 'px';
 
             setTimeout(() => {
-                // 2. Grab character and fly up!
+                // Pause briefly to snatch
                 if (callback) callback();
 
-                const wrap = document.getElementById(`char-wrap-${playerId}`);
-                if (wrap) {
-                    wrap.style.animation = 'none'; 
-                    wrap.style.transition = 'transform 2.5s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 2s ease-in';
-                    wrap.style.transform = 'translateY(-800px) scale(0.5)';
-                    wrap.style.opacity = '0';
-                }
-                
-                container.style.transition = 'top 2.5s cubic-bezier(0.2, 0.8, 0.2, 1), left 2.5s linear, transform 2.5s ease-in, opacity 2s ease-in';
-                container.style.top = (y - 870) + 'px';
-                container.style.left = (x + 100) + 'px'; // Fly away to top right
-                container.style.transform = 'scale(0.5)';
-                container.style.opacity = '0';
-                
-                setTimeout(() => container.remove(), 2500);
+                setTimeout(() => {
+                    // 2. Grab character and fly up to the opposite corner (top right)
+                    const wrap = document.getElementById(`char-wrap-${playerId}`);
+                    if (wrap) {
+                        wrap.style.animation = 'none'; 
+                        wrap.style.transition = 'transform 2s ease-in, opacity 1.5s ease-in';
+                        wrap.style.transform = 'translate(400px, -600px) scale(0.5)';
+                        wrap.style.opacity = '0';
+                    }
+                    
+                    container.style.transition = 'top 2s ease-in, left 2s ease-in, transform 2s ease-in, opacity 1.5s ease-in';
+                    container.style.top = (y - 670) + 'px';
+                    container.style.left = (x + 345) + 'px'; // Fly away to top right
+                    container.style.transform = 'scale(0.5)';
+                    container.style.opacity = '0';
+                    
+                    setTimeout(() => container.remove(), 2000);
+                }, 200);
 
-            }, 600);
+            }, 800);
         }
         
         function updateChatUI() {
@@ -1348,6 +1850,17 @@
                 els.chatInput.disabled = false; els.chatSend.disabled = false;
                 els.chatInput.placeholder = "메시지 입력...";
             }
+            
+            const itemTimerEl = document.getElementById('item-timer');
+            if (state.room.itemEnabled && state.room.nextItemDropTime) {
+                const dropRemain = Math.max(0, Math.ceil((state.room.nextItemDropTime - Date.now()) / 1000));
+                const m = Math.floor(dropRemain / 60).toString().padStart(2, '0');
+                const s = (dropRemain % 60).toString().padStart(2, '0');
+                itemTimerEl.textContent = `다음 보급: ${m}:${s}`;
+                itemTimerEl.classList.remove('hidden');
+            } else {
+                itemTimerEl.classList.add('hidden');
+            }
         }
 
         function updateStatus(id, newStatus) {
@@ -1364,6 +1877,15 @@
         function triggerFly(playerId, word, specialEvent = null) {
             const player = state.players.find(p => p.id === playerId);
             if (!player) return;
+
+            // --- Shield Intercept ---
+            if (player.items && player.items.includes('shield')) {
+                player.items.splice(player.items.indexOf('shield'), 1); // Consume shield
+                sysChat(`🛡️ ${player.name}님이 방패로 치명적인 공격을 방어했습니다!`);
+                createShieldEffect(playerId);
+                if (currentMode === MODE_HOST || currentMode === MODE_BOT) broadcastState();
+                return; // Stop fly/penalty
+            }
 
             // Clear any previous animation timeouts to prevent desync glitches
             if (player.flyTimeouts) player.flyTimeouts.forEach(clearTimeout);
@@ -1515,6 +2037,167 @@
                 }
             }, 1000);
         }
+        function createShieldEffect(playerId) {
+            const wrap = document.getElementById(`char-wrap-${playerId}`);
+            if (!wrap) return;
+            const shield = document.createElement('div');
+            shield.style.position = 'absolute';
+            shield.style.width = '120px';
+            shield.style.height = '120px';
+            shield.style.borderRadius = '50%';
+            shield.style.background = 'radial-gradient(circle, rgba(30,144,255,0.2) 0%, rgba(30,144,255,0.6) 90%, rgba(30,144,255,0.9) 100%)';
+            shield.style.boxShadow = '0 0 20px rgba(30,144,255,0.8)';
+            shield.style.top = '-15px';
+            shield.style.left = '-25px';
+            shield.style.zIndex = '35';
+            shield.style.pointerEvents = 'none';
+            shield.style.transition = 'opacity 1s, transform 0.5s';
+            shield.style.transform = 'scale(0)';
+            wrap.appendChild(shield);
+            
+            requestAnimationFrame(() => {
+                shield.style.transform = 'scale(1)';
+            });
+            
+            setTimeout(() => {
+                shield.style.opacity = '0';
+                shield.style.transform = 'scale(1.2)';
+                setTimeout(() => shield.remove(), 1000);
+            }, 1500);
+            playTone(800, 'sine', 0.5, 0.5);
+        }
+
+        function createExplosionEffect(x, y) {
+            const stage = document.getElementById('stage');
+            const boom = document.createElement('div');
+            boom.style.position = 'absolute'; boom.style.left = x + 'px'; boom.style.top = y + 'px';
+            boom.style.width = '10px'; boom.style.height = '10px'; boom.style.borderRadius = '50%';
+            boom.style.zIndex = '60'; boom.style.animation = 'boom 0.6s ease-out forwards';
+            stage.appendChild(boom);
+            
+            const ring = document.createElement('div');
+            ring.style.position = 'absolute'; ring.style.left = x + 'px'; ring.style.top = y + 'px';
+            ring.style.width = '10px'; ring.style.height = '10px'; ring.style.borderRadius = '50%';
+            ring.style.border = 'solid'; ring.style.zIndex = '59'; ring.style.animation = 'boom-ring 0.6s ease-out forwards';
+            stage.appendChild(ring);
+            
+            createBloodEffect(x, y);
+            setTimeout(() => { boom.remove(); ring.remove(); }, 600);
+        }
+
+        function createMissileAnimation(senderId, targetId, onHit) {
+            const senderWrap = document.getElementById(`char-wrap-${senderId}`);
+            const targetWrap = document.getElementById(`char-wrap-${targetId}`);
+            const stage = document.getElementById('stage');
+            if (!senderWrap || !targetWrap) { if (onHit) onHit(); return; }
+            
+            const stageRect = stage.getBoundingClientRect();
+            const sX = senderWrap.getBoundingClientRect().left - stageRect.left + 35;
+            const sY = senderWrap.getBoundingClientRect().top - stageRect.top + 45;
+            
+            const missile = document.createElement('div');
+            missile.style.position = 'absolute';
+            missile.style.width = '60px'; missile.style.height = '60px';
+            missile.style.zIndex = '50';
+            missile.style.transformOrigin = 'center center';
+            // Custom drawn commercial-free SVG missile facing right (0 degrees)
+            missile.innerHTML = `<svg viewBox="0 0 100 100" style="width:100%; height:100%; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));">
+                <path d="M 20 40 L 70 40 L 90 50 L 70 60 L 20 60 Z" fill="#ecf0f1"/>
+                <path d="M 70 40 L 90 50 L 70 60 Z" fill="#e74c3c"/>
+                <path d="M 20 40 L 10 25 L 30 40 Z" fill="#c0392b"/>
+                <path d="M 20 60 L 10 75 L 30 60 Z" fill="#c0392b"/>
+                <path d="M 20 40 L 20 60 L 10 50 Z" fill="#7f8c8d"/>
+                <circle cx="65" cy="50" r="4" fill="#34495e"/>
+            </svg>`;
+            stage.appendChild(missile);
+            
+            let curX = sX, curY = sY, angle = -90;
+            const centerX = stageRect.width / 2;
+            const centerY = 150;
+            
+            let startTime = performance.now();
+            let phase = 1; // 1: go to center, 2: infinity loop, 3: strike
+            let phaseTime = 0;
+            let lastSmokeTime = 0;
+            let p3StartX = 0, p3StartY = 0;
+            
+            playTone(150, 'sawtooth', 0.5, 0.5); // launch sound
+            
+            function animate(time) {
+                const dt = time - startTime;
+                
+                // Smoke trail
+                if (time - lastSmokeTime > 40) {
+                    lastSmokeTime = time;
+                    const smoke = document.createElement('div');
+                    smoke.style.position = 'absolute'; smoke.style.left = (curX - 15 * Math.cos(angle*Math.PI/180)) + 'px'; smoke.style.top = (curY - 15 * Math.sin(angle*Math.PI/180)) + 'px';
+                    smoke.style.width = '12px'; smoke.style.height = '12px'; smoke.style.borderRadius = '50%';
+                    smoke.style.background = 'rgba(200,200,200,0.8)'; smoke.style.transform = 'translate(-50%, -50%) scale(1)';
+                    smoke.style.transition = 'transform 0.8s, opacity 0.8s'; smoke.style.pointerEvents = 'none'; smoke.style.zIndex = '49';
+                    stage.appendChild(smoke);
+                    requestAnimationFrame(() => { smoke.style.transform = 'translate(-50%, -50%) scale(3)'; smoke.style.opacity = '0'; });
+                    setTimeout(() => smoke.remove(), 800);
+                }
+
+                if (phase === 1) {
+                    const progress = Math.min(dt / 800, 1);
+                    const ease = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+                    curX = sX + (centerX - sX) * ease;
+                    curY = sY - 100 * ease; // arch up slightly
+                    angle = Math.atan2((centerY - sY - 100), (centerX - sX)) * 180 / Math.PI;
+                    if (progress >= 1) { phase = 2; phaseTime = time; }
+                } else if (phase === 2) {
+                    const t = (time - phaseTime) / 1000 * Math.PI; // speed
+                    if (t > Math.PI * 4) { 
+                        phase = 3; phaseTime = time; p3StartX = curX; p3StartY = curY; 
+                        playTone(400, 'square', 0.8, 0.6); 
+                    } // 2 loops, strike sound
+                    else {
+                        const A = 150, B = 80;
+                        const nextX = centerX + A * Math.sin(t);
+                        const nextY = centerY + B * Math.sin(2 * t) / 2;
+                        angle = Math.atan2(nextY - curY, nextX - curX) * 180 / Math.PI;
+                        curX = nextX; curY = nextY;
+                    }
+                } else if (phase === 3) {
+                    const tRect = targetWrap.getBoundingClientRect();
+                    const tX = tRect.left - stageRect.left + 35;
+                    const tY = tRect.top - stageRect.top + 45;
+                    const progress = Math.min((time - phaseTime) / 300, 1); // 0.3s to strike
+                    curX = p3StartX + (tX - p3StartX) * progress;
+                    curY = p3StartY + (tY - p3StartY) * progress;
+                    angle = Math.atan2(tY - p3StartY, tX - p3StartX) * 180 / Math.PI;
+                    if (progress >= 1) {
+                        missile.remove();
+                        playTone(100, 'square', 0.8, 1); // Boom sound
+                        createExplosionEffect(tX, tY);
+                        if (onHit) onHit();
+                        return;
+                    }
+                }
+                
+                missile.style.left = (curX - 30) + 'px';
+                missile.style.top = (curY - 30) + 'px';
+                missile.style.transform = `rotate(${angle}deg)`;
+                requestAnimationFrame(animate);
+            }
+            requestAnimationFrame(animate);
+        }
+        
+        // --- Exports for Inline Handlers ---
+        window.leaveRoom = leaveRoom;
+        window.toggleOption = toggleOption;
+        window.changeWords = changeWords;
+        window.createMultiplayerRoom = createMultiplayerRoom;
+        window.showJoinInput = showJoinInput;
+        window.joinMultiplayerRoom = joinMultiplayerRoom;
+        window.quickStartBotMode = quickStartBotMode;
+        window.addBotToRoom = addBotToRoom;
+        window.startGame = startGame;
+        window.toggleReady = toggleReady;
+        window.submitWords = submitWords;
+        window.closeTargetModal = closeTargetModal;
+    })();
     </script>
 </body>
 </html>
