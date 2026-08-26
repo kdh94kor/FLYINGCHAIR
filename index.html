@@ -767,6 +767,7 @@
         function leaveRoom() {
             if (socket) { socket.disconnect(); socket = null; }
             currentMode = null;
+            roomCode = null;
             state.room.status = 'lobby';
             updateBodyState();
             state.players = [];
@@ -783,6 +784,13 @@
             document.getElementById('inventory-items').innerHTML = '';
             document.getElementById('room-code-display').classList.add('hidden');
             document.getElementById('join-input-area').classList.add('hidden');
+            
+            const btnReady = document.getElementById('btn-ready');
+            if (btnReady) {
+                btnReady.textContent = '🚀 준비하기';
+                btnReady.className = 'btn btn-success';
+            }
+            
             switchView('lobby-view');
         }
 
@@ -882,7 +890,7 @@
                 slot.className = 'chair-slot';
                 const showReady = p.isReady && state.room.status === 'waiting';
                 slot.innerHTML = `
-                    <div class="ready-badge ${showReady ? '' : 'hidden'}" style="position:absolute; top:-35px; left:50%; transform:translateX(-50%); background:var(--accent); color:white; font-size:0.75rem; padding:4px 8px; border-radius:12px; font-weight:bold; white-space:nowrap; z-index:25; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">준비 완료!</div>
+                    <div class="ready-badge ${showReady ? '' : 'hidden'}" style="position:absolute; bottom:-48px; left:50%; transform:translateX(-50%); background:var(--accent); color:white; font-size:0.75rem; padding:4px 8px; border-radius:12px; font-weight:bold; white-space:nowrap; z-index:25; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">준비 완료!</div>
                     <div class="chair-base" id="chair-${p.id}"><div class="chair-back"></div></div>
                     <div class="character-wrapper status-${p.status}" id="char-wrap-${p.id}">
                         <div class="speech-bubble" id="bubble-${p.id}"></div>
@@ -1016,14 +1024,20 @@
         
         function updateMissingPlayersUI() {
             if (state.room.status !== 'word_setting') return;
-            const missing = state.players.filter(p => !p.isBot && !p.hasSubmittedWords).map(p => p.name);
+            const me = state.players.find(p => p.id === state.myId);
             const listEl = document.getElementById('missing-players-list');
-            if (listEl) {
+            if (!listEl) return;
+            
+            if (me && me.hasSubmittedWords) {
+                const missing = state.players.filter(p => !p.isBot && !p.hasSubmittedWords).map(p => p.name);
                 if (missing.length > 0) {
                     listEl.textContent = `미입력자: ${missing.join(', ')}`;
                 } else {
                     listEl.textContent = '모두 입력 완료! 게임 시작 대기 중...';
                 }
+                listEl.style.display = 'block';
+            } else {
+                listEl.style.display = 'none';
             }
         }
 
