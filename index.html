@@ -181,6 +181,8 @@
             .chat-messages { padding: 8px 12px; padding-bottom: 95px; gap: 6px; }
             .chat-input-area { position: fixed; bottom: 0; left: 0; right: 0; padding: 8px 10px; z-index: 1000; background: var(--bg-darker); box-shadow: 0 -2px 10px rgba(0,0,0,0.5); }
             .inventory-bar { position: fixed; bottom: 53px; left: 0; right: 0; z-index: 1000; box-shadow: 0 -2px 10px rgba(0,0,0,0.5); }
+            .inventory-label { display: none; }
+            .item-btn { font-size: 0.7rem; padding: 4px 8px; }
 
             .words-bar { padding: 4px 6px; gap: 4px; }
             .word-chip { font-size: 0.65rem; padding: 1px 5px; }
@@ -319,7 +321,7 @@
                 </div>
                 <!-- Inventory Bar -->
                 <div class="inventory-bar hidden" id="inventory-bar" style="background:var(--bg-panel); padding:6px 12px; display:flex; gap:8px; border-top:1px solid #333; align-items:center; overflow-x:auto;">
-                    <span style="font-size:0.75rem; color:var(--text-muted); white-space:nowrap;">가방:</span>
+                    <span class="inventory-label" style="font-size:0.75rem; color:var(--text-muted); white-space:nowrap;">가방:</span>
                     <div id="inventory-items" style="display:flex; gap:6px;"></div>
                 </div>
                 <div class="chat-input-area">
@@ -1061,14 +1063,13 @@
             const dropInterval = currentMode === MODE_BOT ? 30000 : 300000;
             state.room.nextItemDropTime = Date.now() + dropInterval;
             
-            const alivePlayers = state.players.filter(p => p.status !== 'dead' && p.status !== 'dead-gator' && p.status !== 'snatched');
-            if (alivePlayers.length === 0) {
+            if (state.players.length === 0) {
                 broadcastState();
                 return;
             }
             
             const itemTypes = ['missile', 'shield', 'word_change', 'word_add'];
-            alivePlayers.forEach(p => {
+            state.players.forEach(p => {
                 const randomItem = itemTypes[Math.floor(Math.random() * itemTypes.length)];
                 if (!p.items) p.items = [];
                 p.items.push(randomItem);
@@ -1220,15 +1221,15 @@
             const inputs = list.querySelectorAll('input');
             const wordMap = {};
             
-            let allFilled = true;
+            let allValid = true;
             inputs.forEach(input => {
                 const val = input.value.trim();
-                if (!val) allFilled = false;
+                if (val.length < 2) allValid = false;
                 wordMap[input.dataset.targetId] = val;
             });
             
-            if (!allFilled) {
-                alert('모든 참가자의 금기어를 입력해주세요.');
+            if (!allValid) {
+                alert('모든 참가자의 금기어를 각각 2글자 이상으로 입력해주세요!');
                 return;
             }
             
@@ -1279,13 +1280,16 @@
         function selectTarget(targetId) {
             if (!pendingItemUse) return;
             const { item, index } = pendingItemUse;
-            closeTargetModal();
+            
+            document.getElementById('modal-target-selection').classList.add('hidden');
             
             if (item === 'word_change') {
                 pendingItemUse.targetId = targetId; // Save targetId for the next step
                 openWordChangeModal(targetId);
                 return; // Stop here, wait for modal submit
             }
+            
+            pendingItemUse = null;
             
             // For other targeted items (like missile)
             if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
@@ -1363,8 +1367,12 @@
                 }
             });
             
-            if (changedIdx === -1 || !newWord) {
+            if (changedIdx === -1) {
                 alert('단어를 변경해주세요.');
+                return;
+            }
+            if (newWord.length < 2) {
+                alert('변경할 단어를 2글자 이상으로 입력해주세요!');
                 return;
             }
             
@@ -1416,22 +1424,43 @@
                         if (currentMode === MODE_HOST || currentMode === MODE_BOT) broadcastState();
                     } else {
                         // Hit penalty
-                        sysChat(`💥 ${target.name}님이 미사일에 격추되었습니다! (30초 기절)`);
+                        const now = Date.now();
+                        let totalSec = 30;
+                        if (target.penaltyEndTime && target.penaltyEndTime > now) {
+                            totalSec = Math.ceil((target.penaltyEndTime - now) / 1000) + 30;
+                        }
+                        sysChat(`💥 ${target.name}님이 미사일에 격추되었습니다! (기절 누적: 총 ${totalSec}초)`);
+                        
                         if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
-                            target.penaltyEndTime = Date.now() + 30000;
+                            let stunDuration = 30000;
+                            if (target.penaltyEndTime && target.penaltyEndTime > now) {
+                                const remain = target.penaltyEndTime - now;
+                                target.penaltyEndTime += stunDuration;
+                                stunDuration += remain;
+                            } else {
+                                target.penaltyEndTime = now + stunDuration;
+                            }
+                            
                             updateStatus(targetId, 'dead');
                             broadcastState();
+                            
                             const wrap = document.getElementById(`char-wrap-${targetId}`);
                             if (wrap) {
                                 wrap.style.transition = 'transform 1s ease-out';
                                 wrap.style.transform = `translate(0, -100px) rotate(180deg) scale(0.7)`;
-                                setTimeout(() => {
+                            }
+                            
+                            if (target.reviveTimeout) clearTimeout(target.reviveTimeout);
+                            
+                            target.reviveTimeout = setTimeout(() => {
+                                if (wrap) {
                                     wrap.style.transition = 'none';
                                     wrap.style.transform = 'translate(0, 0) scale(1)';
-                                    updateStatus(targetId, 'idle');
-                                    broadcastState();
-                                }, 30000);
-                            }
+                                }
+                                target.penaltyEndTime = null;
+                                updateStatus(targetId, 'idle');
+                                broadcastState();
+                            }, stunDuration);
                         }
                     }
                 });
@@ -2197,6 +2226,10 @@
         window.toggleReady = toggleReady;
         window.submitWords = submitWords;
         window.closeTargetModal = closeTargetModal;
+        window.closeWordAddModal = closeWordAddModal;
+        window.submitWordAdd = submitWordAdd;
+        window.closeWordChangeModal = closeWordChangeModal;
+        window.submitWordChange = submitWordChange;
     })();
     </script>
 </body>
