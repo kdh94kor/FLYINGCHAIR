@@ -838,14 +838,35 @@
 
         // --- Stage Render ---
         function updateStageGap() {
-            const numPlayers = state.players.length || 1;
+            const numPlayers = Math.max(state.players.length, 1);
             const isMobile = window.innerWidth <= 768;
-            let gap = isMobile ? 10 : 30; // 6 players default
-            if (numPlayers <= 2) gap = isMobile ? 100 : 250;
-            else if (numPlayers === 3) gap = isMobile ? 60 : 150;
-            else if (numPlayers === 4) gap = isMobile ? 40 : 100;
-            else if (numPlayers === 5) gap = isMobile ? 25 : 60;
-            els.chairsContainer.style.gap = `${gap}px`;
+            
+            const stageEl = document.getElementById('stage');
+            if (!stageEl) return;
+            const stageWidth = stageEl.clientWidth;
+            
+            // Determine chair size
+            const slotWidth = isMobile ? 50 : 80;
+            
+            // To prevent speech bubbles on the edge characters from getting cut off,
+            // we reserve a safe margin on the left and right sides.
+            // Speech bubbles are up to 200px wide (100px each side from center).
+            const safeMargin = isMobile ? 50 : 120;
+            const availableWidth = stageWidth - (safeMargin * 2);
+            const charsWidth = numPlayers * slotWidth;
+            
+            let gap = 0;
+            if (numPlayers > 1) {
+                gap = (availableWidth - charsWidth) / (numPlayers - 1);
+            }
+            
+            // Constrain the gap within reasonable min and max limits
+            const minGap = isMobile ? 10 : 30;
+            const maxGap = isMobile ? 120 : 300;
+            
+            gap = Math.max(minGap, Math.min(gap, maxGap));
+            
+            els.chairsContainer.style.gap = `${Math.floor(gap)}px`;
         }
         window.addEventListener('resize', updateStageGap);
 
