@@ -767,8 +767,8 @@
             audioCtx.resume();
             currentMode = MODE_BOT;
             state.myId = 'player-local';
-            const { wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled } = getRoomOptions();
-            state.room = { status: 'waiting', title: '시뮬레이션 방', wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled };
+            const { wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds } = getRoomOptions();
+            state.room = { status: 'waiting', title: '시뮬레이션 방', wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds };
             updateBodyState();
             state.players = [{ id: state.myId, name: els.nickname.value.trim() || '게스트', gender: document.querySelector('input[name="gender"]:checked').value, isBot: false, words: {}, splashCount: 0, status: 'idle', items: [] }];
             
@@ -946,7 +946,7 @@
                 slot.className = 'chair-slot';
                 const showReady = p.isReady && state.room.status === 'waiting';
                 slot.innerHTML = `
-                    <div class="ready-badge ${showReady ? '' : 'hidden'}" style="position:absolute; bottom:-48px; left:50%; transform:translateX(-50%); background:var(--accent); color:white; font-size:0.75rem; padding:4px 8px; border-radius:12px; font-weight:bold; white-space:nowrap; z-index:25; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">준비 완료!</div>
+                    <div class="ready-badge ${showReady ? '' : 'hidden'}" style="position:absolute; bottom:5px; left:50%; transform:translateX(-50%); background:var(--accent); color:white; font-size:0.75rem; padding:4px 8px; border-radius:12px; font-weight:bold; white-space:nowrap; z-index:25; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">준비 완료!</div>
                     <div class="chair-base" id="chair-${p.id}"><div class="chair-back"></div></div>
                     <div class="character-wrapper status-${p.status}" id="char-wrap-${p.id}">
                         <div class="speech-bubble" id="bubble-${p.id}"></div>
@@ -1154,7 +1154,7 @@
             sysChat('🎁 보급품이 도착했습니다! 가방을 확인하세요.');
             broadcast({ type: 'EVENT_SYS', payload: { text: '🎁 보급품이 도착했습니다! 가방을 확인하세요.' } });
             
-            if (currentMode === MODE_BOT) renderInventory();
+            renderInventory();
         }
 
         function renderWordsPanel() {
@@ -1247,7 +1247,7 @@
                 return sysChat('행동 불능 상태에서는 미사일 등 공격 아이템을 사용할 수 없습니다.');
             }
             if (item === 'shield') {
-                sysChat('방패는 패시브 아이템입니다. 해로운 효과를 1회 자동 방어합니다.');
+                alert('🛡️ 방패는 직접 사용할 수 없는 패시브 아이템입니다.\n치명적인 공격(상어, 악어, 미사일)을 받았을 때 자동으로 1회 막아줍니다.');
             } else if (item === 'missile' || item === 'word_change') {
                 pendingItemUse = { item, index };
                 openTargetModal();
@@ -1314,7 +1314,7 @@
             if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
                 executeItem(state.myId, item, index, null, extraData);
             } else {
-                socket.emit('SEND_TO_HOST', { type: 'USE_ITEM', payload: { item, index, targetId: null, extraData } });
+                socket.emit('SEND_TO_HOST', { roomCode, type: 'USE_ITEM', payload: { item, index, targetId: null, extraData } });
             }
         }
         
@@ -1328,8 +1328,8 @@
                 // Word change can target anyone, including dead players and yourself
                 targets = state.players;
             } else {
-                // Missile etc.
-                targets = state.players.filter(p => p.id !== state.myId && p.status !== 'dead' && p.status !== 'dead-gator' && p.status !== 'snatched');
+                // Missile etc. - Only target those sitting in the chair (idle)
+                targets = state.players.filter(p => p.id !== state.myId && p.status === 'idle');
             }
             
             if (targets.length === 0) {
@@ -1371,7 +1371,7 @@
                 // Host executing directly
                 executeItem(state.myId, item, index, targetId, null);
             } else {
-                socket.emit('SEND_TO_HOST', { type: 'USE_ITEM', payload: { item, index, targetId, extraData: null } });
+                socket.emit('SEND_TO_HOST', { roomCode, type: 'USE_ITEM', payload: { item, index, targetId, extraData: null } });
             }
         }
         
@@ -1457,7 +1457,7 @@
             if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
                 executeItem(state.myId, item, index, targetId, extraData);
             } else {
-                socket.emit('SEND_TO_HOST', { type: 'USE_ITEM', payload: { item, index, targetId, extraData } });
+                socket.emit('SEND_TO_HOST', { roomCode, type: 'USE_ITEM', payload: { item, index, targetId, extraData } });
             }
         }
 
@@ -1489,14 +1489,23 @@
 
             if (item === 'missile') {
                 if (!target) return;
+                
+                const willBlock = target.items && target.items.includes('shield');
+                
+                if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
+                    if (willBlock) {
+                        target.items.splice(target.items.indexOf('shield'), 1);
+                        if (targetId === state.myId) renderInventory();
+                    }
+                    broadcastState();
+                }
+                
                 createMissileAnimation(senderId, targetId, () => {
                     // Explosion logic
-                    if (target.items && target.items.includes('shield')) {
+                    if (willBlock) {
                         // Shield block
-                        target.items.splice(target.items.indexOf('shield'), 1);
                         sysChat(`🛡️ ${target.name}님이 방패로 미사일을 막아냈습니다!`);
                         createShieldEffect(targetId);
-                        if (currentMode === MODE_HOST || currentMode === MODE_BOT) broadcastState();
                     } else {
                         // Hit penalty
                         const now = Date.now();
@@ -1983,12 +1992,16 @@
             if (!player) return;
 
             // --- Shield Intercept ---
-            if (player.items && player.items.includes('shield')) {
-                player.items.splice(player.items.indexOf('shield'), 1); // Consume shield
-                sysChat(`🛡️ ${player.name}님이 방패로 치명적인 공격을 방어했습니다!`);
-                createShieldEffect(playerId);
-                if (currentMode === MODE_HOST || currentMode === MODE_BOT) broadcastState();
-                return; // Stop fly/penalty
+            if (specialEvent === 'shark' || specialEvent === 'gator') {
+                if (player.items && player.items.includes('shield')) {
+                    player.items.splice(player.items.indexOf('shield'), 1); // Consume shield
+                    const attackName = specialEvent === 'shark' ? '상어' : '악어 떼';
+                    sysChat(`🛡️ ${player.name}님이 방패로 ${attackName}의 치명적인 공격을 방어했습니다!`);
+                    createShieldEffect(playerId);
+                    if (currentMode === MODE_HOST || currentMode === MODE_BOT) broadcastState();
+                    if (playerId === state.myId) renderInventory();
+                    specialEvent = null; // Revert to normal fly (do not return, they still fly)
+                }
             }
 
             // Clear any previous animation timeouts to prevent desync glitches
@@ -2003,7 +2016,7 @@
             if (badge) { badge.textContent = player.splashCount; badge.classList.remove('hidden'); }
 
             playWarningSound();
-            const reasonText = word === '[30초 침묵]' ? '30초 침묵 강제 입수!' : `금기어 적발!`;
+            const reasonText = word && word.includes('침묵') ? `${word.replace(/[\[\]]/g, '')} 강제 입수!` : `금기어 적발!`;
             showSubtitle(`🚨 ${player.name} ${reasonText}`);
 
             const wrap = document.getElementById(`char-wrap-${playerId}`);
