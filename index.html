@@ -466,7 +466,33 @@
         function playWarningSound() { playTone(800, 'square', 0.2, 0.1); setTimeout(() => playTone(600, 'square', 0.2, 0.1), 200); }
         function playSharkSound() { playTone(100, 'sawtooth', 0.5, 0.4); setTimeout(() => playTone(70, 'sawtooth', 2.0, 0.5), 300); }
 
-        // --- UI Utils ---
+        // --- UI Utils & Browser Events ---
+        window.addEventListener('popstate', function(event) {
+            if (currentMode && (document.getElementById('room-view').classList.contains('hidden') === false)) {
+                if (confirm("퇴장하시겠습니까?")) {
+                    leaveRoom();
+                } else {
+                    history.pushState(null, document.title, location.href);
+                }
+            }
+        });
+        
+        window.addEventListener('pagehide', function() {
+            // Prevent ghost connections when mobile browser is closed or backgrounded
+            if (socket) socket.disconnect();
+        });
+
+        window.addEventListener('visibilitychange', function() {
+            // Mobile background prevention fallback (Prevent Ghost Connections)
+            if (document.visibilityState === 'hidden' && socket) {
+                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                if (isMobile) {
+                    socket.disconnect();
+                    leaveRoom();
+                }
+            }
+        });
+
         function switchView(viewId) {
             els.lobbyView.classList.add('hidden');
             els.roomView.classList.add('hidden');
@@ -474,6 +500,7 @@
             if (viewId === 'room-view') {
                 els.chatInput.disabled = false;
                 els.chatSend.disabled = false;
+                history.pushState(null, document.title, location.href); // Trap back button
             }
         }
         function showJoinInput() {
