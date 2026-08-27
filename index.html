@@ -293,6 +293,10 @@
                 방 코드: <span id="room-code-text" style="color:var(--accent); font-size:1.5em; letter-spacing:2px;"></span>
             </h3>
             
+            <div id="room-rules-display" style="margin-top:10px; padding:10px; background:var(--bg-darker); border-radius:6px; font-size:0.85rem; color:#ccc;">
+                <!-- Rules injected dynamically -->
+            </div>
+            
             <h3 style="margin-top:15px;">참가자 (<span id="player-count">0</span>/6)</h3>
             <ul id="player-list" style="list-style:none; margin-bottom: 10px; color:#ddd; padding: 10px; background:var(--bg-darker); border-radius:6px; max-height: 100px; overflow-y: auto;"></ul>
             
@@ -887,6 +891,29 @@
                 list.appendChild(li);
             });
             
+            // Update Rules Display
+            const rulesEl = document.getElementById('room-rules-display');
+            if (state.room && rulesEl) {
+                const rules = [];
+                if (state.room.wordsPerPlayer) {
+                    rules.push(`🔹 단어 수: 1인당 ${state.room.wordsPerPlayer}개`);
+                }
+                if (state.room.afkEnabled) {
+                    rules.push(`🔹 침묵 페널티: ${state.room.afkSeconds}초 후 발사`);
+                }
+                if (state.room.itemEnabled) {
+                    rules.push(`🔹 아이템 보급: ${state.room.itemSeconds}초 마다`);
+                }
+                
+                if (rules.length > 0) {
+                    rulesEl.innerHTML = `<div style="font-weight:bold; margin-bottom:5px; color:var(--text-light);">[방 규칙]</div>` + rules.join('<br>');
+                    rulesEl.classList.remove('hidden');
+                } else {
+                    rulesEl.innerHTML = '';
+                    rulesEl.classList.add('hidden');
+                }
+            }
+            
             if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
                 const guests = state.players.filter(p => !p.isBot && p.id !== state.myId);
                 const allReady = guests.every(p => p.isReady);
@@ -1007,6 +1034,12 @@
                     const charWrap = document.getElementById(`char-wrap-${p.id}`);
                     if (charWrap) {
                         charWrap.className = `character-wrapper status-${p.status}`;
+                        if (p.status === 'idle') {
+                            charWrap.style.transform = 'none';
+                            charWrap.style.opacity = '1';
+                            const chair = document.getElementById(`chair-${p.id}`);
+                            if (chair) chair.classList.remove('tilted');
+                        }
                     }
                     
                     const badge = document.getElementById(`badge-${p.id}`);
@@ -1737,15 +1770,26 @@
 
         function handleChatInput() {
             const val = els.chatInput.value.trim();
-            if (!val) return;
+            if (!val) {
+                els.chatInput.focus();
+                return;
+            }
             if (currentMode === MODE_GUEST) {
                 socket.emit('SEND_TO_HOST', { roomCode, type: 'CHAT', payload: { text: val } });
             } else {
                 sendChat(state.myId, val);
             }
             els.chatInput.value = '';
+            els.chatInput.focus();
         }
-        els.chatInput.addEventListener('keypress', e => { if(e.key === 'Enter') handleChatInput(); });
+        els.chatInput.addEventListener('keypress', e => { if(e.key === 'Enter') { e.preventDefault(); handleChatInput(); } });
+        
+        // Prevent focus loss when clicking/tapping the send button
+        els.chatSend.addEventListener('mousedown', e => e.preventDefault());
+        els.chatSend.addEventListener('touchstart', e => {
+            e.preventDefault();
+            handleChatInput();
+        }, { passive: false });
         els.chatSend.addEventListener('click', handleChatInput);
 
         function startBotChat() {
@@ -2085,8 +2129,22 @@
                 if (newStatus === 'idle') p.lastChatTime = Date.now();
             }
             const wrap = document.getElementById(`char-wrap-${id}`);
-            if (wrap) wrap.className = `character-wrapper status-${newStatus}`;
+            if (wrap) {
+                wrap.className = `character-wrapper status-${newStatus}`;
+                if (newStatus === 'idle') {
+                    // Force clear any lingering inline styles from interrupted animations
+                    wrap.style.transform = 'none';
+                    wrap.style.opacity = '1';
+                    const chair = document.getElementById(`chair-${id}`);
+                    if (chair) chair.classList.remove('tilted');
+                }
+            }
             if (id === state.myId) updateChatUI();
+            
+            if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
+                // Ensure all guests are perfectly synced with status changes (fixes invisible characters)
+                broadcastState();
+            }
         }
 
         function triggerFly(playerId, word, specialEvent = null) {
