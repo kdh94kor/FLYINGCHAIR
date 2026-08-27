@@ -659,7 +659,11 @@
             socket.on('GUEST_DISCONNECTED', (data) => {
                 const pId = data.guestId;
                 const departed = state.players.find(p => p.id === pId);
-                const deptName = departed ? departed.name : '참가자';
+                
+                // If they weren't in the game (e.g., rejected join), ignore the disconnect
+                if (!departed) return;
+                
+                const deptName = departed.name;
                 
                 // Remove departed player from list
                 state.players = state.players.filter(p => p.id !== pId);
