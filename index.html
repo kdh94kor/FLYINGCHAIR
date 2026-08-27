@@ -234,7 +234,7 @@
 
             <div class="option-row" id="opt-words-row">
                 <input type="checkbox" id="opt-words-check" onchange="toggleOption('words')">
-                <label for="opt-words-check" class="option-label">1인당 금기어 개수</label>
+                <label for="opt-words-check" class="option-label">금기어 개수 변경 <span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;">(기본 1개)</span></label>
                 <div class="stepper hidden" id="opt-words-stepper">
                     <button class="stepper-btn" onclick="changeWords(-1)">−</button>
                     <span id="words-count-display">1</span>
@@ -252,8 +252,12 @@
             </div>
 
             <div class="option-row" id="opt-item-row">
-                <input type="checkbox" id="opt-item-check">
-                <label for="opt-item-check" class="option-label">아이템 모드 (5분마다 랜덤 아이템)</label>
+                <input type="checkbox" id="opt-item-check" onchange="toggleOption('item')">
+                <label for="opt-item-check" class="option-label">아이템 모드</label>
+                <div class="hidden" id="opt-item-input" style="display:flex; align-items:center; gap:6px; margin-top:6px;">
+                    <input type="number" id="opt-item-secs" value="300" min="30" max="600" style="width:65px; padding:5px; text-align:center;">
+                    <span style="font-size:0.85rem; color:var(--text-muted);">초 마다 보급</span>
+                </div>
             </div>
 
             
@@ -478,7 +482,11 @@
             } else if (type === 'afk') {
                 const checked = document.getElementById('opt-afk-check').checked;
                 const el = document.getElementById('opt-afk-input');
-                // toggle: remove hidden and set display flex, or add hidden
+                if (checked) { el.classList.remove('hidden'); el.style.display = 'flex'; }
+                else { el.classList.add('hidden'); }
+            } else if (type === 'item') {
+                const checked = document.getElementById('opt-item-check').checked;
+                const el = document.getElementById('opt-item-input');
                 if (checked) { el.classList.remove('hidden'); el.style.display = 'flex'; }
                 else { el.classList.add('hidden'); }
             }
@@ -499,7 +507,12 @@
                 afkSeconds = parseInt(document.getElementById('opt-afk-secs').value, 10);
                 if (isNaN(afkSeconds) || afkSeconds < 30) afkSeconds = 30;
             }
-            return { wordsPerPlayer, afkEnabled: afkChecked, afkSeconds, itemEnabled: itemChecked };
+            let itemSeconds = 300;
+            if (itemChecked) {
+                itemSeconds = parseInt(document.getElementById('opt-item-secs').value, 10);
+                if (isNaN(itemSeconds) || itemSeconds < 30) itemSeconds = 30;
+            }
+            return { wordsPerPlayer, afkEnabled: afkChecked, afkSeconds, itemEnabled: itemChecked, itemSeconds };
         }
 
         // --- Network Logic (Socket.io) ---
@@ -542,7 +555,7 @@
             audioCtx.resume();
             const myName = els.nickname.value.trim() || '방장';
             const myGender = document.querySelector('input[name="gender"]:checked').value;
-            const { wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled } = getRoomOptions();
+            const { wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds } = getRoomOptions();
             
             sysChat('서버 연결 중...');
             if (socket) socket.disconnect();
@@ -567,7 +580,7 @@
                         roomCode = response.roomCode;
                         currentMode = MODE_HOST;
                         state.myId = 'host';
-                        state.room = { status: 'waiting', title: '멀티플레이 방', wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled };
+                        state.room = { status: 'waiting', title: '멀티플레이 방', wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds };
                         updateBodyState();
                         state.players = [{ id: state.myId, name: myName, gender: myGender, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, splashCount: 0, status: 'idle', items: [] }];
                         
@@ -1088,7 +1101,7 @@
             if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
                 if (itemInterval) clearInterval(itemInterval);
                 if (state.room.itemEnabled) {
-                    const dropInterval = currentMode === MODE_BOT ? 30000 : 300000;
+                    const dropInterval = (state.room.itemSeconds * 1000) || 300000;
                     state.room.nextItemDropTime = Date.now() + dropInterval;
                     if (currentMode === MODE_HOST) broadcastState();
                     itemInterval = setInterval(distributeItems, dropInterval);
@@ -1098,7 +1111,7 @@
         }
         
         function distributeItems() {
-            const dropInterval = currentMode === MODE_BOT ? 30000 : 300000;
+            const dropInterval = (state.room.itemSeconds * 1000) || 300000;
             state.room.nextItemDropTime = Date.now() + dropInterval;
             
             if (state.players.length === 0) {
