@@ -476,22 +476,8 @@
                 }
             }
         });
-        
-        window.addEventListener('pagehide', function() {
-            // Prevent ghost connections when mobile browser is closed or backgrounded
-            if (socket) socket.disconnect();
-        });
 
-        window.addEventListener('visibilitychange', function() {
-            // Mobile background prevention fallback (Prevent Ghost Connections)
-            if (document.visibilityState === 'hidden' && socket) {
-                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                if (isMobile) {
-                    socket.disconnect();
-                    leaveRoom();
-                }
-            }
-        });
+
 
         function switchView(viewId) {
             els.lobbyView.classList.add('hidden');
