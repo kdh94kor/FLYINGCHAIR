@@ -339,9 +339,7 @@
 
         <div class="bottom-panel">
             <div class="chat-section">
-                <div class="chat-messages" id="chat-messages">
-                    <div class="msg sys">방에 입장했습니다.</div>
-                </div>
+                <div class="chat-messages" id="chat-messages"></div>
                 <!-- Inventory Bar -->
                 <div class="inventory-bar hidden" id="inventory-bar" style="background:var(--bg-panel); padding:6px 12px; display:flex; gap:8px; border-top:1px solid #333; align-items:center; overflow-x:auto;">
                     <span class="inventory-label" style="font-size:0.75rem; color:var(--text-muted); white-space:nowrap;">가방:</span>
@@ -698,7 +696,7 @@
                 
                 const deptName = departed.name;
                 
-                if (state.room.status === 'waiting') {
+                if (state.room.status === 'waiting' || departed.intentionallyLeft) {
                     // Remove departed player from list
                     state.players = state.players.filter(p => p.id !== pId);
                     
@@ -716,6 +714,7 @@
                     // Game already started! Do NOT remove them from state.players so they can reconnect!
                     // Just notify and maybe mark as disconnected
                     sysChat(`[시스템] ${deptName}님의 연결이 끊어졌습니다. (재연결 대기 중...)`);
+                    broadcast({ type: 'EVENT_SYS', payload: { text: `[시스템] ${deptName}님의 연결이 끊어졌습니다. (재연결 대기 중...)` } });
                     // We can leave their avatar on the chair so it doesn't break the game state
                 }
             });
@@ -746,6 +745,14 @@
                         state.myId = socket.id; // Server uses new socket.id
                         document.getElementById('room-code-display').classList.remove('hidden');
                         document.getElementById('room-code-text').textContent = roomCode;
+                        
+                        sysChat(`방에 입장했습니다. (방 코드: ${roomCode})`);
+                        
+                        if (state.room && state.room.status === 'playing') {
+                            els.chatInput.disabled = false;
+                            els.chatSend.disabled = false;
+                            els.chatInput.placeholder = "메시지 입력...";
+                        }
                     } else {
                         alert(response.reason || '방 입장에 실패했습니다.');
                         socket.disconnect();
@@ -761,6 +768,8 @@
             });
 
             socket.on('disconnect', (reason) => {
+                els.chatInput.disabled = true;
+                els.chatSend.disabled = true;
                 if (reason === 'io server disconnect') {
                     // Server forcibly disconnected — do not reconnect
                     leaveRoom();
@@ -769,6 +778,8 @@
             });
 
             socket.on('connect_error', () => {
+                els.chatInput.disabled = true;
+                els.chatSend.disabled = true;
                 sysChat('서버 연결 오류. 재연결 시도 중...');
             });
         }
@@ -790,6 +801,7 @@
                             });
                         }
                         sysChat(`[시스템] ${existingPlayer.name}님이 재연결되었습니다.`);
+                        broadcast({ type: 'EVENT_SYS', payload: { text: `[시스템] ${existingPlayer.name}님이 재연결되었습니다.` } });
                         broadcastState();
                         updateRoomUI();
                         renderStage();
@@ -817,6 +829,9 @@
                 renderStage();
             } else if (data.type === 'USE_ITEM') {
                 executeItem(guestId, data.payload.item, data.payload.index, data.payload.targetId, data.payload.extraData);
+            } else if (data.type === 'LEAVE') {
+                const p = state.players.find(x => x.id === guestId);
+                if (p) p.intentionallyLeft = true;
             }
         }
 
@@ -896,6 +911,9 @@
         }
 
         function leaveRoom() {
+            if (currentMode === MODE_GUEST && socket) {
+                socket.emit('SEND_TO_HOST', { roomCode, type: 'LEAVE', payload: {} });
+            }
             if (socket) { socket.disconnect(); socket = null; }
             currentMode = null;
             roomCode = null;
@@ -910,6 +928,8 @@
             if(afkInterval) clearInterval(afkInterval);
             if(itemInterval) clearInterval(itemInterval);
             if(chatUiInterval) clearInterval(chatUiInterval);
+            document.getElementById('end-game-btn').classList.add('hidden');
+            document.getElementById('stats-modal').classList.add('hidden');
             document.getElementById('inventory-bar').classList.add('hidden');
             document.getElementById('item-timer').classList.add('hidden');
             document.getElementById('inventory-items').innerHTML = '';
@@ -1518,13 +1538,11 @@
             const wordsList = document.getElementById('stats-my-words-list');
             wordsList.innerHTML = '';
             
-            // Reconstruct my words from what others assigned to me
-            const myWords = [];
-            state.players.forEach(p => {
-                if (p.id !== state.myId && p.words && p.words[state.myId]) {
-                    myWords.push(p.words[state.myId]);
-                }
-            });
+            // Reconstruct my words from what others assigned to me (or system)
+            let myWords = [];
+            if (me.words) {
+                myWords = Object.values(me.words).flat();
+            }
             
             if (myWords.length === 0) {
                 wordsList.innerHTML = '<span style="color:#888;">없음</span>';
@@ -2228,6 +2246,13 @@
         
         function updateChatUI() {
             if (state.room.status !== 'playing') return;
+            
+            if (socket && !socket.connected) {
+                els.chatInput.disabled = true; els.chatSend.disabled = true;
+                els.chatInput.placeholder = "연결 끊김 (재연결 중...)";
+                return;
+            }
+            
             const me = state.players.find(p => p.id === state.myId);
             if (!me) return;
             
@@ -2637,6 +2662,8 @@
         window.submitWordAdd = submitWordAdd;
         window.closeWordChangeModal = closeWordChangeModal;
         window.submitWordChange = submitWordChange;
+        window.endGame = endGame;
+        window.closeStatsModal = closeStatsModal;
     })();
     </script>
 </body>
