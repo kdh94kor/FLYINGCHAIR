@@ -458,7 +458,8 @@
         const state = {
             myId: 'player-' + Math.floor(Math.random()*10000),
             room: { status: 'lobby', title: '' },
-            players: []
+            players: [],
+            disconnectTimeouts: {}
         };
         
         function updateBodyState() {
@@ -712,10 +713,11 @@
                     broadcastState();
                 } else {
                     // Game already started! Do NOT remove them from state.players so they can reconnect!
-                    // Just notify and maybe mark as disconnected
-                    sysChat(`[시스템] ${deptName}님의 연결이 끊어졌습니다. (재연결 대기 중...)`);
-                    broadcast({ type: 'EVENT_SYS', payload: { text: `[시스템] ${deptName}님의 연결이 끊어졌습니다. (재연결 대기 중...)` } });
-                    // We can leave their avatar on the chair so it doesn't break the game state
+                    if (state.disconnectTimeouts[pId]) clearTimeout(state.disconnectTimeouts[pId]);
+                    state.disconnectTimeouts[pId] = setTimeout(() => {
+                        sysChat(`[시스템] ${deptName}님의 연결이 불안정합니다. (재연결 대기 중...)`);
+                        broadcast({ type: 'EVENT_SYS', payload: { text: `[시스템] ${deptName}님의 연결이 불안정합니다. (재연결 대기 중...)` } });
+                    }, 4000);
                 }
             });
 
@@ -746,7 +748,14 @@
                         document.getElementById('room-code-display').classList.remove('hidden');
                         document.getElementById('room-code-text').textContent = roomCode;
                         
-                        sysChat(`방에 입장했습니다. (방 코드: ${roomCode})`);
+                        if (!state.room || state.room.status === 'lobby' || state.room.status === 'waiting') {
+                            sysChat(`방에 입장했습니다. (방 코드: ${roomCode})`);
+                        } else {
+                            if (!window.lastReconnectMsg || Date.now() - window.lastReconnectMsg > 5000) {
+                                sysChat(`서버와 안정적으로 재연결되었습니다.`);
+                                window.lastReconnectMsg = Date.now();
+                            }
+                        }
                         
                         if (state.room && state.room.status === 'playing') {
                             els.chatInput.disabled = false;
@@ -780,7 +789,10 @@
             socket.on('connect_error', () => {
                 els.chatInput.disabled = true;
                 els.chatSend.disabled = true;
-                sysChat('서버 연결 오류. 재연결 시도 중...');
+                if (!window.lastConnectErrorMsg || Date.now() - window.lastConnectErrorMsg > 5000) {
+                    sysChat('서버 연결 오류. 재연결 시도 중...');
+                    window.lastConnectErrorMsg = Date.now();
+                }
             });
         }
 
@@ -800,8 +812,18 @@
                                 }
                             });
                         }
-                        sysChat(`[시스템] ${existingPlayer.name}님이 재연결되었습니다.`);
-                        broadcast({ type: 'EVENT_SYS', payload: { text: `[시스템] ${existingPlayer.name}님이 재연결되었습니다.` } });
+                        
+                        // Check if we actually announced their disconnect
+                        if (state.disconnectTimeouts[data.payload.oldId]) {
+                            clearTimeout(state.disconnectTimeouts[data.payload.oldId]);
+                            delete state.disconnectTimeouts[data.payload.oldId];
+                            // Reconnected very fast, no need to spam
+                        } else {
+                            // It was announced, so announce recovery
+                            sysChat(`[시스템] ${existingPlayer.name}님이 재연결되었습니다.`);
+                            broadcast({ type: 'EVENT_SYS', payload: { text: `[시스템] ${existingPlayer.name}님이 재연결되었습니다.` } });
+                        }
+                        
                         broadcastState();
                         updateRoomUI();
                         renderStage();
