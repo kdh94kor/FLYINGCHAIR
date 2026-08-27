@@ -246,7 +246,7 @@
                 <input type="checkbox" id="opt-afk-check" onchange="toggleOption('afk')">
                 <label for="opt-afk-check" class="option-label">침묵 시 발사</label>
                 <div class="hidden" id="opt-afk-input" style="display:flex; align-items:center; gap:6px; margin-top:6px;">
-                    <input type="number" id="opt-afk-secs" value="60" min="30" max="300" style="width:65px; padding:5px; text-align:center;">
+                    <input type="number" id="opt-afk-secs" value="60" min="30" max="300" style="width:65px; padding:5px; text-align:center;" onchange="validateMinTime(this, '침묵 시 발사')">
                     <span style="font-size:0.85rem; color:var(--text-muted);">초 후 발사</span>
                 </div>
             </div>
@@ -255,7 +255,7 @@
                 <input type="checkbox" id="opt-item-check" onchange="toggleOption('item')">
                 <label for="opt-item-check" class="option-label">아이템 모드</label>
                 <div class="hidden" id="opt-item-input" style="display:flex; align-items:center; gap:6px; margin-top:6px;">
-                    <input type="number" id="opt-item-secs" value="300" min="30" max="600" style="width:65px; padding:5px; text-align:center;">
+                    <input type="number" id="opt-item-secs" value="300" min="30" max="600" style="width:65px; padding:5px; text-align:center;" onchange="validateMinTime(this, '아이템 보급')">
                     <span style="font-size:0.85rem; color:var(--text-muted);">초 마다 보급</span>
                 </div>
             </div>
@@ -497,21 +497,40 @@
             document.getElementById('words-count-display').textContent = wordsCountValue;
         }
 
+        function validateMinTime(el, label) {
+            let val = parseInt(el.value, 10);
+            if (isNaN(val) || val < 30) {
+                alert(label + ' 시간은 최소 30초 이상이어야 합니다.');
+                el.value = 30;
+            }
+        }
+
         function getRoomOptions() {
             const wordsChecked = document.getElementById('opt-words-check').checked;
             const afkChecked = document.getElementById('opt-afk-check').checked;
             const itemChecked = document.getElementById('opt-item-check').checked;
             const wordsPerPlayer = wordsChecked ? wordsCountValue : 1;
+            
             let afkSeconds = 60;
             if (afkChecked) {
-                afkSeconds = parseInt(document.getElementById('opt-afk-secs').value, 10);
-                if (isNaN(afkSeconds) || afkSeconds < 30) afkSeconds = 30;
+                const afkInput = document.getElementById('opt-afk-secs');
+                afkSeconds = parseInt(afkInput.value, 10);
+                if (isNaN(afkSeconds) || afkSeconds < 30) {
+                    afkSeconds = 30;
+                    afkInput.value = 30;
+                }
             }
+            
             let itemSeconds = 300;
             if (itemChecked) {
-                itemSeconds = parseInt(document.getElementById('opt-item-secs').value, 10);
-                if (isNaN(itemSeconds) || itemSeconds < 30) itemSeconds = 30;
+                const itemInput = document.getElementById('opt-item-secs');
+                itemSeconds = parseInt(itemInput.value, 10);
+                if (isNaN(itemSeconds) || itemSeconds < 30) {
+                    itemSeconds = 30;
+                    itemInput.value = 30;
+                }
             }
+            
             return { wordsPerPlayer, afkEnabled: afkChecked, afkSeconds, itemEnabled: itemChecked, itemSeconds };
         }
 
@@ -1024,6 +1043,10 @@
             document.getElementById('word-setting-list').style.display = 'none';
             document.getElementById('submit-words-btn').style.display = 'none';
             
+            const me = state.players.find(p => p.id === state.myId);
+            if (me) me.hasSubmittedWords = true;
+            updateMissingPlayersUI();
+            
             if (currentMode === MODE_GUEST) {
                 socket.emit('SEND_TO_HOST', { roomCode, type: 'SUBMIT_WORDS', payload: { targetWords: myTargetWords } });
             } else {
@@ -1056,6 +1079,7 @@
                 finalizeStart();
             } else {
                 if (currentMode === MODE_HOST) broadcastState();
+                updateMissingPlayersUI();
             }
         }
         
