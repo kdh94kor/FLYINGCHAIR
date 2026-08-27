@@ -323,7 +323,10 @@
         </div>
 
         <div class="stage" id="stage">
-            <button id="mobile-leave-btn" class="btn btn-danger" style="position: absolute; top: 10px; left: 10px; z-index: 100; width: auto; padding: 5px 10px; font-size: 0.8rem; display: none;" onclick="leaveRoom()">방 나가기</button>
+            <div style="position: absolute; top: 10px; left: 10px; z-index: 100; display:flex; gap:10px;">
+                <button id="mobile-leave-btn" class="btn btn-danger" style="width: auto; padding: 5px 10px; font-size: 0.8rem; display: none;" onclick="leaveRoom()">나가기</button>
+                <button id="end-game-btn" class="btn btn-warning hidden" style="width: auto; padding: 5px 10px; font-size: 0.8rem; color: #000;" onclick="endGame()">게임 종료</button>
+            </div>
             <div id="item-timer" class="hidden" style="position: absolute; top: 15px; right: 20px; background: rgba(0,0,0,0.6); padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; border: 1px solid #f39c12; color: #f39c12; z-index: 100;"></div>
             <div class="pool">
                 <div class="wave wave1"></div>
@@ -345,7 +348,7 @@
                     <div id="inventory-items" style="display:flex; gap:6px;"></div>
                 </div>
                 <div class="chat-input-area">
-                    <input type="text" id="chat-input" placeholder="메시지 입력..." disabled>
+                    <input type="text" id="chat-input" placeholder="메시지 입력..." disabled autocomplete="off">
                     <button id="chat-send" disabled>전송</button>
                 </div>
             </div>
@@ -374,6 +377,36 @@
             </p>
             <div id="target-selection-list"></div>
             <button class="btn btn-secondary" onclick="closeTargetModal()">취소</button>
+        </div>
+    </div>
+
+    <!-- Stats Modal -->
+    <div id="stats-modal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
+            <h2 style="color:var(--accent); margin-bottom:15px;">🏁 게임 종료!</h2>
+            <div id="stats-playtime" style="font-size:1.1rem; margin-bottom:15px; color:#ddd;">플레이 시간: -</div>
+            <div id="stats-my-words" style="margin-bottom:20px; background:var(--bg-darker); padding:15px; border-radius:8px;">
+                <h3 style="margin-bottom:10px;">나의 금기어 🚫</h3>
+                <div id="stats-my-words-list" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center;"></div>
+            </div>
+            
+            <div style="text-align:left; background:rgba(0,0,0,0.2); padding:15px; border-radius:8px; margin-bottom:20px;">
+                <h3 style="margin-bottom:10px; color:#fff; text-align:center;">📊 나의 플레이 통계</h3>
+                <ul style="list-style:none; line-height:1.8; color:#ccc;">
+                    <li>💦 총 비행 횟수: <strong id="stats-splash-count" style="color:#fff;">0</strong>회</li>
+                    <li>🦅 갈매기 납치: <strong id="stats-gull" style="color:#fff;">0</strong>회</li>
+                    <li>🦈 상어밥 신세: <strong id="stats-shark" style="color:#fff;">0</strong>회</li>
+                    <li>🐊 악어떼 습격: <strong id="stats-gator" style="color:#fff;">0</strong>회</li>
+                    <li>🚀 미사일 피격: <strong id="stats-missile" style="color:#fff;">0</strong>회</li>
+                </ul>
+                <div style="margin-top:15px; border-top:1px solid #444; padding-top:15px;">
+                    <h4 style="margin-bottom:5px; color:#aaa;">발동된 금기어 횟수</h4>
+                    <div id="stats-word-counts" style="font-size:0.9rem; color:#bbb;"></div>
+                </div>
+            </div>
+            
+            <button class="btn btn-primary" onclick="closeStatsModal()" style="width:100%; margin-bottom:10px;">확인</button>
+            <button class="btn btn-secondary" onclick="leaveRoom()" style="width:100%;">방 나가기</button>
         </div>
     </div>
 
@@ -633,7 +666,7 @@
                         state.myId = 'host';
                         state.room = { status: 'waiting', title: '멀티플레이 방', wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds };
                         updateBodyState();
-                        state.players = [{ id: state.myId, name: myName, gender: myGender, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, splashCount: 0, status: 'idle', items: [] }];
+                        state.players = [{ id: state.myId, name: myName, gender: myGender, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0 } }];
                         
                         switchView('room-view');
                         updateRoomUI();
@@ -743,7 +776,7 @@
             if (data.type === 'JOIN') {
                 if (state.room.status !== 'waiting') return socket.emit('SEND_TO_GUEST', { guestId, type: 'REJECT_JOIN', payload: { reason: '이미 게임이 시작되어 입장할 수 없습니다.' } });
                 if (state.players.length >= 6) return socket.emit('SEND_TO_GUEST', { guestId, type: 'REJECT_JOIN', payload: { reason: '방이 꽉 찼습니다.' } });
-                state.players.push({ ...data.payload, id: guestId, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, splashCount: 0, status: 'idle', items: [] });
+                state.players.push({ ...data.payload, id: guestId, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0 } });
                 broadcastState();
                 updateRoomUI();
                 renderStage();
@@ -781,6 +814,8 @@
                 if (state.room.status === 'playing') {
                     renderWordsPanel();
                     renderInventory();
+                } else if (state.room.status === 'finished') {
+                    showStatsModal();
                 }
             } else if (data.type === 'CHAT_BROADCAST') {
                 const sender = state.players.find(p => p.id === data.payload.senderId);
@@ -808,7 +843,7 @@
             const { wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds } = options;
             state.room = { status: 'waiting', title: '시뮬레이션 방', wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds };
             updateBodyState();
-            state.players = [{ id: state.myId, name: els.nickname.value.trim() || '게스트', gender: document.querySelector('input[name="gender"]:checked').value, isBot: false, words: {}, splashCount: 0, status: 'idle', items: [] }];
+            state.players = [{ id: state.myId, name: els.nickname.value.trim() || '게스트', gender: document.querySelector('input[name="gender"]:checked').value, isBot: false, words: {}, splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0 } }];
             
             switchView('room-view');
             document.getElementById('host-controls').classList.remove('hidden');
@@ -826,7 +861,7 @@
             const botGender = r < 0.33 ? 'M' : (r < 0.66 ? 'F' : 'A');
             state.players.push({
                 id: botId, name: `봇 ${botNum}호`, gender: botGender,
-                isBot: true, words: {}, splashCount: 0, status: 'idle', items: []
+                isBot: true, words: {}, splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0 }
             });
             updateRoomUI();
             renderStage();
@@ -1207,9 +1242,13 @@
 
         let chatUiInterval = null;
         function finalizeStart() {
+            state.room.startedAt = Date.now();
             els.wordSettingModal.classList.add('hidden');
             els.chatMessages.innerHTML = '';
             sysChat('게임이 시작되었습니다! 채팅을 자유롭게 시작하세요.');
+            if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
+                document.getElementById('end-game-btn').classList.remove('hidden');
+            }
             els.chatInput.disabled = false;
             els.chatSend.disabled = false;
             els.chatInput.focus();
@@ -1428,6 +1467,80 @@
             }
         }
         
+        // --- Stats Modal ---
+        function endGame() {
+            if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
+                if (!confirm('정말 게임을 종료하시겠습니까? (통계가 표시됩니다)')) return;
+                state.room.status = 'finished';
+                broadcastState();
+                showStatsModal();
+            }
+        }
+        
+        function showStatsModal() {
+            const me = state.players.find(p => p.id === state.myId);
+            if (!me || !me.stats) return;
+            
+            // Play time
+            let timeText = '알 수 없음';
+            if (state.room.startedAt) {
+                const diff = Math.floor((Date.now() - state.room.startedAt) / 1000);
+                const m = Math.floor(diff / 60);
+                const s = diff % 60;
+                timeText = `${m}분 ${s}초`;
+            }
+            document.getElementById('stats-playtime').textContent = `플레이 시간: ${timeText}`;
+            
+            // My words
+            const wordsList = document.getElementById('stats-my-words-list');
+            wordsList.innerHTML = '';
+            
+            // Reconstruct my words from what others assigned to me
+            const myWords = [];
+            state.players.forEach(p => {
+                if (p.id !== state.myId && p.words && p.words[state.myId]) {
+                    myWords.push(p.words[state.myId]);
+                }
+            });
+            
+            if (myWords.length === 0) {
+                wordsList.innerHTML = '<span style="color:#888;">없음</span>';
+            } else {
+                myWords.forEach(w => {
+                    const chip = document.createElement('span');
+                    chip.className = 'word-chip';
+                    chip.textContent = w;
+                    wordsList.appendChild(chip);
+                });
+            }
+            
+            // Stats
+            document.getElementById('stats-splash-count').textContent = me.splashCount || 0;
+            document.getElementById('stats-gull').textContent = me.stats.gull || 0;
+            document.getElementById('stats-shark').textContent = me.stats.shark || 0;
+            document.getElementById('stats-gator').textContent = me.stats.gator || 0;
+            document.getElementById('stats-missile').textContent = me.stats.missile || 0;
+            
+            // Word counts
+            const countsDiv = document.getElementById('stats-word-counts');
+            countsDiv.innerHTML = '';
+            if (Object.keys(me.stats.words).length === 0) {
+                countsDiv.textContent = '금기어로 날아간 적이 없습니다! 👏';
+            } else {
+                for (const [w, count] of Object.entries(me.stats.words)) {
+                    const line = document.createElement('div');
+                    line.textContent = `- [${w}]: ${count}회`;
+                    countsDiv.appendChild(line);
+                }
+            }
+            
+            document.getElementById('stats-modal').classList.remove('hidden');
+        }
+        
+        function closeStatsModal() {
+            document.getElementById('stats-modal').classList.add('hidden');
+        }
+
         function openTargetModal() {
             const list = document.getElementById('target-selection-list');
             list.innerHTML = '';
@@ -1640,6 +1753,7 @@
                             totalSec = Math.ceil((target.penaltyEndTime - now) / 1000) + 30;
                         }
                         sysChat(`💥 ${target.name}님이 미사일에 격추되었습니다! (기절 누적: 총 ${totalSec}초)`);
+                        if (target.stats) target.stats.missile++;
                         
                         if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
                             let stunDuration = 30000;
@@ -2172,6 +2286,16 @@
             if (player.flyTimeouts) player.flyTimeouts.forEach(clearTimeout);
             player.flyTimeouts = [];
             const addTimer = (cb, delay) => { const t = setTimeout(cb, delay); player.flyTimeouts.push(t); return t; };
+
+            // Record stats
+            if (player.stats) {
+                if (specialEvent === 'gull') player.stats.gull++;
+                else if (specialEvent === 'shark') player.stats.shark++;
+                else if (specialEvent === 'gator') player.stats.gator++;
+                if (word && !word.includes('침묵')) {
+                    player.stats.words[word] = (player.stats.words[word] || 0) + 1;
+                }
+            }
 
             updateStatus(playerId, 'flying');
             player.splashCount++;
