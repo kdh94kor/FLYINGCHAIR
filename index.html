@@ -148,9 +148,11 @@
 
         .item-btn { background: #444; border: 1px solid #555; border-radius: 4px; padding: 4px 8px; color: #fff; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 4px; }
         .item-btn:hover { background: #555; }
-        .item-btn.missile { background: rgba(255,71,87,0.2); border-color: rgba(255,71,87,0.5); color: #ff4757; }
+        .item-btn.missile { background: rgba(235,77,75,0.2); border-color: rgba(235,77,75,0.5); color: #eb4d4b; }
         .item-btn.shield { background: rgba(30,144,255,0.2); border-color: rgba(30,144,255,0.5); color: #1e90ff; }
         .item-btn.word_change { background: rgba(46,213,115,0.2); border-color: rgba(46,213,115,0.5); color: #2ed573; }
+        .item-btn.word_add { background: rgba(156,136,255,0.2); border-color: rgba(156,136,255,0.5); color: #9c88ff; }
+        .item-btn.word_delete { background: rgba(255,159,67,0.2); border-color: rgba(255,159,67,0.5); color: #ff9f43; }
 
         /* Modals */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(3px); }
@@ -1143,7 +1145,7 @@
                 return;
             }
             
-            const itemTypes = ['missile', 'shield', 'word_change', 'word_add'];
+            const itemTypes = ['missile', 'shield', 'word_change', 'word_add', 'word_delete'];
             state.players.forEach(p => {
                 const randomItem = itemTypes[Math.floor(Math.random() * itemTypes.length)];
                 if (!p.items) p.items = [];
@@ -1220,7 +1222,7 @@
                 return;
             }
             
-            const itemLabels = { 'missile': '🚀 미사일', 'shield': '🛡️ 방패', 'word_change': '🃏 변경권', 'word_add': '➕ 추가권' };
+            const itemLabels = { 'missile': '🚀 미사일', 'shield': '🛡️ 방패', 'word_change': '🃏 변경권', 'word_add': '➕ 추가권', 'word_delete': '✂️ 삭제권' };
             
             const grouped = {};
             me.items.forEach(item => {
@@ -1242,8 +1244,8 @@
             const index = me.items.indexOf(item);
             if (index === -1) return;
             
-            // Allow word_change and word_add even if dead
-            if (me.status !== 'idle' && item !== 'word_change' && item !== 'word_add') {
+            // Allow word_change, word_add, and word_delete even if dead
+            if (me.status !== 'idle' && item !== 'word_change' && item !== 'word_add' && item !== 'word_delete') {
                 return sysChat('행동 불능 상태에서는 미사일 등 공격 아이템을 사용할 수 없습니다.');
             }
             if (item === 'shield') {
@@ -1254,6 +1256,12 @@
             } else if (item === 'word_add') {
                 pendingItemUse = { item, index };
                 openWordAddModal();
+            } else if (item === 'word_delete') {
+                if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
+                    executeItem(state.myId, item, index, null, null);
+                } else {
+                    socket.emit('SEND_TO_HOST', { roomCode, type: 'USE_ITEM', payload: { item, index, targetId: null, extraData: null } });
+                }
             }
         }
         
@@ -1262,12 +1270,13 @@
             list.innerHTML = '';
             
             state.players.forEach(p => {
+                if (p.id === state.myId) return; // Exclude self
                 const row = document.createElement('div');
                 row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;';
                 
                 const label = document.createElement('span');
                 label.style.fontWeight = 'bold';
-                label.textContent = p.id === state.myId ? `${p.name} (나)` : p.name;
+                label.textContent = p.name;
                 
                 const input = document.createElement('input');
                 input.type = 'text';
@@ -1325,8 +1334,8 @@
             
             let targets;
             if (item === 'word_change') {
-                // Word change can target anyone, including dead players and yourself
-                targets = state.players;
+                // Word change can target anyone EXCEPT yourself
+                targets = state.players.filter(p => p.id !== state.myId);
             } else {
                 // Missile etc. - Only target those sitting in the chair (idle)
                 targets = state.players.filter(p => p.id !== state.myId && p.status === 'idle');
@@ -1461,15 +1470,31 @@
             }
         }
 
-        function executeItem(senderId, item, index, targetId, extraData = null) {
+        function executeItem(senderId, item, clientIndex, targetId, extraData = null) {
             // Host logic to process item use
             const sender = state.players.find(p => p.id === senderId);
-            if (!sender || !sender.items || sender.items[index] !== item) return; // Validation failed
+            if (!sender || !sender.items) return; 
+            
+            // Find the item dynamically instead of relying on client index (prevents race conditions if inventory shifted while modal was open)
+            const realIndex = sender.items.indexOf(item);
+            if (realIndex === -1) return; // Validation failed: they don't have this item
             
             // Consume item
-            sender.items.splice(index, 1);
+            sender.items.splice(realIndex, 1);
             if (currentMode === MODE_HOST) broadcastState(); // Sync removed item
             if (senderId === state.myId) renderInventory(); // Update local UI for Host/Bot
+            
+            if (item === 'word_delete' && !extraData) {
+                const allWords = Object.values(sender.words).flat();
+                if (allWords.length > 0) {
+                    const randomIdx = Math.floor(Math.random() * allWords.length);
+                    const deleted = allWords.splice(randomIdx, 1)[0];
+                    sender.words = { 'system': allWords }; // Host updates state immediately
+                    extraData = { deletedWord: deleted };
+                } else {
+                    extraData = { deletedWord: null };
+                }
+            }
             
             // Broadcast event to trigger animation
             if (currentMode === MODE_HOST) {
@@ -1572,6 +1597,19 @@
                             p.words['system'].push(newWord);
                         }
                     });
+                    broadcastState();
+                    renderWordsPanel();
+                }
+            } else if (item === 'word_delete') {
+                if (!sender || !extraData) return;
+                
+                if (extraData.deletedWord) {
+                    sysChat(`🗑️ ${sender.name}님이 금기어 삭제권을 사용하여 자신의 금기어 1개(${extraData.deletedWord})를 지웠습니다!`);
+                } else {
+                    sysChat(`🗑️ ${sender.name}님이 금기어 삭제권을 사용했으나 지울 금기어가 없었습니다.`);
+                }
+                
+                if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
                     broadcastState();
                     renderWordsPanel();
                 }
@@ -2277,7 +2315,15 @@
                         curX = nextX; curY = nextY;
                     }
                 } else if (phase === 3) {
-                    const tRect = targetWrap.getBoundingClientRect();
+                    const currentTargetWrap = document.getElementById(`char-wrap-${targetId}`);
+                    if (!currentTargetWrap) {
+                        missile.remove();
+                        createExplosionEffect(curX, curY);
+                        if (onHit) onHit();
+                        return;
+                    }
+                    const stageRect = document.getElementById('stage').getBoundingClientRect();
+                    const tRect = currentTargetWrap.getBoundingClientRect();
                     const tX = tRect.left - stageRect.left + 35;
                     const tY = tRect.top - stageRect.top + 45;
                     const progress = Math.min((time - phaseTime) / 300, 1); // 0.3s to strike
