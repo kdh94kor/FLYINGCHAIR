@@ -698,25 +698,25 @@
                 
                 const deptName = departed.name;
                 
-                // Remove departed player from list
-                state.players = state.players.filter(p => p.id !== pId);
-                
-                // Remove the departed player's assigned words from all remaining players
-                state.players.forEach(p => {
-                    if (p.words && p.words[pId]) {
-                        delete p.words[pId];
-                    }
-                });
-                
-                updateRoomUI();
-                renderStage();
-                sysChat(`[시스템] ${deptName}님이 퇴장했습니다.`);
-                
-                if (state.room.status === 'word_setting' || state.room.status === 'playing') {
+                if (state.room.status === 'waiting') {
+                    // Remove departed player from list
+                    state.players = state.players.filter(p => p.id !== pId);
+                    
+                    // Remove the departed player's assigned words from all remaining players
+                    state.players.forEach(p => {
+                        if (p.words && p.words[pId]) {
+                            delete p.words[pId];
+                        }
+                    });
+                    updateRoomUI();
+                    renderStage();
+                    sysChat(`[시스템] ${deptName}님이 퇴장했습니다.`);
                     broadcastState();
-                    if (state.room.status === 'word_setting') checkAllWordsSubmitted();
-                } else if (state.room.status === 'waiting') {
-                    broadcastState();
+                } else {
+                    // Game already started! Do NOT remove them from state.players so they can reconnect!
+                    // Just notify and maybe mark as disconnected
+                    sysChat(`[시스템] ${deptName}님의 연결이 끊어졌습니다. (재연결 대기 중...)`);
+                    // We can leave their avatar on the chair so it doesn't break the game state
                 }
             });
 
@@ -738,11 +738,12 @@
             socket = io(SOCKET_URL, { reconnection: true, reconnectionAttempts: 10, reconnectionDelay: 2000 });
             
             socket.on('connect', () => {
-                socket.emit('JOIN_ROOM', { roomCode: code, payload: { name: myName, gender: myGender } }, (response) => {
+                const oldId = state.myId;
+                socket.emit('JOIN_ROOM', { roomCode: code, payload: { name: myName, gender: myGender, oldId } }, (response) => {
                     if (response.success) {
                         roomCode = code;
                         currentMode = MODE_GUEST;
-                        state.myId = socket.id; // Server uses socket.id
+                        state.myId = socket.id; // Server uses new socket.id
                         document.getElementById('room-code-display').classList.remove('hidden');
                         document.getElementById('room-code-text').textContent = roomCode;
                     } else {
@@ -774,6 +775,28 @@
 
         function handleDataFromGuest(guestId, data) {
             if (data.type === 'JOIN') {
+                if (data.payload.oldId) {
+                    const existingPlayer = state.players.find(p => p.id === data.payload.oldId);
+                    if (existingPlayer) {
+                        // Reconnect! Update ID
+                        if (data.payload.oldId !== guestId) {
+                            existingPlayer.id = guestId;
+                            // Update references in word maps
+                            state.players.forEach(p => {
+                                if (p.words && p.words[data.payload.oldId]) {
+                                    p.words[guestId] = p.words[data.payload.oldId];
+                                    delete p.words[data.payload.oldId];
+                                }
+                            });
+                        }
+                        sysChat(`[시스템] ${existingPlayer.name}님이 재연결되었습니다.`);
+                        broadcastState();
+                        updateRoomUI();
+                        renderStage();
+                        return;
+                    }
+                }
+                
                 if (state.room.status !== 'waiting') return socket.emit('SEND_TO_GUEST', { guestId, type: 'REJECT_JOIN', payload: { reason: '이미 게임이 시작되어 입장할 수 없습니다.' } });
                 if (state.players.length >= 6) return socket.emit('SEND_TO_GUEST', { guestId, type: 'REJECT_JOIN', payload: { reason: '방이 꽉 찼습니다.' } });
                 state.players.push({ ...data.payload, id: guestId, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0 } });
