@@ -154,8 +154,12 @@
 
         /* Modals */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(3px); }
-        .modal { background: var(--bg-panel); padding: 30px; border-radius: 12px; width: 400px; max-width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #444; }
-        .modal h2 { text-align: center; border-bottom: 2px solid #444; padding-bottom: 15px; margin-bottom: 20px; color: var(--accent); }
+        .modal { background: var(--bg-panel); padding: 30px; border-radius: 12px; width: 400px; max-width: 90%; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #444; }
+        .modal h2 { text-align: center; border-bottom: 2px solid #444; padding-bottom: 15px; margin-bottom: 20px; color: var(--accent); flex-shrink: 0; }
+        .modal > p, .modal > hr { flex-shrink: 0; }
+        .modal > div[id$="-list"] { overflow-y: auto; flex: 1; padding-right: 5px; margin-bottom: 10px; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 10px; flex-shrink: 0; }
+        .modal > button { flex-shrink: 0; }
 
         /* Mobile Responsive Styles */
         @media (max-width: 768px) {
@@ -352,12 +356,11 @@
             <p style="font-size:0.9rem; color:#ccc; margin-bottom:15px; text-align:center;">
                 아이템을 사용할 대상을 선택하세요.
             </p>
-            <div id="target-selection-list" style="display:flex; flex-direction:column; gap:10px; margin-bottom:15px;"></div>
+            <div id="target-selection-list"></div>
             <button class="btn btn-secondary" onclick="closeTargetModal()">취소</button>
         </div>
     </div>
 
-    <!-- Word Add Modal -->
     <div id="modal-word-add" class="modal-overlay hidden">
         <div class="modal">
             <h2>금기어 추가</h2>
@@ -365,7 +368,7 @@
                 각 참가자에게 추가할 금기어를 입력하세요.
             </p>
             <div id="word-add-list"></div>
-            <div style="display:flex; gap:10px; margin-top:10px;">
+            <div class="modal-buttons">
                 <button class="btn" onclick="submitWordAdd()">추가하기</button>
                 <button class="btn btn-secondary" onclick="closeWordAddModal()">취소</button>
             </div>
@@ -379,8 +382,8 @@
             <p style="font-size:0.9rem; color:#ccc; margin-bottom:20px; text-align:center;">
                 변경할 단어 <strong>1개만</strong> 지우고 새 단어로 수정하세요.
             </p>
-            <div id="word-change-list" style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;"></div>
-            <div style="display:flex; gap:10px;">
+            <div id="word-change-list"></div>
+            <div class="modal-buttons">
                 <button class="btn" onclick="submitWordChange()">변경하기</button>
                 <button class="btn btn-secondary" onclick="closeWordChangeModal()">취소</button>
             </div>
