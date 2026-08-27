@@ -942,22 +942,58 @@
 
         function renderStage() {
             updateStageGap();
-            els.chairsContainer.innerHTML = '';
-            state.players.forEach(p => {
-                const slot = document.createElement('div');
-                slot.className = 'chair-slot';
-                const showReady = p.isReady && state.room.status === 'waiting';
-                slot.innerHTML = `
-                    <div class="ready-badge ${showReady ? '' : 'hidden'}" style="position:absolute; bottom:5px; left:50%; transform:translateX(-50%); background:var(--accent); color:white; font-size:0.75rem; padding:4px 8px; border-radius:12px; font-weight:bold; white-space:nowrap; z-index:25; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">준비 완료!</div>
-                    <div class="chair-base" id="chair-${p.id}"><div class="chair-back"></div></div>
-                    <div class="character-wrapper status-${p.status}" id="char-wrap-${p.id}">
-                        <div class="speech-bubble" id="bubble-${p.id}"></div>
-                        <div class="badge-count ${p.splashCount > 0 ? '' : 'hidden'}" id="badge-${p.id}">${p.splashCount}</div>
-                        <div class="name-tag">${p.name}</div>
-                        ${getAvatarSvg(p.gender)}
-                    </div>`;
-                els.chairsContainer.appendChild(slot);
-            });
+            
+            // Check if we need a full rebuild (players joined/left)
+            const currentIds = Array.from(els.chairsContainer.querySelectorAll('.chair-slot')).map(slot => slot.dataset.playerId);
+            const newIds = state.players.map(p => p.id);
+            const needsFullRender = currentIds.join(',') !== newIds.join(',');
+            
+            if (needsFullRender) {
+                els.chairsContainer.innerHTML = '';
+                state.players.forEach(p => {
+                    const slot = document.createElement('div');
+                    slot.className = 'chair-slot';
+                    slot.dataset.playerId = p.id;
+                    const showReady = p.isReady && state.room.status === 'waiting';
+                    slot.innerHTML = `
+                        <div class="ready-badge ${showReady ? '' : 'hidden'}" id="ready-${p.id}" style="position:absolute; bottom:5px; left:50%; transform:translateX(-50%); background:var(--accent); color:white; font-size:0.75rem; padding:4px 8px; border-radius:12px; font-weight:bold; white-space:nowrap; z-index:25; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">준비 완료!</div>
+                        <div class="chair-base" id="chair-${p.id}"><div class="chair-back"></div></div>
+                        <div class="character-wrapper status-${p.status}" id="char-wrap-${p.id}">
+                            <div class="speech-bubble" id="bubble-${p.id}"></div>
+                            <div class="badge-count ${p.splashCount > 0 ? '' : 'hidden'}" id="badge-${p.id}">${p.splashCount}</div>
+                            <div class="name-tag" id="name-${p.id}">${p.name}</div>
+                            ${getAvatarSvg(p.gender)}
+                        </div>`;
+                    els.chairsContainer.appendChild(slot);
+                });
+            } else {
+                // Surgical update to PRESERVE inline animations (fixes teleporting during supply drops)
+                state.players.forEach(p => {
+                    const showReady = p.isReady && state.room.status === 'waiting';
+                    const readyBadge = document.getElementById(`ready-${p.id}`);
+                    if (readyBadge) {
+                        if (showReady) readyBadge.classList.remove('hidden');
+                        else readyBadge.classList.add('hidden');
+                    }
+                    
+                    const charWrap = document.getElementById(`char-wrap-${p.id}`);
+                    if (charWrap) {
+                        charWrap.className = `character-wrapper status-${p.status}`;
+                    }
+                    
+                    const badge = document.getElementById(`badge-${p.id}`);
+                    if (badge) {
+                        badge.textContent = p.splashCount;
+                        if (p.splashCount > 0) badge.classList.remove('hidden');
+                        else badge.classList.add('hidden');
+                    }
+                    
+                    const nameTag = document.getElementById(`name-${p.id}`);
+                    if (nameTag) {
+                        nameTag.textContent = p.name;
+                    }
+                });
+            }
         }
 
         // --- Word Setting Phase ---
