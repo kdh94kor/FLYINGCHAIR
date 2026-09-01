@@ -6,6 +6,8 @@
     <title>위험한 초대 - 실시간 플라잉 체어 (멀티플레이)</title>
     <!-- Socket.io for Multiplayer -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <!-- Google AdSense (auto ads disabled; manual slots only) - Temporarily commented out until real ID is provided -->
+    <!-- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script> -->
     <style>
         :root {
             --bg-main: #1a1a24;
@@ -22,7 +24,7 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; }
-        body { background-color: var(--bg-main); color: var(--text-main); height: 100vh; height: 100dvh; display: flex; overflow: hidden; }
+        body { background-color: var(--bg-main); color: var(--text-main); height: 100vh; height: 100dvh; display: flex; overflow: hidden; padding-top: 70px; box-sizing: border-box; }
 
         /* Layout */
         .sidebar { width: 25%; min-width: 250px; background-color: var(--bg-panel); border-right: 2px solid var(--bg-darker); display: flex; flex-direction: column; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.3); z-index: 20; transition: width 0.3s, min-width 0.3s, padding 0.3s; position: relative; }
@@ -115,6 +117,31 @@
         .subtitle { display: inline-block; background: rgba(0,0,0,0.8); color: #ff4757; font-size: 1.5rem; font-weight: 900; padding: 10px 25px; border-radius: 10px; border: 3px solid #ff4757; transform: scale(0); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-shadow: 1px 1px 0 #fff; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
         .subtitle.show { transform: scale(1); }
 
+        /* Ad Banners */
+        #ad-top-banner {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 70px;
+            z-index: 9999;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            border-bottom: 2px solid #222;
+        }
+        #ad-top-banner ins { width: 100%; }
+        #ad-inline-banner {
+            width: 100%;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        #ad-inline-banner ins { width: 100%; }
+
         /* Words top bar */
         .words-bar { width: 100%; background: var(--bg-darker); border-bottom: 1px solid #333; padding: 3px 8px; display: flex; flex-direction: column; gap: 2px; z-index: 50; flex-shrink: 0; }
         .words-row { display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; overflow: hidden; white-space: nowrap; min-width: 0; }
@@ -165,7 +192,7 @@
 
         /* Mobile Responsive Styles */
         @media (max-width: 768px) {
-            body { flex-direction: column; }
+            body { flex-direction: column; padding-top: env(safe-area-inset-top); }
             .sidebar { width: 100% !important; min-width: 100% !important; }
             
             body.state-lobby .sidebar { height: 100%; flex: 1; border-right: none; }
@@ -211,6 +238,18 @@
 </head>
 <body class="state-lobby">
 
+    <!-- Top fixed ad banner (temporarily commented out until real ID is provided) -->
+    <!--
+    <div id="ad-top-banner">
+        <ins class="adsbygoogle"
+             style="display:block; min-height:50px; max-height:90px;"
+             data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+             data-ad-slot="XXXXXXXXXX"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+    </div>
+    -->
+
     <!-- Sidebar -->
     <aside class="sidebar">
         <button id="btn-sidebar-leave" onclick="leaveRoom()">나가기</button>
@@ -221,7 +260,7 @@
             <h3>입장 설정</h3>
             <div class="form-group">
                 <label>닉네임</label>
-                <input type="text" id="lobby-nickname" placeholder="닉네임을 입력해주세요">
+                <input type="text" id="lobby-nickname" placeholder="닉네임을 입력해주세요" maxlength="16">
             </div>
             <div class="form-group">
                 <label>캐릭터</label>
@@ -321,6 +360,18 @@
             <span class="words-bar-label">🚫</span>
             <span style="color:var(--text-muted); font-size:0.7rem;">게임이 시작되면 금기어가 표시됩니다.</span>
         </div>
+
+        <!-- Inline ad banner (temporarily commented out until real ID is provided) -->
+        <!--
+        <div id="ad-inline-banner">
+            <ins class="adsbygoogle"
+                 style="display:block; min-height:50px; max-height:90px;"
+                 data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+                 data-ad-slot="XXXXXXXXXX"
+                 data-ad-format="auto"
+                 data-full-width-responsive="true"></ins>
+        </div>
+        -->
 
         <div class="stage" id="stage">
             <div style="position: absolute; top: 10px; left: 10px; z-index: 100; display:flex; gap:10px;">
@@ -529,6 +580,29 @@
             document.getElementById('join-input-area').classList.remove('hidden');
         }
 
+        // --- Sanitize helpers (XSS/abuse mitigation at the edge) ---
+        function sanitizeNickname(raw, fallback) {
+            if (typeof raw !== 'string') return fallback;
+            // 1~16자, 한글/영문/숫자/공백/밑줄/하이픈만 허용, 제어문자 제거
+            const cleaned = raw
+                .replace(/[-]/g, '')
+                .replace(/[^가-힣ㄱ-ㆎA-Za-z0-9 _\-]/g, '')
+                .trim();
+            if (!cleaned) return fallback;
+            return cleaned.slice(0, 16);
+        }
+
+        function sanitizeRoomCode(raw) {
+            if (typeof raw !== 'string') return '';
+            return raw.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+        }
+
+        function sanitizeChatText(raw) {
+            if (typeof raw !== 'string') return '';
+            // 제어문자 제거, 200자 제한
+            return raw.replace(/[-]/g, '').slice(0, 200);
+        }
+
         // --- Room Option Helpers ---
         let wordsCountValue = 1;
 
@@ -634,7 +708,7 @@
 
         function createMultiplayerRoom() {
             audioCtx.resume();
-            const myName = els.nickname.value.trim() || '방장';
+            const myName = sanitizeNickname(els.nickname.value.trim(), '방장');
             const myGender = document.querySelector('input[name="gender"]:checked').value;
             const options = getRoomOptions();
             if (!options) return; // Validation failed
@@ -731,7 +805,7 @@
             const code = document.getElementById('join-room-code').value.trim().toUpperCase();
             if (!code) return alert('방 코드를 입력하세요.');
             
-            const myName = els.nickname.value.trim() || '게스트';
+            const myName = sanitizeNickname(els.nickname.value.trim(), '게스트');
             const myGender = document.querySelector('input[name="gender"]:checked').value;
             
             sysChat('서버 연결 중...');
@@ -903,7 +977,7 @@
             const { wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds } = options;
             state.room = { status: 'waiting', title: '시뮬레이션 방', wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds };
             updateBodyState();
-            state.players = [{ id: state.myId, name: els.nickname.value.trim() || '게스트', gender: document.querySelector('input[name="gender"]:checked').value, isBot: false, words: {}, splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0 } }];
+            state.players = [{ id: state.myId, name: sanitizeNickname(els.nickname.value.trim(), '게스트'), gender: document.querySelector('input[name="gender"]:checked').value, isBot: false, words: {}, splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0 } }];
             
             switchView('room-view');
             document.getElementById('host-controls').classList.remove('hidden');
@@ -954,6 +1028,10 @@
             document.getElementById('stats-modal').classList.add('hidden');
             document.getElementById('inventory-bar').classList.add('hidden');
             document.getElementById('item-timer').classList.add('hidden');
+            document.getElementById('modal-word-setting').classList.add('hidden');
+            document.getElementById('modal-target-selection').classList.add('hidden');
+            document.getElementById('modal-word-add').classList.add('hidden');
+            document.getElementById('modal-word-change').classList.add('hidden');
             document.getElementById('inventory-items').innerHTML = '';
             document.getElementById('room-code-display').classList.add('hidden');
             document.getElementById('join-input-area').classList.add('hidden');
@@ -1896,7 +1974,8 @@
 
         function sysChat(text) {
             const isScrolledToBottom = els.chatMessages.scrollHeight - els.chatMessages.clientHeight <= els.chatMessages.scrollTop + 10;
-            els.chatMessages.insertAdjacentHTML('beforeend', `<div class="msg sys">${text}</div>`);
+            const safeText = String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            els.chatMessages.insertAdjacentHTML('beforeend', `<div class="msg sys">${safeText}</div>`);
             if (isScrolledToBottom) {
                 els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
             }
@@ -1910,11 +1989,13 @@
             
             const isScrolledToBottom = els.chatMessages.scrollHeight - els.chatMessages.clientHeight <= els.chatMessages.scrollTop + 10;
             
+            const safeSenderName = sender.name ? String(sender.name).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') : '';
+            const safeText = String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
             els.chatMessages.insertAdjacentHTML('beforeend', `
                 <div class="msg ${isMe ? 'user' : 'other'}">
-                    ${!isMe ? `<div class="sender">${sender.name}</div>` : ''}
+                    ${!isMe ? `<div class="sender">${safeSenderName}</div>` : ''}
                     <div class="msg-content">
-                        <div class="bubble">${text}</div>
+                        <div class="bubble">${safeText}</div>
                         <div class="time">${timeStr}</div>
                     </div>
                 </div>`);
@@ -1950,6 +2031,11 @@
         }
 
         function handleChatInput() {
+            const me = state.players.find(p => p.id === state.myId);
+            if (me && (me.status === 'snatched' || me.status === 'dead' || me.status === 'dead-gator')) {
+                els.chatInput.value = '';
+                return;
+            }
             const val = els.chatInput.value.trim();
             if (!val) {
                 els.chatInput.focus();
@@ -2286,12 +2372,15 @@
 
             if (me.status === 'snatched') {
                 els.chatInput.disabled = true; els.chatSend.disabled = true;
+                els.chatInput.value = '';
                 els.chatInput.placeholder = `🦅 갈매기에게 납치됨...${remainText}`;
             } else if (me.status === 'dead') {
                 els.chatInput.disabled = true; els.chatSend.disabled = true;
+                els.chatInput.value = '';
                 els.chatInput.placeholder = `🦈 상어에게 물려 기절 중...${remainText}`;
             } else if (me.status === 'dead-gator') {
                 els.chatInput.disabled = true; els.chatSend.disabled = true;
+                els.chatInput.value = '';
                 els.chatInput.placeholder = `🐊 악어 떼의 습격으로 기절 중...${remainText}`;
             } else {
                 els.chatInput.disabled = false; els.chatSend.disabled = false;
@@ -2315,6 +2404,9 @@
             if (p) {
                 p.status = newStatus;
                 if (newStatus === 'idle') p.lastChatTime = Date.now();
+                if (id === state.myId && (newStatus === 'snatched' || newStatus === 'dead' || newStatus === 'dead-gator')) {
+                    els.chatInput.value = '';
+                }
             }
             const wrap = document.getElementById(`char-wrap-${id}`);
             if (wrap) {
@@ -2688,5 +2780,19 @@
         window.closeStatsModal = closeStatsModal;
     })();
     </script>
+    <!--
+    <script>
+    // Initialize AdSense ad slots
+    (function initAds() {
+        if (typeof adsbygoogle === 'undefined') return;
+        try {
+            (adsbygoogle = window.adsbygoogle || []).push({});
+            (adsbygoogle = window.adsbygoogle || []).push({});
+        } catch (e) {
+            console.warn('AdSense init skipped:', e);
+        }
+    })();
+    </script>
+    -->
 </body>
 </html>
