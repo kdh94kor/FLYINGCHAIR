@@ -1270,6 +1270,18 @@
             if (currentMode === MODE_HOST) {
                 broadcastState();
                 broadcast({ type: 'START_WORD_SETTING' });
+                if (socket) {
+                    socket.emit('GAME_STARTED', {
+                        roomCode: currentRoomCode,
+                        options: {
+                            theme: state.room.theme,
+                            wordsPerPlayer: state.room.wordsPerPlayer,
+                            itemMode: state.room.itemMode,
+                            itemInterval: state.room.itemInterval
+                        },
+                        playerCount: state.players.length
+                    });
+                }
             }
             openWordSettingModal();
         }

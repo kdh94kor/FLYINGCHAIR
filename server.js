@@ -4,8 +4,36 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const statsManager = require('./src/statsManager');
+const path = require('path');
 
 const app = express();
+
+// Basic Authentication Middleware
+const ADMIN_USER = process.env.ADMIN_USER;
+const ADMIN_PASS = process.env.ADMIN_PASSWORD;
+
+function basicAuth(req, res, next) {
+  if (!ADMIN_USER || !ADMIN_PASS) {
+    return res.status(500).send('서버에 관리자 계정 정보가 설정되지 않았습니다.');
+  }
+
+  const b64auth = (req.headers.authorization || '').split(' ')[1] || '';
+  const [login, password] = Buffer.from(b64auth, 'base64').toString().split(':');
+
+  if (login && password && login === ADMIN_USER && password === ADMIN_PASS) {
+    return next();
+  }
+  res.set('WWW-Authenticate', 'Basic realm="401"');
+  res.status(401).send('Authentication required.');
+}
+
+// Track unique visitors
+app.use((req, res, next) => {
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  statsManager.recordVisitor(ip);
+  next();
+});
 
 // ── Security Headers (CSP disabled temporarily due to AdSense issues) ────────
 app.use(helmet({
@@ -27,6 +55,15 @@ app.use(cors({
   origin: process.env.ALLOWED_ORIGIN || '*',
   methods: ['GET', 'POST'],
 }));
+
+// Admin Routes
+app.get('/admin', basicAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'admin.html'));
+});
+
+app.get('/api/admin/stats', basicAuth, async (req, res) => {
+  res.json(await statsManager.getStats());
+});
 
 // Serve static files (index.html, etc.) from the root directory for local testing
 app.use(express.static(__dirname, {
@@ -111,6 +148,16 @@ io.on('connection', (socket) => {
       callback({ success: true });
     } else {
       callback({ success: false, message: '방 코드를 다시 확인해 주세요.' });
+    }
+  });
+
+  // Handle game start to record stats
+  socket.on('GAME_STARTED', (data) => {
+    const roomCode = sanitizeRoomCode(data && data.roomCode);
+    if (!roomCode) return;
+    const room = rooms[roomCode];
+    if (room && room.hostId === socket.id) {
+      statsManager.recordGameStart(data.options, data.playerCount);
     }
   });
 

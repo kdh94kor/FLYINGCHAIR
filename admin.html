@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>위험한 초대 - 관리자 통계</title>
+    <style>
+        :root {
+            --bg-main: #1a1a24;
+            --bg-panel: #272736;
+            --accent: #ff4757;
+            --text-main: #f5f5f5;
+        }
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            font-family: 'Malgun Gothic', sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: var(--accent);
+            text-align: center;
+        }
+        .card {
+            background: var(--bg-panel);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .stat-box {
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #3498db;
+            margin: 10px 0;
+        }
+        .options-list {
+            list-style: none;
+            padding: 0;
+        }
+        .options-list li {
+            padding: 8px;
+            border-bottom: 1px solid #444;
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 게임 통계 대시보드</h1>
+        
+        <div class="card">
+            <h2>기본 통계</h2>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div>총 방문자 수</div>
+                    <div class="stat-value" id="stat-visitors">0</div>
+                </div>
+                <div class="stat-box">
+                    <div>실행된 게임 수</div>
+                    <div class="stat-value" id="stat-games">0</div>
+                </div>
+                <div class="stat-box">
+                    <div>총 플레이어 수</div>
+                    <div class="stat-value" id="stat-players">0</div>
+                </div>
+                <div class="stat-box">
+                    <div>평균 인원/게임</div>
+                    <div class="stat-value" id="stat-avg-players">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>설정된 옵션 통계 (게임 시작 기준)</h2>
+            <ul class="options-list" id="options-list">
+                <!-- Data injected via JS -->
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        async function fetchStats() {
+            try {
+                const response = await fetch('/api/admin/stats');
+                if (!response.ok) throw new Error('Failed to fetch');
+                const data = await response.json();
+                
+                document.getElementById('stat-visitors').innerText = data.visitors || 0;
+                document.getElementById('stat-games').innerText = data.gamesPlayed || 0;
+                document.getElementById('stat-players').innerText = data.totalPlayers || 0;
+                
+                const avgPlayers = data.gamesPlayed > 0 ? (data.totalPlayers / data.gamesPlayed).toFixed(1) : 0;
+                document.getElementById('stat-avg-players').innerText = avgPlayers;
+
+                const optionsList = document.getElementById('options-list');
+                optionsList.innerHTML = '';
+                
+                if (data.optionsStats) {
+                    const sortedOptions = Object.entries(data.optionsStats).sort((a, b) => b[1] - a[1]);
+                    for (const [key, count] of sortedOptions) {
+                        const li = document.createElement('li');
+                        li.innerHTML = `<span>${key}</span> <span>${count} 회</span>`;
+                        optionsList.appendChild(li);
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                alert('통계 데이터를 불러오는데 실패했습니다.');
+            }
+        }
+
+        window.onload = fetchStats;
+    </script>
+</body>
+</html>
