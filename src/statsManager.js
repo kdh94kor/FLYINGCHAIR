@@ -88,17 +88,21 @@ async function getStats(fromIso, toIso) {
     // 방문자 처리
     visits.forEach(v => {
       const d = new Date(v.created_at);
-      const dateStr = d.toISOString().split('T')[0]; // YYYY-MM-DD
+      // KST (UTC+9) 적용
+      const kstDate = new Date(d.getTime() + (9 * 60 * 60 * 1000));
+      const dateStr = kstDate.toISOString().split('T')[0]; // KST 기준 날짜
       
       dailyVisits[dateStr] = (dailyVisits[dateStr] || 0) + 1;
-      dayOfWeekCount[d.getDay()]++;
-      hourOfDayCount[d.getHours()]++;
+      dayOfWeekCount[kstDate.getUTCDay()]++;
+      hourOfDayCount[kstDate.getUTCHours()]++;
     });
 
     // 게임 처리
     games.forEach(g => {
       const d = new Date(g.created_at);
-      const dateStr = d.toISOString().split('T')[0];
+      // KST (UTC+9) 적용
+      const kstDate = new Date(d.getTime() + (9 * 60 * 60 * 1000));
+      const dateStr = kstDate.toISOString().split('T')[0]; // KST 기준 날짜
       
       dailyGames[dateStr] = (dailyGames[dateStr] || 0) + 1;
       totalPlayers += (g.player_count || 0);
