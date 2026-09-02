@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -62,7 +63,8 @@ app.get('/admin', basicAuth, (req, res) => {
 });
 
 app.get('/api/admin/stats', basicAuth, async (req, res) => {
-  res.json(await statsManager.getStats());
+  const { from, to } = req.query;
+  res.json(await statsManager.getStats(from, to));
 });
 
 // Serve static files (index.html, etc.) from the root directory for local testing

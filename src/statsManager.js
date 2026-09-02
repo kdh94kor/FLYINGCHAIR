@@ -1,120 +1,139 @@
 const { createClient } = require('@supabase/supabase-js');
+const WebSocket = require('ws');
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 
 let supabase = null;
 if (supabaseUrl && supabaseKey) {
-  supabase = createClient(supabaseUrl, supabaseKey);
-  console.log('Supabase connection initialized.');
+  global.WebSocket = WebSocket; 
+  supabase = createClient(supabaseUrl, supabaseKey, {
+    auth: { persistSession: false }
+  });
+  console.log('Supabase connection initialized for Time-Series Logging.');
 } else {
-  console.warn("Supabase credentials (SUPABASE_URL, SUPABASE_KEY) not found in env. Stats will be kept in memory only and lost on restart.");
+  console.warn("Supabase credentials not found. Stats will not be saved.");
 }
 
-// Memory cache for stats to prevent excessive DB reads/writes
-let cachedStats = { visitors: 0, gamesPlayed: 0, totalPlayers: 0, optionsStats: {} };
-let isLoaded = false;
-
-async function loadStats() {
-  if (!supabase) {
-    isLoaded = true;
-    return cachedStats;
-  }
-  
-  try {
-    const { data, error } = await supabase
-      .from('global_stats')
-      .select('*')
-      .eq('id', 1)
-      .single();
-      
-    if (error && error.code !== 'PGRST116') { // PGRST116: No rows found
-      console.error('Error loading stats from Supabase:', error);
-      return cachedStats;
-    }
-    
-    if (data) {
-      cachedStats = {
-        visitors: data.visitors || 0,
-        gamesPlayed: data.games_played || 0,
-        totalPlayers: data.total_players || 0,
-        optionsStats: data.options_stats || {}
-      };
-      isLoaded = true;
-    } else {
-      // Row doesn't exist, insert initial
-      await supabase.from('global_stats').insert({
-        id: 1, 
-        visitors: 0, 
-        games_played: 0, 
-        total_players: 0, 
-        options_stats: {}
-      });
-      isLoaded = true;
-    }
-  } catch (err) {
-    console.error('Exception loading stats:', err);
-  }
-  return cachedStats;
-}
-
-async function saveStats() {
-  if (!supabase) return;
-  try {
-    await supabase
-      .from('global_stats')
-      .update({
-        visitors: cachedStats.visitors,
-        games_played: cachedStats.gamesPlayed,
-        total_players: cachedStats.totalPlayers,
-        options_stats: cachedStats.optionsStats
-      })
-      .eq('id', 1);
-  } catch (err) {
-    console.error('Error saving stats:', err);
-  }
-}
-
-// In-memory set for daily unique visitors (lifecycle of the node process for now)
+// In-memory set for daily unique visitors (prevent spamming DB)
 const seenIps = new Set();
+// Periodically clear seenIps to allow recounting visitors on subsequent days
+setInterval(() => seenIps.clear(), 1000 * 60 * 60 * 24); 
+
+// Hash IP lightly for privacy before saving
+const crypto = require('crypto');
+function hashIp(ip) {
+  return crypto.createHash('sha256').update(ip).digest('hex').substring(0, 16);
+}
 
 async function recordVisitor(ip) {
   if (!ip) return;
-  if (!seenIps.has(ip)) {
-    seenIps.add(ip);
-    if (!isLoaded) await loadStats();
-    cachedStats.visitors += 1;
-    // Don't await saveStats to prevent blocking the request
-    saveStats();
+  const hashed = hashIp(ip);
+  if (!seenIps.has(hashed)) {
+    seenIps.add(hashed);
+    if (supabase) {
+      // Background insert
+      supabase.from('visits_log').insert([{ ip_hash: hashed }]).then(({error}) => {
+        if(error) console.error('Error inserting visit:', error);
+      });
+    }
   }
 }
 
 async function recordGameStart(options, playerCount) {
-  if (!isLoaded) await loadStats();
-  
-  cachedStats.gamesPlayed += 1;
-  cachedStats.totalPlayers += (playerCount || 0);
-  
-  if (options && typeof options === 'object') {
-    if (!cachedStats.optionsStats) cachedStats.optionsStats = {};
-    for (const [key, value] of Object.entries(options)) {
-      if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-        const optionKey = `${key}:${value}`;
-        cachedStats.optionsStats[optionKey] = (cachedStats.optionsStats[optionKey] || 0) + 1;
-      }
-    }
+  if (supabase) {
+    // Background insert
+    supabase.from('games_log').insert([{
+      options: options || {},
+      player_count: playerCount || 0
+    }]).then(({error}) => {
+      if(error) console.error('Error inserting game log:', error);
+    });
   }
-  // Don't await saveStats to prevent blocking the socket event
-  saveStats();
 }
 
-async function getStats() {
-  if (!isLoaded) await loadStats();
-  return cachedStats;
-}
+async function getStats(fromIso, toIso) {
+  if (!supabase) return { error: "Supabase 미연동" };
 
-// Initial load on server start
-loadStats();
+  try {
+    // 날짜 필터 적용
+    let visitsQuery = supabase.from('visits_log').select('created_at');
+    let gamesQuery = supabase.from('games_log').select('created_at, options, player_count');
+
+    if (fromIso) {
+      visitsQuery = visitsQuery.gte('created_at', fromIso);
+      gamesQuery = gamesQuery.gte('created_at', fromIso);
+    }
+    if (toIso) {
+      visitsQuery = visitsQuery.lte('created_at', toIso);
+      gamesQuery = gamesQuery.lte('created_at', toIso);
+    }
+
+    const [visitsRes, gamesRes] = await Promise.all([visitsQuery, gamesQuery]);
+
+    if (visitsRes.error) throw visitsRes.error;
+    if (gamesRes.error) throw gamesRes.error;
+
+    const visits = visitsRes.data || [];
+    const games = gamesRes.data || [];
+
+    // 통계 집계 로직
+    let totalPlayers = 0;
+    const optionsCount = {};
+    const dayOfWeekCount = { 0:0, 1:0, 2:0, 3:0, 4:0, 5:0, 6:0 }; // 0:일요일 ~ 6:토요일
+    const hourOfDayCount = Array(24).fill(0);
+    const dailyVisits = {};
+    const dailyGames = {};
+
+    // 방문자 처리
+    visits.forEach(v => {
+      const d = new Date(v.created_at);
+      const dateStr = d.toISOString().split('T')[0]; // YYYY-MM-DD
+      
+      dailyVisits[dateStr] = (dailyVisits[dateStr] || 0) + 1;
+      dayOfWeekCount[d.getDay()]++;
+      hourOfDayCount[d.getHours()]++;
+    });
+
+    // 게임 처리
+    games.forEach(g => {
+      const d = new Date(g.created_at);
+      const dateStr = d.toISOString().split('T')[0];
+      
+      dailyGames[dateStr] = (dailyGames[dateStr] || 0) + 1;
+      totalPlayers += (g.player_count || 0);
+
+      if (g.options) {
+        for (const [key, val] of Object.entries(g.options)) {
+          const optStr = `${key}:${val}`;
+          optionsCount[optStr] = (optionsCount[optStr] || 0) + 1;
+        }
+      }
+    });
+
+    // Sort daily arrays for chart
+    const sortedDates = Array.from(new Set([...Object.keys(dailyVisits), ...Object.keys(dailyGames)])).sort();
+    const trendData = sortedDates.map(date => ({
+      date,
+      visits: dailyVisits[date] || 0,
+      games: dailyGames[date] || 0
+    }));
+
+    return {
+      totalVisitors: visits.length,
+      totalGames: games.length,
+      totalPlayers,
+      trendData,
+      dayOfWeekCount,
+      hourOfDayCount,
+      optionsCount
+    };
+
+  } catch (err) {
+    console.error('Error fetching advanced stats:', err);
+    return { error: 'Failed to load stats' };
+  }
+}
 
 module.exports = {
   recordVisitor,
