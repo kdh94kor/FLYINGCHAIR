@@ -32,7 +32,8 @@
         body.state-playing .sidebar > *:not(#btn-sidebar-leave) { display: none !important; }
         
         #btn-sidebar-leave { display: none; width: 100%; text-align: center; font-size: 0.8rem; padding: 10px 0; background: var(--accent); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        body.state-playing #btn-sidebar-leave { display: block !important; }
+        body.state-playing:not(.mode-host) #btn-sidebar-leave { display: block !important; }
+        body.state-playing.mode-host .sidebar { display: none !important; }
         
         .main-area { flex: 1; display: flex; flex-direction: column; position: relative; overflow: hidden; }
 
@@ -1104,8 +1105,8 @@
                 const allReady = guests.every(p => p.isReady);
                 const startBtn = document.getElementById('btn-start-game');
                 if (startBtn) {
-                    startBtn.disabled = guests.length > 0 && !allReady;
-                    startBtn.textContent = (guests.length === 0 || allReady) ? '🚀 게임 시작' : '🚀 게임 시작 (모두 준비 필요)';
+                    startBtn.disabled = guests.length === 0;
+                    startBtn.textContent = '🚀 게임 시작';
                 }
             }
         }
@@ -1246,6 +1247,14 @@
         function startGame() {
             if(state.players.length < 2) return alert('최소 2명 이상이어야 합니다.');
             
+            const guests = state.players.filter(p => !p.isBot && p.id !== state.myId);
+            const unready = guests.filter(p => !p.isReady);
+            if (unready.length > 0) {
+                const names = unready.map(p => p.name).join(', ');
+                sysChat(`[시스템] 다음 참가자가 아직 준비되지 않았습니다: ${names}`);
+                return;
+            }
+            
             state.room.status = 'word_setting';
             updateBodyState();
             document.getElementById('host-controls').classList.add('hidden');
@@ -1272,7 +1281,7 @@
                 broadcast({ type: 'START_WORD_SETTING' });
                 if (socket) {
                     socket.emit('GAME_STARTED', {
-                        roomCode: currentRoomCode,
+                        roomCode: roomCode,
                         options: {
                             theme: state.room.theme,
                             wordsPerPlayer: state.room.wordsPerPlayer,
