@@ -2824,9 +2824,9 @@
         if (roomFromUrl) {
             showJoinInput();
             document.getElementById('join-room-code').value = roomFromUrl;
-            setTimeout(() => {
-                joinMultiplayerRoom();
-            }, 300);
+            // Focus on nickname input so user can enter their name
+            const nickInput = document.getElementById('lobby-nickname');
+            if (nickInput) nickInput.focus();
         }
     })();
     </script>
