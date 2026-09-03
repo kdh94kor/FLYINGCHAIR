@@ -331,6 +331,7 @@
         <div id="room-view" class="view hidden">
             <h3 id="room-code-display" class="hidden" style="background:rgba(255,255,255,0.1); padding:10px; border-radius:6px; text-align:center;">
                 방 코드: <span id="room-code-text" style="color:var(--accent); font-size:1.5em; letter-spacing:2px;"></span>
+                <button onclick="copyInviteLink()" class="btn btn-secondary" style="margin-left: 10px; padding: 5px 10px; width: auto; font-size: 0.8rem;">🔗 초대 링크 복사</button>
             </h3>
             
             <div id="room-rules-display" style="margin-top:10px; padding:10px; background:var(--bg-darker); border-radius:6px; font-size:0.85rem; color:#ccc;">
@@ -2805,6 +2806,28 @@
         window.submitWordChange = submitWordChange;
         window.endGame = endGame;
         window.closeStatsModal = closeStatsModal;
+
+        function copyInviteLink() {
+            const url = window.location.origin + window.location.pathname + '?room=' + roomCode;
+            navigator.clipboard.writeText(url).then(() => {
+                sysChat('[시스템] 초대 링크가 복사되었습니다!');
+                alert('초대 링크가 복사되었습니다!\n친구에게 이 링크를 전달해주세요.');
+            }).catch(err => {
+                alert('링크 복사에 실패했습니다: ' + url);
+            });
+        }
+        window.copyInviteLink = copyInviteLink;
+
+        // Auto-join via URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomFromUrl = urlParams.get('room');
+        if (roomFromUrl) {
+            showJoinInput();
+            document.getElementById('join-room-code').value = roomFromUrl;
+            setTimeout(() => {
+                joinMultiplayerRoom();
+            }, 300);
+        }
     })();
     </script>
     <!--
