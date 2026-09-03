@@ -458,7 +458,6 @@
                 </div>
             </div>
             
-            <button class="btn btn-primary" onclick="closeStatsModal()" style="width:100%; margin-bottom:10px;">확인</button>
             <button class="btn btn-secondary" onclick="leaveRoom()" style="width:100%;">방 나가기</button>
         </div>
     </div>
@@ -1050,6 +1049,10 @@
         }
 
         function toggleReady() {
+            if (currentMode === MODE_GUEST && (!socket || !socket.connected)) {
+                sysChat('[시스템] 서버와 연결이 끊어졌습니다. 잠시 후 다시 시도해주세요.');
+                return;
+            }
             const me = state.players.find(p => p.id === state.myId);
             me.isReady = !me.isReady;
             const btn = document.getElementById('btn-ready');
