@@ -104,7 +104,12 @@ const gameEventLimiter = rateLimit({
 });
 
 // ── Server-side validation of guest payloads ───────────────────────────────
-const VALID_GUEST_TYPES = new Set(['CHAT', 'MOVE', 'INPUT', 'PING']);
+const VALID_GUEST_TYPES = new Set([
+  'CHAT', 'MOVE', 'INPUT', 'PING', 
+  'JOIN', 'SYNC_STATE', 'REJECT_JOIN', 'LEAVE', 'TOGGLE_READY', 
+  'SUBMIT_WORDS', 'USE_ITEM', 'EVENT_SYS', 'START_WORD_SETTING', 
+  'START_PLAYING', 'EVENT_ITEM', 'CHAT_BROADCAST', 'EVENT_FLY'
+]);
 
 function sanitizeGuestPayload(data) {
   if (!data || typeof data !== 'object') return null;
