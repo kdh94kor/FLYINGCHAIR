@@ -511,6 +511,18 @@
                            : 'https://flyingchair.onrender.com';
         let socket = null;
         let roomCode = '';
+        let hostToken = '';
+        let disconnectedAt = 0;
+        const DISCONNECT_GRACE_MS = 30000;
+        const CHAT_LOCK_DELAY_MS = 3000;
+        // 탭 단위로 유지되는 플레이어 식별자 (페이지 리로드 후 재합류용)
+        let playerId;
+        try {
+            playerId = sessionStorage.getItem('playerId') || Math.random().toString(36).slice(2) + Date.now().toString(36);
+            sessionStorage.setItem('playerId', playerId);
+        } catch (e) {
+            playerId = 'player-' + Math.floor(Math.random()*1000000);
+        }
         let botInterval = null;
         let afkInterval = null;
         let itemInterval = null;
@@ -519,7 +531,8 @@
             myId: 'player-' + Math.floor(Math.random()*10000),
             room: { status: 'lobby', title: '' },
             players: [],
-            disconnectTimeouts: {}
+            disconnectTimeouts: {},
+            disconnectAnnounced: {}
         };
         
         function updateBodyState() {
@@ -735,7 +748,7 @@
             
             sysChat('서버 연결 중...');
             if (socket) socket.disconnect();
-            socket = io(SOCKET_URL, { reconnection: true, reconnectionAttempts: 10, reconnectionDelay: 2000 });
+            socket = io(SOCKET_URL, { reconnection: true, reconnectionDelay: 1000 });
             
             socket.on('disconnect', (reason) => {
                 if (reason === 'io server disconnect') {
@@ -748,12 +761,20 @@
             socket.on('connect', () => {
                 // Only create a room if we don't already have one (prevents re-creation on mobile reconnect)
                 if (roomCode) {
-                    sysChat('서버와 재연결되었습니다.');
+                    socket.emit('REJOIN_HOST', { roomCode, hostToken }, (response) => {
+                        if (response.success) {
+                            sysChat('서버와 재연결되었습니다.');
+                        } else {
+                            alert(response.message || '방이 종료되었습니다.');
+                            leaveRoom();
+                        }
+                    });
                     return;
                 }
                 socket.emit('CREATE_ROOM', (response) => {
                     if (response.success) {
                         roomCode = response.roomCode;
+                        hostToken = response.hostToken;
                         currentMode = MODE_HOST;
                         state.myId = 'host';
                         state.room = { status: 'waiting', title: '멀티플레이 방', wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds };
@@ -790,10 +811,10 @@
                 
                 const deptName = departed.name;
                 
-                if (state.room.status === 'waiting' || departed.intentionallyLeft) {
+                const removePlayer = () => {
                     // Remove departed player from list
                     state.players = state.players.filter(p => p.id !== pId);
-                    
+
                     // Remove the departed player's assigned words from all remaining players
                     state.players.forEach(p => {
                         if (p.words && p.words[pId]) {
@@ -804,13 +825,23 @@
                     renderStage();
                     sysChat(`[시스템] ${deptName}님이 퇴장했습니다.`);
                     broadcastState();
+                };
+
+                if (departed.intentionallyLeft) {
+                    removePlayer();
                 } else {
-                    // Game already started! Do NOT remove them from state.players so they can reconnect!
+                    // Do NOT remove them yet so they can reconnect within the grace period
                     if (state.disconnectTimeouts[pId]) clearTimeout(state.disconnectTimeouts[pId]);
                     state.disconnectTimeouts[pId] = setTimeout(() => {
-                        sysChat(`[시스템] ${deptName}님의 연결이 불안정합니다. (재연결 대기 중...)`);
-                        broadcast({ type: 'EVENT_SYS', payload: { text: `[시스템] ${deptName}님의 연결이 불안정합니다. (재연결 대기 중...)` } });
-                    }, 4000);
+                        delete state.disconnectTimeouts[pId];
+                        if (state.room.status === 'waiting') {
+                            removePlayer();
+                        } else {
+                            state.disconnectAnnounced[pId] = true;
+                            sysChat(`[시스템] ${deptName}님의 연결이 불안정합니다. (재연결 대기 중...)`);
+                            broadcast({ type: 'EVENT_SYS', payload: { text: `[시스템] ${deptName}님의 연결이 불안정합니다. (재연결 대기 중...)` } });
+                        }
+                    }, DISCONNECT_GRACE_MS);
                 }
             });
 
@@ -829,15 +860,16 @@
             
             sysChat('서버 연결 중...');
             if (socket) socket.disconnect();
-            socket = io(SOCKET_URL, { reconnection: true, reconnectionAttempts: 10, reconnectionDelay: 2000 });
+            socket = io(SOCKET_URL, { reconnection: true, reconnectionDelay: 1000 });
             
             socket.on('connect', () => {
                 const oldId = state.myId;
-                socket.emit('JOIN_ROOM', { roomCode: code, payload: { name: myName, gender: myGender, oldId } }, (response) => {
+                socket.emit('JOIN_ROOM', { roomCode: code, payload: { name: myName, gender: myGender, oldId, playerId } }, (response) => {
                     if (response.success) {
                         roomCode = code;
                         currentMode = MODE_GUEST;
                         state.myId = socket.id; // Server uses new socket.id
+                        disconnectedAt = 0;
                         document.getElementById('room-code-display').classList.remove('hidden');
                         document.getElementById('room-code-text').textContent = roomCode;
                         
@@ -870,18 +902,22 @@
             });
 
             socket.on('disconnect', (reason) => {
-                els.chatInput.disabled = true;
-                els.chatSend.disabled = true;
                 if (reason === 'io server disconnect') {
                     // Server forcibly disconnected — do not reconnect
                     leaveRoom();
+                    return;
                 }
-                // Otherwise socket.io auto-reconnects
+                // Otherwise socket.io auto-reconnects; lock input only if it takes a while
+                disconnectedAt = Date.now();
+                setTimeout(() => {
+                    if (socket && !socket.connected) {
+                        els.chatInput.disabled = true;
+                        els.chatSend.disabled = true;
+                    }
+                }, CHAT_LOCK_DELAY_MS);
             });
 
             socket.on('connect_error', () => {
-                els.chatInput.disabled = true;
-                els.chatSend.disabled = true;
                 if (!window.lastConnectErrorMsg || Date.now() - window.lastConnectErrorMsg > 5000) {
                     sysChat('서버 연결 오류. 재연결 시도 중...');
                     window.lastConnectErrorMsg = Date.now();
@@ -891,32 +927,33 @@
 
         function handleDataFromGuest(guestId, data) {
             if (data.type === 'JOIN') {
-                if (data.payload.oldId) {
-                    const existingPlayer = state.players.find(p => p.id === data.payload.oldId);
+                if (data.payload.oldId || data.payload.playerId) {
+                    const existingPlayer = state.players.find(p => p.id === data.payload.oldId || (data.payload.playerId && p.playerId === data.payload.playerId));
                     if (existingPlayer) {
                         // Reconnect! Update ID
-                        if (data.payload.oldId !== guestId) {
+                        const oldId = existingPlayer.id;
+                        if (oldId !== guestId) {
                             existingPlayer.id = guestId;
                             // Update references in word maps
                             state.players.forEach(p => {
-                                if (p.words && p.words[data.payload.oldId]) {
-                                    p.words[guestId] = p.words[data.payload.oldId];
-                                    delete p.words[data.payload.oldId];
+                                if (p.words && p.words[oldId]) {
+                                    p.words[guestId] = p.words[oldId];
+                                    delete p.words[oldId];
                                 }
                             });
                         }
-                        
-                        // Check if we actually announced their disconnect
-                        if (state.disconnectTimeouts[data.payload.oldId]) {
-                            clearTimeout(state.disconnectTimeouts[data.payload.oldId]);
-                            delete state.disconnectTimeouts[data.payload.oldId];
-                            // Reconnected very fast, no need to spam
-                        } else {
-                            // It was announced, so announce recovery
+
+                        if (state.disconnectTimeouts[oldId]) {
+                            clearTimeout(state.disconnectTimeouts[oldId]);
+                            delete state.disconnectTimeouts[oldId];
+                        }
+                        // Announce recovery only if the disconnect was actually announced
+                        if (state.disconnectAnnounced[oldId]) {
+                            delete state.disconnectAnnounced[oldId];
                             sysChat(`[시스템] ${existingPlayer.name}님이 재연결되었습니다.`);
                             broadcast({ type: 'EVENT_SYS', payload: { text: `[시스템] ${existingPlayer.name}님이 재연결되었습니다.` } });
                         }
-                        
+
                         broadcastState();
                         updateRoomUI();
                         renderStage();
@@ -1032,6 +1069,12 @@
                 broadcast({ type: 'EVENT_SYS', payload: { text: `[시스템] 봇 ${botNum}호가 추가되었습니다.` } });
             }
         }
+
+        // 모바일에서 앱 전환 후 복귀 시 백오프 대기를 건너뛰고 즉시 재접속
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState !== 'visible') return;
+            if (socket && !socket.connected && currentMode !== MODE_BOT) socket.disconnect().connect();
+        });
 
         function leaveRoom() {
             if (currentMode === MODE_GUEST && socket) {
@@ -2483,6 +2526,7 @@
             if (state.room.status !== 'playing') return;
             
             if (socket && !socket.connected) {
+                if (Date.now() - disconnectedAt < CHAT_LOCK_DELAY_MS) return;
                 els.chatInput.disabled = true; els.chatSend.disabled = true;
                 els.chatInput.placeholder = "연결 끊김 (재연결 중...)";
                 return;

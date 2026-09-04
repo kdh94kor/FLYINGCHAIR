@@ -7,6 +7,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const statsManager = require('./src/statsManager');
 const path = require('path');
+const crypto = require('crypto');
 
 const app = express();
 
@@ -79,8 +80,12 @@ const io = new Server(server, {
   cors: {
     origin: '*', // Allow all origins for Vercel deployment
     methods: ['GET', 'POST']
-  }
+  },
+  // 모바일 백그라운드 등 짧은 끊김 후 같은 socket.id 로 세션 복구
+  connectionStateRecovery: { maxDisconnectionDuration: 2 * 60 * 1000 }
 });
+
+const DISCONNECT_GRACE_MS = 30 * 1000; // 방장 끊김 후 방 유지 시간
 
 function generateRoomCode() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -91,7 +96,7 @@ function generateRoomCode() {
   return result;
 }
 
-const rooms = {}; // { roomCode: { hostId: socket.id } }
+const rooms = {}; // { roomCode: { hostId: socket.id, hostToken, hostTimer } }
 
 // Per-socket limiter for high-frequency game events (chat, movement, inputs)
 const gameEventLimiter = rateLimit({
@@ -136,9 +141,24 @@ io.on('connection', (socket) => {
     while (rooms[roomCode]) {
       roomCode = generateRoomCode();
     }
-    rooms[roomCode] = { hostId: socket.id };
+    const hostToken = crypto.randomUUID();
+    rooms[roomCode] = { hostId: socket.id, hostToken, hostTimer: null };
     socket.join(roomCode);
-    callback({ success: true, roomCode });
+    callback({ success: true, roomCode, hostToken });
+  });
+
+  // Host reconnects (new socket.id or recovered session)
+  socket.on('REJOIN_HOST', (data, callback) => {
+    const roomCode = sanitizeRoomCode(data && data.roomCode);
+    const room = roomCode && rooms[roomCode];
+    if (!room || room.hostToken !== (data && data.hostToken)) {
+      return callback({ success: false, message: '방이 종료되었습니다.' });
+    }
+    clearTimeout(room.hostTimer);
+    room.hostTimer = null;
+    room.hostId = socket.id;
+    socket.join(roomCode);
+    callback({ success: true });
   });
 
   // Guest joins a room
@@ -202,9 +222,13 @@ io.on('connection', (socket) => {
     for (const roomCode of socket.rooms) {
       if (rooms[roomCode]) {
         if (rooms[roomCode].hostId === socket.id) {
-          // If Host disconnects, notify all guests and delete room
-          socket.to(roomCode).emit('HOST_DISCONNECTED');
-          delete rooms[roomCode];
+          // If Host disconnects, wait for REJOIN_HOST; after grace notify all guests and delete room
+          clearTimeout(rooms[roomCode].hostTimer);
+          rooms[roomCode].hostTimer = setTimeout(() => {
+            if (!rooms[roomCode] || rooms[roomCode].hostId !== socket.id) return;
+            io.to(roomCode).emit('HOST_DISCONNECTED');
+            delete rooms[roomCode];
+          }, DISCONNECT_GRACE_MS);
         } else {
           // If Guest disconnects, notify Host
           io.to(rooms[roomCode].hostId).emit('GUEST_DISCONNECTED', { guestId: socket.id });
