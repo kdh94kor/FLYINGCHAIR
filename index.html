@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
     <title>위험한 초대 - 실시간 플라잉 체어 (멀티플레이)</title>
     <!-- Socket.io for Multiplayer -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -212,12 +212,11 @@
             body.state-playing .main-area { height: 100%; flex: 1; }
             body.state-playing #mobile-leave-btn { display: block !important; }
             
-            /* Mobile: stage fills remaining space, bottom-panel fixed, no keyboard shift */
+            /* Mobile: stage fills remaining space; input/inventory bars stay in flow under the chat (viewport shrinks with keyboard via interactive-widget=resizes-content) */
             body.state-playing .stage { flex: 1; height: auto; min-height: 0; }
             .bottom-panel { height: 260px; flex-shrink: 0; }
-            .chat-messages { padding: 8px 12px; padding-bottom: 95px; gap: 6px; }
-            .chat-input-area { position: fixed; bottom: 0; left: 0; right: 0; padding: 8px 10px; z-index: 1000; background: var(--bg-darker); box-shadow: 0 -2px 10px rgba(0,0,0,0.5); }
-            .inventory-bar { position: fixed; bottom: 53px; left: 0; right: 0; z-index: 1000; box-shadow: 0 -2px 10px rgba(0,0,0,0.5); }
+            .chat-messages { padding: 8px 12px; gap: 6px; }
+            .chat-input-area { padding: 8px 10px; }
             .inventory-label { display: none; }
             .item-btn { font-size: 0.7rem; padding: 4px 8px; }
 
@@ -720,7 +719,7 @@
                     // Sanitize
                     sanitized.players.forEach(sp => {
                         // 1. Hide the guest's own words from themselves
-                        if (sp.id === p.id && sp.words) {
+                        if (sp.id === p.id && sp.words && state.room.status !== 'finished') {
                             Object.keys(sp.words).forEach(k => {
                                 if (Array.isArray(sp.words[k])) {
                                     sp.words[k] = sp.words[k].map(() => '???');
@@ -2217,7 +2216,13 @@
                 sendChat(state.myId, val);
             }
             els.chatInput.value = '';
-            els.chatInput.focus();
+            // ponytail: 자판 종류는 감지 불가 → 마지막 글자가 한글/영문/숫자가 아니면 특수문자 자판으로 보고 포커스를 다시 잡아 IME를 기본(한글) 자판으로 되돌림
+            if (/[^\p{Script=Hangul}\p{Script=Latin}\p{N}\s]$/u.test(val)) {
+                els.chatInput.blur();
+                setTimeout(() => els.chatInput.focus(), 50);
+            } else {
+                els.chatInput.focus();
+            }
         }
         els.chatInput.addEventListener('keypress', e => { if(e.key === 'Enter') { e.preventDefault(); handleChatInput(); } });
         
