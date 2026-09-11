@@ -342,6 +342,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            min-width: 0;
         }
         .step-num {
             width: 22px;
@@ -360,7 +361,8 @@
             font-size: 0.82rem;
             font-weight: 600;
             color: var(--toss-text-main);
-            white-space: nowrap;
+            word-break: keep-all;
+            overflow-wrap: break-word;
         }
 
         /* Section Titles & Explorer Headers */
@@ -555,6 +557,29 @@
             body.state-lobby .toss-guide-container {
                 display: flex !important;
                 padding: 16px 14px 40px !important;
+            }
+            .toss-hero-card {
+                padding: 20px 16px;
+            }
+            .toss-hero-title {
+                font-size: 1.35rem;
+                line-height: 1.38;
+            }
+            .toss-hero-desc {
+                font-size: 0.88rem;
+                line-height: 1.55;
+            }
+            .toss-steps-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+                padding: 12px 14px;
+            }
+            .step-item {
+                gap: 10px;
+                padding: 2px 0;
+            }
+            .step-text {
+                font-size: 0.88rem;
             }
             
             body.state-waiting .sidebar, body.state-word_setting .sidebar {
