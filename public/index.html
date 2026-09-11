@@ -2195,7 +2195,10 @@
 
         async function fetchTabooWords() {
             try {
-                const res = await fetch('/api/taboo-words/top100');
+                const apiUrl = (typeof SOCKET_URL !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
+                    ? `${SOCKET_URL}/api/taboo-words/top100`
+                    : '/api/taboo-words/top100';
+                const res = await fetch(apiUrl);
                 if (res.ok) {
                     const data = await res.json();
                     if (Array.isArray(data) && data.length > 0) {
