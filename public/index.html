@@ -323,9 +323,90 @@
         .modal { background: var(--bg-panel); padding: 30px; border-radius: 12px; width: 400px; max-width: 90%; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #444; }
         .modal h2 { text-align: center; border-bottom: 2px solid #444; padding-bottom: 15px; margin-bottom: 20px; color: var(--accent); flex-shrink: 0; }
         .modal > p, .modal > hr { flex-shrink: 0; }
-        .modal > div[id$="-list"] { overflow-y: auto; flex: 1; padding-right: 5px; margin-bottom: 10px; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+        .modal > div[id$="-list"] { overflow-y: auto; overflow-x: hidden; flex: 1; max-height: 52vh; padding-right: 5px; margin-bottom: 10px; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
         .modal-buttons { display: flex; gap: 10px; margin-top: 10px; flex-shrink: 0; }
         .modal > button { flex-shrink: 0; }
+
+        /* Taboo Slot Machine & Recommendation Styles */
+        .word-input-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .word-input-row input.word-target-input {
+            flex: 1 1 auto !important;
+            min-width: 0 !important;
+            width: 100% !important;
+            margin-bottom: 0 !important;
+        }
+        .slot-btn {
+            width: auto !important;
+            min-width: 68px;
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            white-space: nowrap;
+            flex: 0 0 auto !important;
+            flex-shrink: 0;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            color: #f2f4f6;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            height: 38px;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        .slot-btn:hover:not(:disabled) {
+            background: rgba(49, 130, 246, 0.2);
+            border-color: #3182f6;
+            color: #3182f6;
+            transform: translateY(-1px);
+        }
+        .slot-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        .slot-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .slot-rolling {
+            border-color: #3182f6 !important;
+            box-shadow: 0 0 12px rgba(49, 130, 246, 0.4) !important;
+            background: rgba(49, 130, 246, 0.1) !important;
+            color: #3182f6 !important;
+            font-weight: bold;
+            transition: none !important;
+        }
+        .slot-settle {
+            animation: slotSettlePop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes slotSettlePop {
+            0% { transform: scale(1.04); border-color: #2ed573; box-shadow: 0 0 14px rgba(46, 213, 115, 0.6); }
+            100% { transform: scale(1); border-color: inherit; box-shadow: none; }
+        }
+        .slot-cooldown-notice {
+            background: rgba(255, 71, 87, 0.12);
+            border: 1px solid rgba(255, 71, 87, 0.35);
+            color: #ff6b81;
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 8px 12px;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 6px;
+            margin-bottom: 6px;
+            line-height: 1.4;
+            animation: fadeIn 0.2s ease-in-out;
+        }
 
         /* ===================================================
            TOSS DESIGN SYSTEM - LOBBY EXPLORER STYLES
@@ -1057,6 +1138,7 @@
                 본인을 제외한 다른 플레이어들이 말하면<br>날아가게 될 <b>단어</b>를 1개씩 입력하세요.
             </p>
             <div id="word-setting-list"></div>
+            <div id="word-setting-cooldown" class="slot-cooldown-notice hidden"></div>
             <button id="submit-words-btn" class="btn" onclick="submitWords()" style="margin-top:10px;">입력 완료</button>
             <div id="missing-players-list" style="color:var(--accent); font-weight:bold; text-align:center; margin-top:15px; font-size: 1.1rem;"></div>
         </div>
@@ -1115,6 +1197,7 @@
                 각 참가자에게 추가할 금기어를 입력하세요.
             </p>
             <div id="word-add-list"></div>
+            <div id="word-add-cooldown" class="slot-cooldown-notice hidden"></div>
             <div class="modal-buttons">
                 <button class="btn" onclick="submitWordAdd()">추가하기</button>
                 <button class="btn btn-secondary" onclick="closeWordAddModal()">취소</button>
@@ -1130,6 +1213,7 @@
                 변경할 단어 <strong>1개만</strong> 지우고 새 단어로 수정하세요.
             </p>
             <div id="word-change-list"></div>
+            <div id="word-change-cooldown" class="slot-cooldown-notice hidden"></div>
             <div class="modal-buttons">
                 <button class="btn" onclick="submitWordChange()">변경하기</button>
                 <button class="btn btn-secondary" onclick="closeWordChangeModal()">취소</button>
@@ -2098,8 +2182,136 @@
             openWordSettingModal();
         }
 
+        // ── SSOT: 금기어 추천 & 슬롯머신 롤링 시스템 ──────────────────────
+        window.tabooWordsTop100 = [
+            '진짜', '아니', '근데', '대박', '솔직히', '약간', '맞아', '그치', '설마', '왜요',
+            '혹시', '바보', '정말', '뭐야', '그냥', '어쩌라고', '알겠어', '너무', '오늘', '지금',
+            '어떻게', '잠깐', '뭐라고', '알았어', '하지마'
+        ];
+
+        let tabooRecommendClickCount = 0;
+        let tabooRecommendCooldownUntil = 0;
+        let tabooRecommendTimer = null;
+
+        async function fetchTabooWords() {
+            try {
+                const res = await fetch('/api/taboo-words/top100');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (Array.isArray(data) && data.length > 0) {
+                        window.tabooWordsTop100 = data;
+                    }
+                }
+            } catch (e) {
+                console.warn('Taboo words prefetch notice: using default memory list.', e);
+            }
+        }
+
+        function updateCooldownUI() {
+            const remainingMs = tabooRecommendCooldownUntil - Date.now();
+            const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
+            const notices = document.querySelectorAll('.slot-cooldown-notice');
+            const slotBtns = document.querySelectorAll('.slot-btn');
+
+            if (remainingSec > 0) {
+                slotBtns.forEach(btn => { btn.disabled = true; });
+                notices.forEach(el => {
+                    el.textContent = `잠시 숨을 고르는 중입니다. (다시 추천받기까지 ${remainingSec}초 남음)`;
+                    el.classList.remove('hidden');
+                });
+            } else {
+                if (tabooRecommendTimer) {
+                    clearInterval(tabooRecommendTimer);
+                    tabooRecommendTimer = null;
+                }
+                tabooRecommendClickCount = 0;
+                tabooRecommendCooldownUntil = 0;
+                slotBtns.forEach(btn => { btn.disabled = false; });
+                notices.forEach(el => {
+                    el.textContent = '';
+                    el.classList.add('hidden');
+                });
+            }
+        }
+
+        function resetTabooCooldown() {
+            tabooRecommendCooldownUntil = 0;
+            tabooRecommendClickCount = 0;
+            updateCooldownUI();
+        }
+        window.resetTabooCooldown = resetTabooCooldown;
+
+        function rollTabooWord(inputId, triggerBtn) {
+            const input = typeof inputId === 'string' ? document.getElementById(inputId) : inputId;
+            if (!input || input.disabled) return;
+
+            // 1. Cooldown & Rate limiting check (10 clicks -> 10s cooldown)
+            if (Date.now() < tabooRecommendCooldownUntil) {
+                updateCooldownUI();
+                return;
+            }
+
+            tabooRecommendClickCount++;
+            if (tabooRecommendClickCount >= 10) {
+                tabooRecommendCooldownUntil = Date.now() + 10000;
+                updateCooldownUI();
+                if (!tabooRecommendTimer) {
+                    tabooRecommendTimer = setInterval(updateCooldownUI, 500);
+                }
+                return;
+            }
+
+            // 2. Throttling flag check (Prevent overlapping clicks while rolling)
+            if (input.dataset.rolling === 'true') return;
+            input.dataset.rolling = 'true';
+            if (triggerBtn) triggerBtn.disabled = true;
+
+            // 3. Deceleration Slot Machine Animation (~760ms)
+            input.classList.add('slot-rolling');
+            const words = (window.tabooWordsTop100 && window.tabooWordsTop100.length > 0)
+                ? window.tabooWordsTop100
+                : ['진짜', '아니', '근데', '대박', '솔직히'];
+
+            const stepDelays = [30, 30, 35, 45, 60, 80, 110, 150, 220];
+            let step = 0;
+
+            function runStep() {
+                const randomWord = words[Math.floor(Math.random() * words.length)];
+                input.value = randomWord;
+
+                if (step < stepDelays.length) {
+                    const delay = stepDelays[step++];
+                    setTimeout(runStep, delay);
+                } else {
+                    // Settle on final word
+                    let finalWord = words[Math.floor(Math.random() * words.length)];
+                    if (words.length > 1 && finalWord === input.value) {
+                        finalWord = words[(words.indexOf(finalWord) + 1) % words.length];
+                    }
+                    input.value = finalWord;
+                    input.dataset.rolling = 'false';
+                    input.classList.remove('slot-rolling');
+                    input.classList.add('slot-settle');
+                    setTimeout(() => input.classList.remove('slot-settle'), 350);
+
+                    // Restore button if not in cooldown
+                    if (Date.now() >= tabooRecommendCooldownUntil && triggerBtn) {
+                        triggerBtn.disabled = false;
+                    }
+
+                    // Dispatch input event for dependent logic
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            }
+
+            runStep();
+        }
+
         function openWordSettingModal() {
             document.querySelectorAll('.ready-badge').forEach(b => b.classList.add('hidden'));
+            if (!window.tabooWordsTop100 || window.tabooWordsTop100.length <= 25) {
+                fetchTabooWords();
+            }
             
             const list = document.getElementById('word-setting-list');
             list.innerHTML = '';
@@ -2110,17 +2322,25 @@
                 if (p.id !== state.myId) {
                     const div = document.createElement('div');
                     div.className = 'form-group';
+                    div.style.marginBottom = '12px';
                     let inputsHTML = '';
                     for (let i = 0; i < wordsPerPlayer; i++) {
                         const randomDefault = currentMode === MODE_BOT
                             ? defaultSuggestions[(pIdx * 2 + i) % defaultSuggestions.length]
                             : '';
-                        inputsHTML += `<input type="text" id="word-for-${p.id}-${i}" value="${randomDefault}" placeholder="${p.name}의 금기어 ${i + 1}" style="margin-bottom:5px;">`;
+                        const inputId = `word-for-${p.id}-${i}`;
+                        inputsHTML += `
+                            <div class="word-input-row" style="display:flex; gap:6px; align-items:center; margin-bottom:8px;">
+                                <input type="text" id="${inputId}" value="${randomDefault}" placeholder="${p.name}의 금기어 ${i + 1}" class="word-target-input" style="flex:1; margin-bottom:0;">
+                                <button type="button" class="btn btn-secondary slot-btn" onclick="rollTabooWord('${inputId}', this)" title="랜덤 금기어 추천">🎲 추천</button>
+                            </div>
+                        `;
                     }
-                    div.innerHTML = `<label>${p.name}의 금기어</label>${inputsHTML}`;
+                    div.innerHTML = `<label style="display:block; margin-bottom:6px; font-weight:600; color:#eee;">${p.name}의 금기어</label>${inputsHTML}`;
                     list.appendChild(div);
                 }
             });
+            updateCooldownUI();
             document.getElementById('modal-title').textContent = '비밀 금기어 설정';
             document.getElementById('modal-desc').style.display = 'block';
             list.style.display = 'block';
@@ -2163,6 +2383,15 @@
                 socket.emit('SEND_TO_HOST', { roomCode, type: 'SUBMIT_WORDS', payload: { targetWords: myTargetWords } });
             } else {
                 applySubmittedWords(state.myId, myTargetWords);
+            }
+
+            // Record submitted words for learning
+            const allWordsToRecord = [];
+            for (const tid in myTargetWords) {
+                if (Array.isArray(myTargetWords[tid])) allWordsToRecord.push(...myTargetWords[tid]);
+            }
+            if (allWordsToRecord.length > 0 && socket) {
+                socket.emit('RECORD_TABOO_WORDS', { words: allWordsToRecord });
             }
         }
 
@@ -2380,29 +2609,44 @@
         }
         
         function openWordAddModal() {
+            if (!window.tabooWordsTop100 || window.tabooWordsTop100.length <= 25) {
+                fetchTabooWords();
+            }
             const list = document.getElementById('word-add-list');
             list.innerHTML = '';
             
             state.players.forEach(p => {
                 if (p.id === state.myId) return; // Exclude self
                 const row = document.createElement('div');
-                row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;';
+                row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:8px;';
                 
                 const label = document.createElement('span');
                 label.style.fontWeight = 'bold';
+                label.style.minWidth = '50px';
                 label.textContent = p.name;
                 
+                const inputId = `word-add-${p.id}`;
                 const input = document.createElement('input');
                 input.type = 'text';
+                input.id = inputId;
                 input.dataset.targetId = p.id;
                 input.placeholder = '추가할 단어';
-                input.style.cssText = 'padding:8px; border-radius:4px; border:1px solid #555; background:#222; color:#fff; width:150px;';
+                input.style.cssText = 'padding:8px; border-radius:4px; border:1px solid #555; background:#222; color:#fff; flex:1; min-width:0;';
                 
+                const slotBtn = document.createElement('button');
+                slotBtn.type = 'button';
+                slotBtn.className = 'btn btn-secondary slot-btn';
+                slotBtn.title = '랜덤 금기어 추천';
+                slotBtn.innerHTML = '🎲 추천';
+                slotBtn.onclick = () => rollTabooWord(inputId, slotBtn);
+
                 row.appendChild(label);
                 row.appendChild(input);
+                row.appendChild(slotBtn);
                 list.appendChild(row);
             });
             
+            updateCooldownUI();
             document.getElementById('modal-word-add').classList.remove('hidden');
         }
         
@@ -2578,42 +2822,63 @@
             const allWords = Object.values(target.words).flat();
             const isMe = targetId === state.myId;
             
+            if (!window.tabooWordsTop100 || window.tabooWordsTop100.length <= 25) {
+                fetchTabooWords();
+            }
             allWords.forEach((w, idx) => {
                 const row = document.createElement('div');
-                row.style.cssText = 'display:flex; justify-content:space-between; align-items:center;';
+                row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:8px;';
                 
                 const label = document.createElement('span');
                 label.style.fontWeight = 'bold';
+                label.style.minWidth = '50px';
                 label.textContent = `단어 ${idx + 1}`;
                 
+                const inputId = `word-change-${idx}`;
                 const input = document.createElement('input');
                 input.type = 'text';
+                input.id = inputId;
                 input.className = 'word-change-input';
                 input.dataset.idx = idx;
                 input.value = isMe ? '???' : w;
                 input.dataset.initialValue = input.value; // Store initial value
-                input.style.cssText = 'padding:8px; border-radius:4px; border:1px solid #555; background:#222; color:#fff; width:150px;';
+                input.style.cssText = 'padding:8px; border-radius:4px; border:1px solid #555; background:#222; color:#fff; flex:1; min-width:0;';
                 
+                const slotBtn = document.createElement('button');
+                slotBtn.type = 'button';
+                slotBtn.className = 'btn btn-secondary slot-btn';
+                slotBtn.title = '랜덤 금기어 추천';
+                slotBtn.innerHTML = '🎲 추천';
+                slotBtn.onclick = () => {
+                    if (input.disabled) return;
+                    rollTabooWord(inputId, slotBtn);
+                };
+
                 input.addEventListener('input', (e) => {
                     const inputs = document.querySelectorAll('.word-change-input');
                     const hasChanged = Array.from(inputs).some(inp => inp.value !== inp.dataset.initialValue);
                     
                     inputs.forEach(inp => {
+                        const btn = inp.parentElement.querySelector('.slot-btn');
                         if (hasChanged && inp.value === inp.dataset.initialValue) {
                             inp.disabled = true; // Lock others
                             inp.style.opacity = '0.5';
+                            if (btn) btn.disabled = true;
                         } else {
                             inp.disabled = false;
                             inp.style.opacity = '1';
+                            if (btn && Date.now() >= tabooRecommendCooldownUntil) btn.disabled = false;
                         }
                     });
                 });
                 
                 row.appendChild(label);
                 row.appendChild(input);
+                row.appendChild(slotBtn);
                 list.appendChild(row);
             });
             
+            updateCooldownUI();
             document.getElementById('modal-word-change').classList.remove('hidden');
         }
         
@@ -4063,6 +4328,15 @@
             });
         }
         window.copyInviteLink = copyInviteLink;
+        window.rollTabooWord = rollTabooWord;
+        window.fetchTabooWords = fetchTabooWords;
+        window.openWordSettingModal = openWordSettingModal;
+        window.openWordAddModal = openWordAddModal;
+        window.openWordChangeModal = openWordChangeModal;
+        window.updateCooldownUI = updateCooldownUI;
+
+        // Initial 1-time pre-fetch of top 100 taboo words for client-side zero-overhead rolling
+        fetchTabooWords();
 
         // Auto-join via URL parameter
         const urlParams = new URLSearchParams(window.location.search);

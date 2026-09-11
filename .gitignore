@@ -46,3 +46,4 @@ Thumbs.db
 tmp/
 .cache/
 .gemini/
+powershell.cmd

@@ -6,6 +6,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const statsManager = require('./src/statsManager');
+const tabooWordsManager = require('./src/tabooWordsManager');
 const path = require('path');
 const crypto = require('crypto');
 
@@ -104,6 +105,12 @@ app.get('/admin', basicAuth, (req, res) => {
 app.get('/api/admin/stats', basicAuth, async (req, res) => {
   const { from, to } = req.query;
   res.json(await statsManager.getStats(from, to));
+});
+
+// Top 100 Taboo Words Endpoint (Cached)
+app.get('/api/taboo-words/top100', (req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=300');
+  res.json(tabooWordsManager.getTop100Words());
 });
 
 // Serve static files from public directory first, then root directory
@@ -262,7 +269,17 @@ io.on('connection', (socket) => {
     if (!roomCode) return;
     const room = rooms[roomCode];
     if (room) {
+      if (cleaned.type === 'SUBMIT_WORDS' && cleaned.payload && cleaned.payload.targetWords) {
+        tabooWordsManager.recordWordsFromPayload(cleaned.payload.targetWords);
+      }
       io.to(room.hostId).emit('DATA_FROM_GUEST', { guestId: socket.id, type: cleaned.type, payload: cleaned.payload });
+    }
+  });
+
+  // Client directly records taboo words (e.g. host or solo/bot mode)
+  socket.on('RECORD_TABOO_WORDS', (data) => {
+    if (data && data.words) {
+      tabooWordsManager.recordWords(Array.isArray(data.words) ? data.words : [data.words]);
     }
   });
 
