@@ -1,0 +1,14 @@
+﻿{
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/guide/rules", "destination": "/guide/rules.html" },
+    { "source": "/guide/items", "destination": "/guide/items.html" },
+    { "source": "/guide/strategy", "destination": "/guide/strategy.html" },
+    { "source": "/faq", "destination": "/faq.html" },
+    { "source": "/about", "destination": "/about.html" },
+    { "source": "/privacy", "destination": "/privacy.html" },
+    { "source": "/terms", "destination": "/terms.html" },
+    { "source": "/admin", "destination": "/admin.html" }
+  ]
+}

@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://flyingchair.onrender.com/sitemap.xml
+Sitemap: https://www.flying-chair.com/sitemap.xml
