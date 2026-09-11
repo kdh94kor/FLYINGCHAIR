@@ -1247,7 +1247,7 @@
                     // Sanitize
                     sanitized.players.forEach(sp => {
                         // 1. Hide the guest's own words from themselves
-                        if (sp.id === p.id && sp.words) {
+                        if (sp.id === p.id && sp.words && state.room.status !== 'finished') {
                             Object.keys(sp.words).forEach(k => {
                                 if (Array.isArray(sp.words[k])) {
                                     sp.words[k] = sp.words[k].map(() => '???');
@@ -2764,7 +2764,13 @@
                 sendChat(state.myId, val);
             }
             els.chatInput.value = '';
-            els.chatInput.focus();
+            // ponytail: 자판 종류는 감지 불가 → 마지막 글자가 한글/영문/숫자가 아니면 특수문자 자판으로 보고 포커스를 다시 잡아 IME를 기본(한글) 자판으로 되돌림
+            if (/[^\p{Script=Hangul}\p{Script=Latin}\p{N}\s]$/u.test(val)) {
+                els.chatInput.blur();
+                setTimeout(() => els.chatInput.focus(), 50);
+            } else {
+                els.chatInput.focus();
+            }
         }
         els.chatInput.addEventListener('keypress', e => { if(e.key === 'Enter') { e.preventDefault(); handleChatInput(); } });
         
