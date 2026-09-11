@@ -186,7 +186,7 @@ io.on('connection', (socket) => {
       roomCode = generateRoomCode();
     }
     const hostToken = crypto.randomUUID();
-    rooms[roomCode] = { hostId: socket.id, hostToken, hostTimer: null };
+    rooms[roomCode] = { hostId: socket.id, hostToken, hostTimer: null, status: 'waiting' };
     socket.join(roomCode);
     callback({ success: true, roomCode, hostToken });
   });
@@ -228,7 +228,29 @@ io.on('connection', (socket) => {
     if (!roomCode) return;
     const room = rooms[roomCode];
     if (room && room.hostId === socket.id) {
+      room.status = 'playing';
       statsManager.recordGameStart(data.options, data.playerCount);
+    }
+  });
+
+  // Host explicitly leaves / closes room
+  socket.on('HOST_CLOSE_ROOM', (data) => {
+    const roomCode = sanitizeRoomCode(data && data.roomCode);
+    const room = roomCode && rooms[roomCode];
+    if (room && room.hostId === socket.id) {
+      clearTimeout(room.hostTimer);
+      io.to(roomCode).emit('HOST_DISCONNECTED', { message: '방장이 방을 나갔습니다.' });
+      delete rooms[roomCode];
+    }
+  });
+
+  // Guest explicitly leaves room
+  socket.on('GUEST_LEAVE', (data) => {
+    const roomCode = sanitizeRoomCode(data && data.roomCode);
+    const room = roomCode && rooms[roomCode];
+    if (room) {
+      socket.leave(roomCode);
+      io.to(room.hostId).emit('GUEST_DISCONNECTED', { guestId: socket.id, intentional: true });
     }
   });
 
@@ -266,16 +288,22 @@ io.on('connection', (socket) => {
     for (const roomCode of socket.rooms) {
       if (rooms[roomCode]) {
         if (rooms[roomCode].hostId === socket.id) {
-          // If Host disconnects, wait for REJOIN_HOST; after grace notify all guests and delete room
           clearTimeout(rooms[roomCode].hostTimer);
+          const isWaiting = rooms[roomCode].status === 'waiting';
+          const graceMs = isWaiting ? 1500 : 15000;
           rooms[roomCode].hostTimer = setTimeout(() => {
             if (!rooms[roomCode] || rooms[roomCode].hostId !== socket.id) return;
-            io.to(roomCode).emit('HOST_DISCONNECTED');
+            io.to(roomCode).emit('HOST_DISCONNECTED', {
+              message: isWaiting ? '방장이 대기실을 나갔습니다.' : '방장의 연결이 끊겨 방이 종료되었습니다.'
+            });
             delete rooms[roomCode];
-          }, DISCONNECT_GRACE_MS);
+          }, graceMs);
         } else {
-          // If Guest disconnects, notify Host
-          io.to(rooms[roomCode].hostId).emit('GUEST_DISCONNECTED', { guestId: socket.id });
+          const isWaiting = rooms[roomCode].status === 'waiting';
+          io.to(rooms[roomCode].hostId).emit('GUEST_DISCONNECTED', {
+            guestId: socket.id,
+            isWaiting
+          });
         }
       }
     }

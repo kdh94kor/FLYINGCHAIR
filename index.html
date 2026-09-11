@@ -96,11 +96,26 @@
 
         .btn { width: 100%; padding: 12px; border: none; border-radius: 6px; background-color: #3498db; color: #fff; font-size: 1rem; font-weight: bold; cursor: pointer; transition: all 0.2s; }
         .btn:hover { filter: brightness(1.1); }
+        .btn:disabled { opacity: 0.65; cursor: not-allowed; filter: none; }
         .btn-danger { background-color: var(--accent); }
         .btn-danger:hover { background-color: var(--accent-hover); }
         .btn-secondary { background-color: #555; }
         .btn-success { background-color: #2ecc71; }
         .btn-warning { background-color: #f39c12; }
+        .btn-spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255, 255, 255, 0.35);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: btnSpinner 0.6s linear infinite;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+        @keyframes btnSpinner {
+            to { transform: rotate(360deg); }
+        }
 
         hr { border: 0; border-top: 1px solid #444; margin: 20px 0; }
         .hidden { display: none !important; }
@@ -805,14 +820,14 @@
 
             
             <div style="display:flex; gap:10px; margin-bottom:15px;">
-                <button class="btn btn-success" onclick="createMultiplayerRoom()">👑 방 만들기</button>
-                <button class="btn btn-warning" onclick="showJoinInput()">🤝 방 참가하기</button>
+                <button class="btn btn-success" id="btn-create-room" onclick="createMultiplayerRoom()">👑 방 만들기</button>
+                <button class="btn btn-warning" id="btn-show-join" onclick="showJoinInput()">🤝 방 참가하기</button>
             </div>
             
             <div id="join-input-area" class="hidden form-group" style="background:#333; padding:10px; border-radius:6px;">
                 <label>방장에게 받은 방 코드를 입력하세요</label>
                 <input type="text" id="join-room-code" placeholder="예: 1234">
-                <button class="btn" style="margin-top:10px;" onclick="joinMultiplayerRoom()">입장</button>
+                <button class="btn" id="btn-join-room" style="margin-top:10px;" onclick="joinMultiplayerRoom()">입장</button>
             </div>
             
             <hr>
@@ -1375,18 +1390,75 @@
             });
         }
 
+        function setCreateRoomLoading(loading) {
+            const btn = document.getElementById('btn-create-room');
+            const joinBtn = document.getElementById('btn-show-join');
+            if (!btn) return;
+            if (loading) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="btn-spinner"></span> 방 생성 중...';
+                if (joinBtn) joinBtn.disabled = true;
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = '👑 방 만들기';
+                if (joinBtn) joinBtn.disabled = false;
+            }
+        }
+
+        function setJoinRoomLoading(loading) {
+            const btn = document.getElementById('btn-join-room');
+            if (!btn) return;
+            if (loading) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="btn-spinner"></span> 입장 중...';
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = '입장';
+            }
+        }
+
+        function removeGuestPlayer(guestId) {
+            const departed = state.players.find(p => p.id === guestId);
+            if (!departed) return;
+            const deptName = departed.name;
+            if (state.disconnectTimeouts[guestId]) {
+                clearTimeout(state.disconnectTimeouts[guestId]);
+                delete state.disconnectTimeouts[guestId];
+            }
+            delete state.disconnectAnnounced[guestId];
+            state.players = state.players.filter(p => p.id !== guestId);
+
+            state.players.forEach(p => {
+                if (p.words && p.words[guestId]) {
+                    delete p.words[guestId];
+                }
+            });
+            updateRoomUI();
+            renderStage();
+            sysChat(`[시스템] ${deptName}님이 퇴장했습니다.`);
+            broadcastState();
+        }
+
         function createMultiplayerRoom() {
             audioCtx.resume();
             const myName = sanitizeNickname(els.nickname.value.trim(), '방장');
             const myGender = document.querySelector('input[name="gender"]:checked').value;
             const options = getRoomOptions();
             if (!options) return; // Validation failed
+            
+            setCreateRoomLoading(true);
             const { wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds } = options;
             
             sysChat('서버 연결 중...');
             if (socket) socket.disconnect();
             socket = io(SOCKET_URL, { reconnection: true, reconnectionDelay: 1000 });
             
+            let createTimeout = setTimeout(() => {
+                setCreateRoomLoading(false);
+                sysChat('서버 응답 시간 초과. 다시 시도해주세요.');
+                alert('서버 응답 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.');
+            }, 8000);
+
             socket.on('disconnect', (reason) => {
                 if (reason === 'io server disconnect') {
                     leaveRoom();
@@ -1399,6 +1471,8 @@
                 // Only create a room if we don't already have one (prevents re-creation on mobile reconnect)
                 if (roomCode) {
                     socket.emit('REJOIN_HOST', { roomCode, hostToken }, (response) => {
+                        clearTimeout(createTimeout);
+                        setCreateRoomLoading(false);
                         if (response.success) {
                             sysChat('서버와 재연결되었습니다.');
                         } else {
@@ -1409,6 +1483,8 @@
                     return;
                 }
                 socket.emit('CREATE_ROOM', (response) => {
+                    clearTimeout(createTimeout);
+                    setCreateRoomLoading(false);
                     if (response.success) {
                         roomCode = response.roomCode;
                         hostToken = response.hostToken;
@@ -1427,6 +1503,8 @@
                         document.getElementById('host-controls').classList.remove('hidden');
                         
                         sysChat(`방이 생성되었습니다! 친구들에게 방 코드 [${roomCode}] 를 알려주세요.`);
+                    } else {
+                        alert(response.message || '방 생성에 실패했습니다.');
                     }
                 });
             });
@@ -1442,47 +1520,30 @@
             socket.on('GUEST_DISCONNECTED', (data) => {
                 const pId = data.guestId;
                 const departed = state.players.find(p => p.id === pId);
-                
-                // If they weren't in the game (e.g., rejected join), ignore the disconnect
                 if (!departed) return;
                 
                 const deptName = departed.name;
-                
-                const removePlayer = () => {
-                    // Remove departed player from list
-                    state.players = state.players.filter(p => p.id !== pId);
 
-                    // Remove the departed player's assigned words from all remaining players
-                    state.players.forEach(p => {
-                        if (p.words && p.words[pId]) {
-                            delete p.words[pId];
-                        }
-                    });
-                    updateRoomUI();
-                    renderStage();
-                    sysChat(`[시스템] ${deptName}님이 퇴장했습니다.`);
-                    broadcastState();
-                };
-
-                if (departed.intentionallyLeft) {
-                    removePlayer();
-                } else {
-                    // Do NOT remove them yet so they can reconnect within the grace period
-                    if (state.disconnectTimeouts[pId]) clearTimeout(state.disconnectTimeouts[pId]);
-                    state.disconnectTimeouts[pId] = setTimeout(() => {
-                        delete state.disconnectTimeouts[pId];
-                        if (state.room.status === 'waiting') {
-                            removePlayer();
-                        } else {
-                            state.disconnectAnnounced[pId] = true;
-                            sysChat(`[시스템] ${deptName}님의 연결이 불안정합니다. (재연결 대기 중...)`);
-                            broadcast({ type: 'EVENT_SYS', payload: { text: `[시스템] ${deptName}님의 연결이 불안정합니다. (재연결 대기 중...)` } });
-                        }
-                    }, DISCONNECT_GRACE_MS);
+                // In waiting room, or if intentionally left: REMOVE INSTANTLY!
+                if (state.room.status === 'waiting' || data.isWaiting || data.intentional || departed.intentionallyLeft) {
+                    removeGuestPlayer(pId);
+                    return;
                 }
+
+                // In playing game: 12 seconds grace period for temporary network/app switch
+                if (state.disconnectTimeouts[pId]) clearTimeout(state.disconnectTimeouts[pId]);
+                sysChat(`[시스템] ${deptName}님의 연결이 끊겼습니다. (12초 내 재연결 대기)`);
+                broadcast({ type: 'EVENT_SYS', payload: { text: `[시스템] ${deptName}님의 연결이 끊겼습니다. (12초 내 재연결 대기)` } });
+                
+                state.disconnectTimeouts[pId] = setTimeout(() => {
+                    delete state.disconnectTimeouts[pId];
+                    removeGuestPlayer(pId);
+                }, 12000);
             });
 
             socket.on('connect_error', () => {
+                clearTimeout(createTimeout);
+                setCreateRoomLoading(false);
                 sysChat('서버 연결 오류. 잠시 후 다시 시도해주세요.');
             });
         }
@@ -1495,13 +1556,21 @@
             const myName = sanitizeNickname(els.nickname.value.trim(), '게스트');
             const myGender = document.querySelector('input[name="gender"]:checked').value;
             
+            setJoinRoomLoading(true);
             sysChat('서버 연결 중...');
             if (socket) socket.disconnect();
             socket = io(SOCKET_URL, { reconnection: true, reconnectionDelay: 1000 });
             
+            let joinTimeout = setTimeout(() => {
+                setJoinRoomLoading(false);
+                alert('서버 응답 시간이 초과되었습니다.');
+            }, 8000);
+
             socket.on('connect', () => {
                 const oldId = state.myId;
                 socket.emit('JOIN_ROOM', { roomCode: code, payload: { name: myName, gender: myGender, oldId, playerId } }, (response) => {
+                    clearTimeout(joinTimeout);
+                    setJoinRoomLoading(false);
                     if (response.success) {
                         roomCode = code;
                         currentMode = MODE_GUEST;
@@ -1525,7 +1594,7 @@
                             els.chatInput.placeholder = "메시지 입력...";
                         }
                     } else {
-                        alert(response.reason || '방 입장에 실패했습니다.');
+                        alert(response.reason || response.message || '방 입장에 실패했습니다. 방 코드를 확인해 주세요.');
                         socket.disconnect();
                     }
                 });
@@ -1533,8 +1602,9 @@
 
             socket.on('DATA_FROM_HOST', handleDataFromHost);
 
-            socket.on('HOST_DISCONNECTED', () => {
-                alert('방장과의 연결이 끊어졌습니다.');
+            socket.on('HOST_DISCONNECTED', (data) => {
+                const msg = (data && data.message) || '방장이 방을 나갔습니다. 로비로 이동합니다.';
+                alert(msg);
                 leaveRoom();
             });
 
@@ -1555,6 +1625,8 @@
             });
 
             socket.on('connect_error', () => {
+                clearTimeout(joinTimeout);
+                setJoinRoomLoading(false);
                 if (!window.lastConnectErrorMsg || Date.now() - window.lastConnectErrorMsg > 5000) {
                     sysChat('서버 연결 오류. 재연결 시도 중...');
                     window.lastConnectErrorMsg = Date.now();
@@ -1619,8 +1691,7 @@
             } else if (data.type === 'USE_ITEM') {
                 executeItem(guestId, data.payload.item, data.payload.index, data.payload.targetId, data.payload.extraData);
             } else if (data.type === 'LEAVE') {
-                const p = state.players.find(x => x.id === guestId);
-                if (p) p.intentionallyLeft = true;
+                removeGuestPlayer(guestId);
             }
         }
 
@@ -1714,10 +1785,15 @@
         });
 
         function leaveRoom() {
-            if (currentMode === MODE_GUEST && socket) {
-                socket.emit('SEND_TO_HOST', { roomCode, type: 'LEAVE', payload: {} });
+            if (currentMode === MODE_HOST && socket && roomCode) {
+                socket.emit('HOST_CLOSE_ROOM', { roomCode });
+            } else if (currentMode === MODE_GUEST && socket && roomCode) {
+                socket.emit('GUEST_LEAVE', { roomCode });
+                socket.emit('SEND_TO_HOST', { roomCode, type: 'LEAVE', payload: { intentionallyLeft: true } });
             }
             if (socket) { socket.disconnect(); socket = null; }
+            setCreateRoomLoading(false);
+            setJoinRoomLoading(false);
             currentMode = null;
             roomCode = null;
             state.room.status = 'lobby';
@@ -1752,6 +1828,19 @@
             
             switchView('lobby-view');
         }
+
+        // 브라우저 탭 닫기 / 새로고침 시 방 나가기 즉시 전송
+        function handlePageUnload() {
+            if (!socket || !roomCode) return;
+            if (currentMode === MODE_HOST) {
+                socket.emit('HOST_CLOSE_ROOM', { roomCode });
+            } else if (currentMode === MODE_GUEST) {
+                socket.emit('GUEST_LEAVE', { roomCode });
+                socket.emit('SEND_TO_HOST', { roomCode, type: 'LEAVE', payload: { intentionallyLeft: true } });
+            }
+        }
+        window.addEventListener('beforeunload', handlePageUnload);
+        window.addEventListener('pagehide', handlePageUnload);
 
         function toggleReady() {
             if (currentMode === MODE_GUEST && (!socket || !socket.connected)) {
