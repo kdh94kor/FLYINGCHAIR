@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>아이템 도감 & 밸런스 분석 - 위험한 초대 (플라잉 체어)</title>
+    <meta name="description" content="'위험한 초대 - 실시간 플라잉 체어'의 5종 전략 특수 아이템(유도 미사일, 방패, 단어 변경, 추가, 삭제)의 스펙, 발동 메커니즘, 쿨다운 및 카운터 상성 전략 완벽 가이드.">
+    <meta name="keywords" content="플라잉체어아이템, 위험한초대아이템, 웹게임아이템, 게임도감, 유도미사일, 방패, 금기어변경, 게임공략">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://flyingchair.onrender.com/guide/items">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="아이템 도감 & 밸런스 분석 - 위험한 초대">
+    <meta property="og:description" content="전세를 단숨에 뒤집는 5가지 특수 아이템의 상세 스펙과 카운터 전략 완벽 분석.">
+    <meta property="og:url" content="https://flyingchair.onrender.com/guide/items">
+
+    <!-- Pretendard Font -->
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+
+    <style>
+        :root {
+            --toss-blue: #3182f6;
+            --toss-blue-hover: #1b64da;
+            --toss-blue-light: rgba(49, 130, 246, 0.12);
+            --toss-bg: #14151a;
+            --toss-card-bg: #1f2128;
+            --toss-card-sub: #272a34;
+            --toss-border: rgba(255, 255, 255, 0.08);
+            --toss-text-main: #f2f4f6;
+            --toss-text-sub: #8b95a1;
+            --toss-text-muted: #4e5968;
+            --accent-red: #ff4757;
+            --accent-green: #2ed573;
+            --accent-purple: #9c88ff;
+            --accent-orange: #ffa502;
+            --radius-lg: 20px;
+            --radius-md: 14px;
+            --radius-sm: 8px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+        body { background-color: var(--toss-bg); color: var(--toss-text-main); line-height: 1.6; min-height: 100vh; display: flex; flex-direction: column; }
+
+        /* GNB */
+        .toss-gnb { position: sticky; top: 0; z-index: 1000; background: rgba(20, 21, 26, 0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--toss-border); padding: 0 24px; height: 64px; display: flex; align-items: center; justify-content: space-between; }
+        .gnb-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #fff; font-size: 1.15rem; font-weight: 800; }
+        .gnb-brand-logo { font-size: 1.4rem; }
+        .gnb-nav { display: flex; align-items: center; gap: 6px; list-style: none; }
+        .gnb-link { color: var(--toss-text-sub); text-decoration: none; font-size: 0.92rem; font-weight: 600; padding: 8px 14px; border-radius: var(--radius-sm); transition: all 0.15s; }
+        .gnb-link:hover { color: #fff; background: rgba(255, 255, 255, 0.05); }
+        .gnb-link.active { color: var(--toss-blue); background: var(--toss-blue-light); font-weight: 700; }
+        .gnb-cta { background: var(--toss-blue); color: #fff; padding: 8px 18px; border-radius: 9999px; text-decoration: none; font-size: 0.88rem; font-weight: 700; transition: background 0.2s; }
+        .gnb-cta:hover { background: var(--toss-blue-hover); }
+
+        /* Layout */
+        .container { width: 100%; max-width: 900px; margin: 0 auto; padding: 40px 20px 80px; flex: 1; }
+        .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--toss-text-muted); margin-bottom: 20px; }
+        .breadcrumb a { color: var(--toss-text-sub); text-decoration: none; }
+        .breadcrumb a:hover { color: var(--toss-text-main); text-decoration: underline; }
+
+        /* Content Header */
+        .doc-header { margin-bottom: 36px; }
+        .doc-badge { display: inline-block; background: var(--toss-blue-light); color: var(--toss-blue); font-size: 0.8rem; font-weight: 700; padding: 4px 12px; border-radius: 9999px; margin-bottom: 14px; }
+        .doc-title { font-size: 2.2rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 14px; line-height: 1.3; }
+        .doc-desc { font-size: 1.05rem; color: var(--toss-text-sub); line-height: 1.7; word-break: keep-all; }
+
+        /* Item Grid */
+        .item-detail-card { background: var(--toss-card-bg); border: 1px solid var(--toss-border); border-radius: var(--radius-lg); padding: 32px 28px; margin-bottom: 28px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+        .item-top { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+        .item-icon-circle { width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 2rem; }
+        .item-icon-circle.red { background: rgba(255, 71, 87, 0.15); }
+        .item-icon-circle.blue { background: rgba(49, 130, 246, 0.15); }
+        .item-icon-circle.green { background: rgba(46, 213, 115, 0.15); }
+        .item-icon-circle.purple { background: rgba(156, 136, 255, 0.15); }
+        .item-icon-circle.orange { background: rgba(255, 159, 67, 0.15); }
+        .item-title-group h2 { font-size: 1.4rem; font-weight: 800; color: #fff; margin-bottom: 4px; }
+        .item-badge-row { display: flex; gap: 8px; }
+        .badge { font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+        .badge.attack { background: rgba(255, 71, 87, 0.2); color: #ff4757; }
+        .badge.defense { background: rgba(49, 130, 246, 0.2); color: #3182f6; }
+        .badge.utility { background: rgba(46, 213, 115, 0.2); color: #2ed573; }
+        .badge.curse { background: rgba(156, 136, 255, 0.2); color: #9c88ff; }
+        .badge.buff { background: rgba(255, 159, 67, 0.2); color: #ffa502; }
+
+        /* Specs table */
+        .specs-table { width: 100%; border-collapse: collapse; margin: 18px 0; background: var(--toss-card-sub); border-radius: var(--radius-sm); overflow: hidden; }
+        .specs-table th, .specs-table td { padding: 12px 16px; text-align: left; font-size: 0.88rem; border-bottom: 1px solid var(--toss-border); }
+        .specs-table th { color: var(--toss-text-muted); width: 28%; font-weight: 600; }
+        .specs-table td { color: var(--toss-text-main); }
+        .specs-table tr:last-child th, .specs-table tr:last-child td { border-bottom: none; }
+
+        .strategy-block { margin-top: 18px; padding: 16px 20px; background: rgba(255,255,255,0.02); border-left: 3px solid var(--toss-blue); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+        .strategy-block h4 { font-size: 0.95rem; font-weight: 700; color: #fff; margin-bottom: 6px; }
+        .strategy-block p { font-size: 0.88rem; color: var(--toss-text-sub); margin-bottom: 0; line-height: 1.6; }
+
+        /* Balance Matrix */
+        .matrix-section { background: var(--toss-card-bg); border: 1px solid var(--toss-border); border-radius: var(--radius-lg); padding: 32px 28px; margin-bottom: 28px; }
+        .matrix-section h3 { font-size: 1.25rem; font-weight: 700; margin-bottom: 14px; color: #fff; }
+
+        /* Safe Ad Slot */
+        .adsense-slot { margin: 40px auto; max-width: 728px; min-height: 90px; background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.08); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; color: var(--toss-text-muted); font-size: 0.8rem; }
+
+        /* Footer */
+        .toss-footer { border-top: 1px solid var(--toss-border); padding: 40px 24px; background: #0f1013; text-align: center; }
+        .footer-nav { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+        .footer-nav a { color: var(--toss-text-sub); text-decoration: none; font-size: 0.85rem; }
+        .footer-nav a:hover { color: #fff; text-decoration: underline; }
+        .footer-copy { font-size: 0.78rem; color: var(--toss-text-muted); line-height: 1.6; }
+
+        @media (max-width: 768px) {
+            .toss-gnb { padding: 0 16px; }
+            .gnb-nav { display: none; }
+            .doc-title { font-size: 1.7rem; }
+            .item-detail-card { padding: 22px 18px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header GNB -->
+    <header class="toss-gnb">
+        <a href="/" class="gnb-brand">
+            <span class="gnb-brand-logo">🪑</span>
+            <span>위험한 초대</span>
+        </a>
+        <nav>
+            <ul class="gnb-nav">
+                <li><a href="/guide/rules" class="gnb-link">규칙</a></li>
+                <li><a href="/guide/items" class="gnb-link active">아이템 도감</a></li>
+                <li><a href="/guide/strategy" class="gnb-link">공략집</a></li>
+                <li><a href="/faq" class="gnb-link">FAQ</a></li>
+                <li><a href="/about" class="gnb-link">서비스 소개</a></li>
+            </ul>
+        </nav>
+        <a href="/" class="gnb-cta">게임 시작하기</a>
+    </header>
+
+    <!-- Main Container -->
+    <main class="container">
+        <!-- Breadcrumb -->
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="/">홈</a>
+            <span>›</span>
+            <span>게임 가이드</span>
+            <span>›</span>
+            <span style="color: var(--toss-text-main);">아이템 도감</span>
+        </nav>
+
+        <!-- Doc Header -->
+        <section class="doc-header">
+            <span class="doc-badge">🎒 ITEM COMPENDIUM</span>
+            <h1 class="doc-title">전략 특수 아이템 5종 도감 & 밸런스 분석</h1>
+            <p class="doc-desc">
+                아이템 모드 활성화 시 주기적으로 인벤토리에 보급되는 5가지 특수 아이템의 상세 스펙과 발동 조건,
+                그리고 상대를 카운터치기 위한 실전 밸런스 분석을 제공합니다.
+            </p>
+        </section>
+
+        <!-- Item 1: 유도 미사일 -->
+        <article class="item-detail-card">
+            <div class="item-top">
+                <div class="item-icon-circle red">🚀</div>
+                <div class="item-title-group">
+                    <h2>유도 미사일 (Homing Missile)</h2>
+                    <div class="item-badge-row">
+                        <span class="badge attack">공격형</span>
+                        <span class="badge" style="background: rgba(255,255,255,0.1); color:#ccc;">액티브 소모품</span>
+                    </div>
+                </div>
+            </div>
+            <p style="color: var(--toss-text-sub); font-size: 0.95rem;">
+                원거리에서 특정 플레이어 1명을 직접 타깃팅하여 미사일을 투하합니다. 피격된 플레이어는 화면이 상하로 반전되며 30초 동안 완벽한 기절 상태에 빠져 모든 대화와 행동이 봉쇄됩니다.
+            </p>
+            <table class="specs-table">
+                <tr><th>발동 방식</th><td>타깃 플레이어 선택 후 즉시 조준 발사</td></tr>
+                <tr><th>피격 효과</th><td>피격 대상 30초 확정 기절(Stun) 및 화면 반전 디버프</td></tr>
+                <tr><th>예약 메커니즘</th><td>대상이 공중 비행 또는 수영 중 피격 시 착석 즉시 기절 예약 발동</td></tr>
+                <tr><th>카운터 아이템</th><td>이지스 방패(Shield)를 보유한 대상 공격 시 무효화</td></tr>
+            </table>
+            <div class="strategy-block">
+                <h4>🎯 실전 운용 전략</h4>
+                <p>절대 금기어를 말하지 않고 노련하게 대화를 리드하는 1위 플레이어를 제압하거나, 침묵 타이머가 촉박한 플레이어를 기절시켜 AFK 자동 발사를 강제할 때 극상의 시너지를 발휘합니다.</p>
+            </div>
+        </article>
+
+        <!-- Item 2: 이지스 방패 -->
+        <article class="item-detail-card">
+            <div class="item-top">
+                <div class="item-icon-circle blue">🛡️</div>
+                <div class="item-title-group">
+                    <h2>이지스 방패 (Aegis Shield)</h2>
+                    <div class="item-badge-row">
+                        <span class="badge defense">방어형</span>
+                        <span class="badge" style="background: rgba(255,255,255,0.1); color:#ccc;">패시브 자동발동</span>
+                    </div>
+                </div>
+            </div>
+            <p style="color: var(--toss-text-sub); font-size: 0.95rem;">
+                인벤토리에 보유하는 것만으로 적의 유도 미사일 공격을 감지하여 100% 자동 요격하는 절대 방어구입니다. 1회 방어 성공 시 소모됩니다.
+            </p>
+            <table class="specs-table">
+                <tr><th>발동 방식</th><td>미사일 공격 감지 시 자동 반응 (별도 조작 불필요)</td></tr>
+                <tr><th>방어 범위</th><td>적 유도 미사일 공격 1회 완전 요격 및 무효화</td></tr>
+                <tr><th>지속 시간</th><td>미사일에 피격되어 소모될 때까지 인벤토리에 영구 보존</td></tr>
+            </table>
+            <div class="strategy-block">
+                <h4>🛡️ 실전 운용 전략</h4>
+                <p>내가 상대방의 집중 타깃이 되었거나 공격적으로 질문을 유도하여 어그로를 끌 때 든든한 보험이 됩니다. 상대의 미사일 자원을 낭비시키는 심리적 압박 효과가 뛰어납니다.</p>
+            </div>
+        </article>
+
+        <!-- Item 3: 금기어 변경권 -->
+        <article class="item-detail-card">
+            <div class="item-top">
+                <div class="item-icon-circle green">🔀</div>
+                <div class="item-title-group">
+                    <h2>금기어 변경권 (Word Change)</h2>
+                    <div class="item-badge-row">
+                        <span class="badge utility">유틸형</span>
+                        <span class="badge" style="background: rgba(255,255,255,0.1); color:#ccc;">액티브 전략</span>
+                    </div>
+                </div>
+            </div>
+            <p style="color: var(--toss-text-sub); font-size: 0.95rem;">
+                내가 특정 참가자에게 걸어두었던 기존 금기어를 완전히 새로운 단어로 실시간 교체합니다. 플레이어가 수영 중이거나 기절 중일 때도 전략적으로 교체할 수 있습니다.
+            </p>
+            <table class="specs-table">
+                <tr><th>발동 방식</th><td>타깃 지정 후 기존 단어 1개를 새 단어로 수정하여 제출</td></tr>
+                <tr><th>소모 조건</th><td>수정 성공 시 즉각 소모되며 타깃에게 실시간 적용</td></tr>
+                <tr><th>유효 상태</th><td>본인이 기절, 수영, 생존 상태 불문 상시 사용 가능</td></tr>
+            </table>
+            <div class="strategy-block">
+                <h4>🔄 실전 운용 전략</h4>
+                <p>상대방이 특정 주제(예: 음식 이야기)를 눈치채고 대화를 의도적으로 회피할 때, 현재 나누고 있는 일상적인 주제의 핵심 단어로 기습 교체하여 방심한 순간을 노립니다.</p>
+            </div>
+        </article>
+
+        <!-- Item 4: 금기어 추가권 -->
+        <article class="item-detail-card">
+            <div class="item-top">
+                <div class="item-icon-circle purple">➕</div>
+                <div class="item-title-group">
+                    <h2>금기어 추가권 (Word Add)</h2>
+                    <div class="item-badge-row">
+                        <span class="badge curse">저주형</span>
+                        <span class="badge" style="background: rgba(255,255,255,0.1); color:#ccc;">지뢰 중첩</span>
+                    </div>
+                </div>
+            </div>
+            <p style="color: var(--toss-text-sub); font-size: 0.95rem;">
+                특정 참가자에게 새로운 금기어를 1개 더 추가 중첩시킵니다. 상대방은 피해야 할 지뢰가 2배로 늘어나며 입을 뗄 때마다 날아갈 위험에 직면합니다.
+            </p>
+            <table class="specs-table">
+                <tr><th>발동 방식</th><td>타깃 지정 후 추가할 단어 입력 제출</td></tr>
+                <tr><th>중첩 한도</th><td>플레이어당 최대 4개 이상의 금기어 중첩 누적 가능</td></tr>
+            </table>
+            <div class="strategy-block">
+                <h4>⚠️ 실전 운용 전략</h4>
+                <p>생존력이 극도로 뛰어난 유저에게 일상적인 감탄사나 조사('그리고', '근데', '나')를 추가로 걸어버리면 대화 자체가 봉쇄되어 자멸을 유도할 수 있습니다.</p>
+            </div>
+        </article>
+
+        <!-- Item 5: 금기어 삭제권 -->
+        <article class="item-detail-card">
+            <div class="item-top">
+                <div class="item-icon-circle orange">➖</div>
+                <div class="item-title-group">
+                    <h2>금기어 삭제권 (Word Delete)</h2>
+                    <div class="item-badge-row">
+                        <span class="badge buff">생존형</span>
+                        <span class="badge" style="background: rgba(255,255,255,0.1); color:#ccc;">정화 카드</span>
+                    </div>
+                </div>
+            </div>
+            <p style="color: var(--toss-text-sub); font-size: 0.95rem;">
+                나에게 걸려있는 다른 참가자들의 무수한 금기어 지뢰 중 무작위 1개를 즉시 영구 삭제합니다.
+            </p>
+            <table class="specs-table">
+                <tr><th>발동 방식</th><td>사용 즉시 자신에게 부여된 금기어 중 무작위 1개 정화</td></tr>
+                <tr><th>알림 여부</th><td>출제자에게는 단어가 삭제되었다는 알림이 공지되지 않음</td></tr>
+            </table>
+            <div class="strategy-block">
+                <h4>✨ 실전 운용 전략</h4>
+                <p>의심되는 금기어가 너무 많아 말을 꺼내기 두려운 후반전에서 생존율을 획기적으로 올려주는 최고의 역전 카드입니다.</p>
+            </div>
+        </article>
+
+        <!-- Balance Matrix Section -->
+        <article class="matrix-section">
+            <h3>⚖️ 아이템 상성 및 밸런스 매트릭스</h3>
+            <table class="specs-table">
+                <thead>
+                    <tr><th>아이템</th><th>유리한 상황</th><th>불리한/카운터 상황</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>🚀 유도 미사일</td><td>침묵 직전 유저, 입담 좋은 1위 독주자 제압</td><td>이지스 방패 보유자에게 차단당함</td></tr>
+                    <tr><td>🛡️ 이지스 방패</td><td>적의 표적 저격 방어 및 어그로 핑퐁</td><td>금기어 추가/변경 등 간접 공격에는 무력</td></tr>
+                    <tr><td>🔀 금기어 변경권</td><td>상대가 내 단어 패턴을 완전히 읽었을 때</td><td>대상의 새로운 말버릇을 모르면 낭비됨</td></tr>
+                    <tr><td>➕ 금기어 추가권</td><td>생존자가 적은 후반부 1:1 진흙탕 싸움</td><td>단어 삭제권에 의해 허무하게 지워질 수 있음</td></tr>
+                    <tr><td>➖ 금기어 삭제권</td><td>다수의 참가자가 나에게 집중 포화를 퍼부을 때</td><td>남은 금기어가 1개뿐일 때의 타이밍 계산 필요</td></tr>
+                </tbody>
+            </table>
+        </article>
+
+        <!-- Safe Ad Slot -->
+        <div class="adsense-slot">
+            <span>광고 안전 영역 (AdSense Safe Zone)</span>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="toss-footer">
+        <nav class="footer-nav">
+            <a href="/">게임 홈</a>
+            <a href="/guide/rules">상세 규칙</a>
+            <a href="/guide/items">아이템 도감</a>
+            <a href="/guide/strategy">심리전 공략</a>
+            <a href="/faq">자주 묻는 질문</a>
+            <a href="/about">서비스 소개</a>
+            <a href="/privacy">개인정보처리방침</a>
+            <a href="/terms">이용약관</a>
+        </nav>
+        <p class="footer-copy">
+            위험한 초대 (Flying Chair Online) · 웹 기반 실시간 멀티플레이어 파티 게임<br>
+            공식 문의 및 피드백: <a href="mailto:kdh94kor@gmail.com" style="color:var(--toss-blue); text-decoration:none;">kdh94kor@gmail.com</a><br>
+            © 2026 Flying Chair Team. All rights reserved. 본 서비스는 건전한 게임 문화를 지향합니다.
+        </p>
+    </footer>
+
+</body>
+</html>

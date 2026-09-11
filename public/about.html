@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>서비스 소개 & 개발팀 (About) - 위험한 초대 (실시간 플라잉 체어)</title>
+    <meta name="description" content="전설의 예능 '위험한 초대' 플라잉 체어 웹게임의 기획 의도, 오픈소스 기술 스택(Node.js, Socket.io), 개발팀 소개 및 공식 문의 안내 (EEAT).">
+    <meta name="keywords" content="위험한초대소개, 플라잉체어개발팀, 웹게임오픈소스, 파티게임기획, 서비스소개">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://flyingchair.onrender.com/about">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="서비스 소개 & 개발팀 - 위험한 초대">
+    <meta property="og:description" content="2000년대 전설의 예능을 웹 기술로 재해석한 실시간 멀티플레이 파티게임 개발 스토리.">
+    <meta property="og:url" content="https://flyingchair.onrender.com/about">
+
+    <!-- Pretendard Font -->
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+
+    <style>
+        :root {
+            --toss-blue: #3182f6;
+            --toss-blue-hover: #1b64da;
+            --toss-blue-light: rgba(49, 130, 246, 0.12);
+            --toss-bg: #14151a;
+            --toss-card-bg: #1f2128;
+            --toss-card-sub: #272a34;
+            --toss-border: rgba(255, 255, 255, 0.08);
+            --toss-text-main: #f2f4f6;
+            --toss-text-sub: #8b95a1;
+            --toss-text-muted: #4e5968;
+            --radius-lg: 20px;
+            --radius-md: 14px;
+            --radius-sm: 8px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+        body { background-color: var(--toss-bg); color: var(--toss-text-main); line-height: 1.6; min-height: 100vh; display: flex; flex-direction: column; }
+
+        /* GNB */
+        .toss-gnb { position: sticky; top: 0; z-index: 1000; background: rgba(20, 21, 26, 0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--toss-border); padding: 0 24px; height: 64px; display: flex; align-items: center; justify-content: space-between; }
+        .gnb-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #fff; font-size: 1.15rem; font-weight: 800; }
+        .gnb-brand-logo { font-size: 1.4rem; }
+        .gnb-nav { display: flex; align-items: center; gap: 6px; list-style: none; }
+        .gnb-link { color: var(--toss-text-sub); text-decoration: none; font-size: 0.92rem; font-weight: 600; padding: 8px 14px; border-radius: var(--radius-sm); transition: all 0.15s; }
+        .gnb-link:hover { color: #fff; background: rgba(255, 255, 255, 0.05); }
+        .gnb-link.active { color: var(--toss-blue); background: var(--toss-blue-light); font-weight: 700; }
+        .gnb-cta { background: var(--toss-blue); color: #fff; padding: 8px 18px; border-radius: 9999px; text-decoration: none; font-size: 0.88rem; font-weight: 700; transition: background 0.2s; }
+        .gnb-cta:hover { background: var(--toss-blue-hover); }
+
+        /* Layout */
+        .container { width: 100%; max-width: 900px; margin: 0 auto; padding: 40px 20px 80px; flex: 1; }
+        .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--toss-text-muted); margin-bottom: 20px; }
+        .breadcrumb a { color: var(--toss-text-sub); text-decoration: none; }
+        .breadcrumb a:hover { color: var(--toss-text-main); text-decoration: underline; }
+
+        /* Content Header */
+        .doc-header { margin-bottom: 36px; }
+        .doc-badge { display: inline-block; background: var(--toss-blue-light); color: var(--toss-blue); font-size: 0.8rem; font-weight: 700; padding: 4px 12px; border-radius: 9999px; margin-bottom: 14px; }
+        .doc-title { font-size: 2.2rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 14px; line-height: 1.3; }
+        .doc-desc { font-size: 1.05rem; color: var(--toss-text-sub); line-height: 1.7; word-break: keep-all; }
+
+        /* Card Section */
+        .about-section { background: var(--toss-card-bg); border: 1px solid var(--toss-border); border-radius: var(--radius-lg); padding: 32px 28px; margin-bottom: 28px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+        .about-section h2 { font-size: 1.35rem; font-weight: 700; margin-bottom: 16px; color: #fff; display: flex; align-items: center; gap: 10px; }
+        .about-section p { font-size: 0.95rem; color: var(--toss-text-sub); line-height: 1.8; margin-bottom: 16px; word-break: keep-all; }
+        .about-section p:last-child { margin-bottom: 0; }
+
+        /* Tech Stack Grid */
+        .tech-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 20px; }
+        .tech-card { background: var(--toss-card-sub); border: 1px solid var(--toss-border); border-radius: var(--radius-md); padding: 18px; }
+        .tech-card h4 { font-size: 0.98rem; font-weight: 700; color: #fff; margin-bottom: 6px; }
+        .tech-card p { font-size: 0.83rem; color: var(--toss-text-sub); line-height: 1.5; margin-bottom: 0; }
+
+        /* Contact box */
+        .contact-card { background: linear-gradient(135deg, rgba(49,130,246,0.1) 0%, rgba(20,21,26,0.5) 100%); border: 1px solid rgba(49,130,246,0.3); border-radius: var(--radius-lg); padding: 28px; text-align: center; margin-top: 36px; }
+        .contact-card h3 { font-size: 1.2rem; font-weight: 700; margin-bottom: 10px; color: #fff; }
+        .contact-card p { font-size: 0.9rem; color: var(--toss-text-sub); margin-bottom: 16px; }
+        .contact-email { display: inline-block; background: var(--toss-blue); color: #fff; padding: 10px 24px; border-radius: 9999px; text-decoration: none; font-weight: 700; font-size: 0.9rem; }
+        .contact-email:hover { background: var(--toss-blue-hover); }
+
+        /* Footer */
+        .toss-footer { border-top: 1px solid var(--toss-border); padding: 40px 24px; background: #0f1013; text-align: center; }
+        .footer-nav { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+        .footer-nav a { color: var(--toss-text-sub); text-decoration: none; font-size: 0.85rem; }
+        .footer-nav a:hover { color: #fff; text-decoration: underline; }
+        .footer-copy { font-size: 0.78rem; color: var(--toss-text-muted); line-height: 1.6; }
+
+        @media (max-width: 768px) {
+            .toss-gnb { padding: 0 16px; }
+            .gnb-nav { display: none; }
+            .doc-title { font-size: 1.7rem; }
+            .about-section { padding: 24px 18px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header GNB -->
+    <header class="toss-gnb">
+        <a href="/" class="gnb-brand">
+            <span class="gnb-brand-logo">🪑</span>
+            <span>위험한 초대</span>
+        </a>
+        <nav>
+            <ul class="gnb-nav">
+                <li><a href="/guide/rules" class="gnb-link">규칙</a></li>
+                <li><a href="/guide/items" class="gnb-link">아이템 도감</a></li>
+                <li><a href="/guide/strategy" class="gnb-link">공략집</a></li>
+                <li><a href="/faq" class="gnb-link">FAQ</a></li>
+                <li><a href="/about" class="gnb-link active">서비스 소개</a></li>
+            </ul>
+        </nav>
+        <a href="/" class="gnb-cta">게임 시작하기</a>
+    </header>
+
+    <!-- Main Container -->
+    <main class="container">
+        <!-- Breadcrumb -->
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="/">홈</a>
+            <span>›</span>
+            <span style="color: var(--toss-text-main);">서비스 소개 (About)</span>
+        </nav>
+
+        <!-- Doc Header -->
+        <section class="doc-header">
+            <span class="doc-badge">✨ ABOUT FLYING CHAIR</span>
+            <h1 class="doc-title">우리가 플라잉 체어를 다시 만든 이유</h1>
+            <p class="doc-desc">
+                2000년대 전설의 예능 '위험한 초대'가 주는 아날로그적 폭소와 긴장감을
+                현대 웹 표준 기술로 완벽하게 복원하여 누구나 링크 하나로 즐길 수 있게 만들었습니다.
+            </p>
+        </section>
+
+        <!-- Story Section -->
+        <article class="about-section">
+            <h2><span>🎯</span> 프로젝트 비전 & 기획 배경</h2>
+            <p>
+                2000년대 초반, 전 국민의 주말 저녁을 웃음바다로 만들었던 예능 코너 '위험한 초대'.
+                게스트의 사소한 말버릇이나 행동 하나에 진행자들이 수영장 뒤편으로 힘차게 날아가 입수하던 그 장면은 20여 년이 지난 지금도 수많은 사람들의 뇌리에 유쾌한 추억으로 남아 있습니다.
+            </p>
+            <p>
+                우리는 질문했습니다. "왜 요즘 웹 파티게임들은 설치가 복잡하거나 광고로 도배되어 있을까? 링크 하나만 누르면 디스코드나 술자리에서 친구들과 5초 만에 예능 세트장을 만들 수는 없을까?"
+            </p>
+            <p>
+                그 답이 바로 <strong>'위험한 초대 - 실시간 플라잉 체어'</strong>입니다. 무거운 클라이언트 다운로드나 복잡한 회원가입 없이, 브라우저가 열리는 모든 디바이스에서 가장 순수하고 유쾌한 심리 서바이벌을 무료로 제공합니다.
+            </p>
+        </article>
+
+        <!-- Tech Stack Section -->
+        <article class="about-section">
+            <h2><span>🛠️</span> 오픈소스 기술 스택 (Open Source Architecture)</h2>
+            <p>안정적이고 빠른 실시간 멀티플레이어 환경을 구축하기 위해 검증된 웹 오픈소스 기술을 적용했습니다.</p>
+            <div class="tech-grid">
+                <div class="tech-card">
+                    <h4>🚀 Node.js & Express</h4>
+                    <p>가볍고 빠른 비동기 이벤트 기반 서버 백엔드로 수많은 동시 접속 세션을 안정적으로 제어합니다.</p>
+                </div>
+                <div class="tech-card">
+                    <h4>🔌 Socket.io</h4>
+                    <p>웹소켓 기반의 양방향 실시간 통신 엔진으로 0.05초 단위의 즉각적인 발사 및 채팅 동기화를 보장합니다.</p>
+                </div>
+                <div class="tech-card">
+                    <h4>🎨 HTML5 & Canvas</h4>
+                    <p>플러그인 없는 순수 웹 표준 그래픽 기술로 부드러운 포물선 다이빙과 물보라 파티클을 렌더링합니다.</p>
+                </div>
+                <div class="tech-card">
+                    <h4>🔊 Web Audio API</h4>
+                    <p>브라우저 네이티브 사운드 합성 엔진을 통해 설치 없는 풍부한 입체 음향 피드백을 제공합니다.</p>
+                </div>
+            </div>
+        </article>
+
+        <!-- EEAT Team Section -->
+        <article class="about-section">
+            <h2><span>👥</span> 개발팀 소개 및 윤리 기준</h2>
+            <p>
+                Flying Chair Team은 웹 프론트엔드와 실시간 네트워크 엔지니어링에 열정을 가진 시니어 및 풀스택 개발자들로 구성되어 있습니다.
+            </p>
+            <ul style="list-style: none; display: flex; flex-direction: column; gap: 10px; margin-top: 12px;">
+                <li style="color: var(--toss-text-sub); font-size: 0.95rem;">• <strong>비회원제 개인정보 최소주의:</strong> 우리는 유저의 이름, 전화번호, 이메일을 요구하지 않으며, 게임이 종료되면 세션 데이터를 즉시 파기합니다.</li>
+                <li style="color: var(--toss-text-sub); font-size: 0.95rem;">• <strong>광고 품질 및 사용자 경험 보장:</strong> 게임 진행을 방해하는 팝업이나 오클릭을 유도하는 배너를 일절 배제하며, 안전하고 격리된 구역에만 광고를 배치합니다.</li>
+                <li style="color: var(--toss-text-sub); font-size: 0.95rem;">• <strong>공정한 플레이 환경:</strong> 매크로, 패킷 조작, 비인가 자동화 스크립트를 엄격히 차단합니다.</li>
+            </ul>
+        </article>
+
+        <!-- Contact Section -->
+        <section class="contact-card">
+            <h3>💌 공식 문의 및 피드백</h3>
+            <p>버그 제보, 게임 개선 아이디어, 비즈니스 제휴 문의는 언제나 환영합니다.</p>
+            <a href="mailto:kdh94kor@gmail.com" class="contact-email">kdh94kor@gmail.com</a>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="toss-footer">
+        <nav class="footer-nav">
+            <a href="/">게임 홈</a>
+            <a href="/guide/rules">상세 규칙</a>
+            <a href="/guide/items">아이템 도감</a>
+            <a href="/guide/strategy">심리전 공략</a>
+            <a href="/faq">자주 묻는 질문</a>
+            <a href="/about">서비스 소개</a>
+            <a href="/privacy">개인정보처리방침</a>
+            <a href="/terms">이용약관</a>
+        </nav>
+        <p class="footer-copy">
+            위험한 초대 (Flying Chair Online) · 웹 기반 실시간 멀티플레이어 파티 게임<br>
+            © 2026 Flying Chair Team. All rights reserved. 본 서비스는 건전한 게임 문화를 지향합니다.
+        </p>
+    </footer>
+
+</body>
+</html>

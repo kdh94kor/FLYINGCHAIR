@@ -57,6 +57,44 @@ app.use(cors({
   methods: ['GET', 'POST'],
 }));
 
+// Clean SEO & Guide Routes
+app.get('/guide/rules', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'guide', 'rules.html'));
+});
+
+app.get('/guide/items', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'guide', 'items.html'));
+});
+
+app.get('/guide/strategy', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'guide', 'strategy.html'));
+});
+
+app.get('/faq', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'faq.html'));
+});
+
+app.get('/about', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'about.html'));
+});
+
+// Policy & Terms Routes
+app.get('/privacy', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'privacy.html'));
+});
+
+app.get('/terms', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'terms.html'));
+});
+
+app.get('/robots.txt', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'robots.txt'));
+});
+
+app.get('/sitemap.xml', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sitemap.xml'));
+});
+
 // Admin Routes
 app.get('/admin', basicAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'admin.html'));
@@ -67,7 +105,13 @@ app.get('/api/admin/stats', basicAuth, async (req, res) => {
   res.json(await statsManager.getStats(from, to));
 });
 
-// Serve static files (index.html, etc.) from the root directory for local testing
+// Serve static files from public directory first, then root directory
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, path) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  }
+}));
+
 app.use(express.static(__dirname, {
   setHeaders: (res, path) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
