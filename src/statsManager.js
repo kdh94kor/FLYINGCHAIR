@@ -1,19 +1,4 @@
-const { createClient } = require('@supabase/supabase-js');
-const WebSocket = require('ws');
-
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
-
-let supabase = null;
-if (supabaseUrl && supabaseKey) {
-  global.WebSocket = WebSocket; 
-  supabase = createClient(supabaseUrl, supabaseKey, {
-    auth: { persistSession: false }
-  });
-  console.log('Supabase connection initialized for Time-Series Logging.');
-} else {
-  console.warn("Supabase credentials not found. Stats will not be saved.");
-}
+const supabase = require('./supabaseClient');
 
 // In-memory set for daily unique visitors (prevent spamming DB)
 const seenIps = new Set();
