@@ -2147,7 +2147,9 @@
             document.getElementById('host-controls').classList.add('hidden');
             document.getElementById('guest-controls').classList.add('hidden');
             
-            const dictionary = ['아니', '진짜', '근데', '바보', '왜요', '대박', '뭐야', '저기', '그치만', '설마', '혹시'];
+            const dictionary = (window.tabooWordsTop100 && window.tabooWordsTop100.length > 0)
+                ? window.tabooWordsTop100.slice(0, 25)
+                : ['아니', '진짜', '근데', '바보', '왜요', '대박', '뭐야', '저기', '그치만', '설마', '혹시'];
             const wordsPerPlayer = state.room.wordsPerPlayer || 1;
             state.players.forEach(bot => {
                 bot.hasSubmittedWords = bot.isBot;
@@ -3353,35 +3355,211 @@
         let botChatTimeout = null;
         let lastBotChatTime = 0;
 
+        const WORD_BAIT_MAP = {
+            '진짜': [
+                "방장님, 방금 하신 말씀 거짓말 아니고 진짜예요? 실화예요 가짜예요? ㅋㅋ",
+                "방장님 어제 복권 2등 당첨돼서 내일 한턱 쏜다는 소문 실화예요? 가짜예요 진짜예요? ㅋㅋㅋ",
+                "{target}님, 제 질문에 무조건 진실만 말해주세요. 이거 거짓말 아니고 진짜죠? ㅋㅋ",
+                "방장님 지금 표정 보니까 '진짜?' 하고 반문하고 싶어서 입이 근질근질하신데요? ㅋㅋㅋ",
+                "{target}님, '진짜' 한마디만 해주시면 제가 맛있는 커피 쏩니다 ㅋㅋㅋ",
+                "방장님, 오늘 날씨 좋다는 말... 영혼 1도 없는데 진짜 그렇게 생각하세요? ㅋㅋ",
+                "방장님 통장에 100억 있다는 소문이 돌던데... 설마 진짜인가요? ㅋㅋㅋ"
+            ],
+            '정말': [
+                "방장님, 저 믿으셔도 돼요. 정말로 거짓말 1도 안 보탰습니다 ㅋㅋ",
+                "{target}님, 그거 진심인가요? 정말이라고 맹세할 수 있어요? ㅋㅋㅋ",
+                "방장님 정말 이 판 1등 하실 자신 있으신가요? 표정은 불안해 보이는데 ㅋㅋ",
+                "방장님, 제가 그렇게 얄미우신가요? 정말인지 아닌지 딱 말해보세요 ㅋㅋㅋ"
+            ],
+            '아니': [
+                "방장님은 질문만 하면 첫마디가 무조건 '아니'로 시작하시던데 맞죠? ㅋㅋㅋ",
+                "방장님 혹시 민트초코라면 좋아하신다면서요? '아니'라고 부정하면 안 됩니다? ㅋㅋㅋ",
+                "{target}님, 억울해도 첫마디에 '아니' 나오면 바로 날아갑니다? 조심하세요 ㅋㅋ",
+                "방장님 저한테 서운한 거 있으시죠? '아니' 빼고 똑바로 대답해보세요 ㅋㅋㅋ",
+                "방장님 지금 속으로 '아니 쟤가 왜 저래' 생각하고 계시죠? 표정에 다 써있음 ㅋㅋㅋ",
+                "{target}님 한국인 고유 스킬: 억울하면 일단 '아니'부터 발사함 ㅋㅋㅋ 인정?",
+                "방장님, 제 의견에 반대하시죠? '아니' 소리 안 내고 반박 가능하신가요? ㅋㅋㅋ"
+            ],
+            '근데': [
+                "방장님 제 의견 다 동의해놓고 뒤에 꼭 '근데' 붙여서 딴지거실 것 같음 ㅋㅋㅋ",
+                "{target}님 지금 할 말 많아 보이는데... '근데'라는 접속사 빼고 말해봐요 ㅋㅋ",
+                "방장님, '근데'로 말 돌리지 마시고 제 질문에 단답형으로 대답해주세요! ㅋㅋㅋ",
+                "다 좋은데요 방장님... '근데' 다음으로 하려던 말이 뭐였어요? ㅋㅋㅋ",
+                "방장님 말투 특: '근데' 한 번 나오면 문장이 안 끝남 ㅋㅋㅋ",
+                "{target}님 제 말에 토 달고 싶어서 '근데...' 시동 거시는 거 다 보입니다 ㅋㅋㅋ"
+            ],
+            '왜요': [
+                "방장님!! 지금 당장 손 머리 위로 올리세요!! '왜요'라고 묻지 말고 빨리요!! ㅋㅋㅋ",
+                "방장님 방금 시스템 관리자가 긴급 쪽지 보냈는데요? 궁금해서 '왜요' 하고 싶으시죠? ㅋㅋㅋ",
+                "{target}님, 방장님이 저 부르면 1초 만에 '왜요?' 나올 확률 100%에 한 표 ㅋㅋ",
+                "방장님, 저랑 눈 마주쳤으니까 벌칙입니다! 이유 묻지 마세요, '왜요' 금지! ㅋㅋㅋ",
+                "방장님 표정에서 '내가 왜요?'라는 물음표가 마구 뿜어져 나오는데요? ㅋㅋㅋ",
+                "방장님 잠깐 마이크 켜보세요! 다급하게 부르면 '왜요'부터 나오시죠? ㅋㅋㅋ"
+            ],
+            '뭐야': [
+                "어?? 방장님 등 뒤에 저 이상한 검은 그림자 뭐야... ㄷㄷ 방금 슥 지나갔는데?",
+                "헐... 방장님 의자 스프링 압력 게이지 빨간불 떴는데요? 이거 뭐야 진짜 터지나? ㅋㅋㅋ",
+                "{target}님 당황하셨을 때 입 밖으로 튀어나오는 외마디 비명이 '뭐야' 맞죠? ㅋㅋㅋ",
+                "방장님 지금 화면 쳐다보면서 '뭐야 쟤네...' 하고 계시죠? ㅋㅋㅋ",
+                "방금 지나간 시스템 메시지 뭐야? 방장님도 보셨어요? ㅋㅋㅋ",
+                "어라? 방장님 의자 밑에 물 새는 거 뭐야? 바닥 흥건한데요? ㅋㅋㅋ"
+            ],
+            '대박': [
+                "방장님 이번 판 1등 하시면 제작진이 상금 100만원 준다는데 대박 아닌가요?! ㅋㅋㅋ",
+                "와 방금 방장님 센스 진짜 미쳤다... 다들 감탄사로 '대박' 한번 외쳐줍시다 ㅋㅋㅋ",
+                "{target}님 만약 지금 1등 하면 첫마디로 '대박' 나올 것 같은데 인정? ㅋㅋㅋ",
+                "오늘 방장님 의자 각도 완전 예술인데 이거 '대박' 영상감인데요? ㅋㅋㅋ",
+                "방장님, 오늘 점심으로 랍스터 드셨다는 거 대박 실화인가요? ㅋㅋㅋ"
+            ],
+            '설마': [
+                "방장님, '설마' 아직도 본인 금기어가 뭔지 전혀 감 못 잡으신 건 아니죠? ㅋㅋㅋ",
+                "설마설마하는 사람이 제일 먼저 물에 빠진다던데... 방장님 설마 오늘 1등 퇴장? ㅋㅋ",
+                "{target}님, '설마 내가 날아가겠어?' 하는 방심이 가장 위험합니다 ㅋㅋㅋ",
+                "방장님 혹시 수영 못하시나요? '설마' 튜브 챙겨오신 건 아니겠죠? ㅋㅋㅋ",
+                "설마 방장님이 이 방에서 가장 먼저 날아가진 않겠죠? 믿습니다 방장님! ㅋㅋㅋ"
+            ],
+            '혹시': [
+                "방장님, '혹시'... 아 아닙니다. 말 꺼내면 바로 날아가실 것 같아서 아낄게요 ㅋㅋ",
+                "{target}님 말 시작할 때 '혹시' 붙이는 공손한 습관 있으신가요? 지금 쓰면 큰일 남 ㅋㅋ",
+                "방장님, 혹시 지금 손에 땀 쥐면서 키보드 위에서 망설이고 계신가요? ㅋㅋㅋ",
+                "방장님... 혹시 저한테 말 못 할 비밀이라도 있으신 건 아니죠? 솔직히 말해봐요! ㅋㅋ",
+                "{target}님, 혹시 본인 머리 위에 떠 있는 단어 뭔지 살짝 보였어요? ㅋㅋㅋ"
+            ],
+            '바보': [
+                "방장님, 1+1=3 맞죠? 틀리면 바보 인증입니다 ㅋㅋㅋ 정답은?",
+                "{target}님 천재예요 바보예요? 둘 중 하나만 솔직하게 골라보세요 ㅋㅋㅋ",
+                "방장님, 초성 퀴즈! 'ㅂㅂ' 하면 제일 먼저 떠오르는 단어가 설마 바보? ㅋㅋㅋ",
+                "세상에 자기 금기어도 모르는 바보가 어디 있어요~ 그쵸 방장님? ㅋㅋㅋ"
+            ],
+            '맞아': [
+                "치킨에는 역시 양념 반 후라이드 반이 진리인 거 방장님도 '맞아'라고 생각하죠? ㅋㅋ",
+                "솔직히 이 게임 만든 사람 천재인 거 인정하시죠? '맞아'라고 크게 끄덕여보세요 ㅋㅋㅋ",
+                "방장님 제 말이 맞죠? 아니라고는 절대 부정 못 하실 걸요? ㅋㅋㅋ",
+                "{target}님 '맞아, 내 말이 그 말이야' 하고 격하게 동의하고 싶으시죠? ㅋㅋㅋ"
+            ],
+            '그치': [
+                "오늘 날씨 완전 시원하지 않아요? 방장님도 '그치'라고 생각하시죠? ㅋㅋ",
+                "{target}님 제 의견에 격하게 공감하시죠? '그치'라고 맞장구치고 싶죠? ㅋㅋㅋ",
+                "방장님 맞장구치려다가 앗차 싶어서 입술 꽉 깨무신 거 다 보입니다 ㅋㅋㅋ",
+                "솔직히 여기서 제가 제일 게임 센스 넘치죠? 그치 방장님? ㅋㅋㅋ"
+            ],
+            '솔직히': [
+                "방장님 가식 다 빼고 '솔직히' 털어놔 보세요. 저 봇인 거 티 나나요? ㅋㅋㅋ",
+                "{target}님 솔직히 말씀해보세요, 지금 의자 밑에 물 온도 체크하고 계시죠? ㅋㅋ",
+                "방장님 딴소리 말고 솔직히 본인이 오늘 제일 먼저 빠질 것 같죠? ㅋㅋㅋ",
+                "솔직히 지금 방장님 머릿속 하얘져서 아무 생각 안 나시는 중 ㅋㅋㅋ"
+            ],
+            '약간': [
+                "방장님 오늘 텐션 '약간' 긴장하신 것 같은데 기분 탓인가요? ㅋㅋㅋ",
+                "{target}님 말씀하실 때 '약간'이라는 추임새 넣는 버릇 있으신 거 알아요? ㅋㅋ",
+                "방장님 지금 약간... 아니 매우 많이 당황하셨죠? ㅋㅋㅋ",
+                "방장님 얼굴 색이 약간 파래지신 것 같은데 추우신가요? ㅋㅋㅋ"
+            ],
+            '그치만': [
+                "방장님 변명하고 싶으시죠? '그치만...'으로 시작하면 바로 날아갑니다 ㅋㅋㅋ",
+                "{target}님 억울해도 '그치만' 소리는 꾹 참으셔야 합니다? ㅋㅋㅋ",
+                "방장님 애니메이션 주인공처럼 '그치만...!' 하고 대사 칠 준비 중이신 듯 ㅋㅋ"
+            ],
+            '저기': [
+                "방장님 부를 때 '저기요...' 하고 소심하게 부르시면 안 들립니다 ㅋㅋㅋ",
+                "{target}님 말문 막혀서 '저기...' 하고 계신 거 아니죠? 당당하게 말씀하세요! ㅋㅋ",
+                "방장님, 저기 먼 산 바라보면서 딴청 피우셔도 물은 피할 수 없습니다 ㅋㅋ"
+            ],
+            '오늘': [
+                "방장님 '오늘' 기분 어떠세요? '오늘' 단어 빼고 말씀해보세요 ㅋㅋㅋ",
+                "{target}님 날씨 이야기할 때 '오늘' 빼놓고 대화 가능하신가요? ㅋㅋㅋ",
+                "방장님 오늘따라 왜 이렇게 긴장한 티가 팍팍 나실까요? ㅋㅋㅋ"
+            ],
+            '지금': [
+                "방장님 '지금' 당장 의자에서 손 떼보세요! ㅋㅋㅋ '지금' 빼고 말하기!",
+                "{target}님 지금 몇 시예요? 시계 보지 말고 맞춰보세요 ㅋㅋㅋ",
+                "방장님 지금 이 순간 가장 먹고 싶은 야식은 무엇인가요? ㅋㅋㅋ"
+            ],
+            '너무': [
+                "방장님 오늘 게임 '너무' 꿀잼이지 않나요? '너무' 빼고 소감 말해보기! ㅋㅋ",
+                "{target}님 저 '너무' 귀엽지 않나요? 반박은 정중히 거부합니다 ㅋㅋㅋ",
+                "방장님 너무 심각하게 고민하지 마세요~ 물 한 번 시원하게 맞으면 됩니다 ㅋㅋ"
+            ],
+            '그냥': [
+                "방장님 왜 절 그렇게 그윽하게 쳐다보세요? '그냥'이라고 대답 금지! ㅋㅋㅋ",
+                "{target}님 별 이유 없이 게임 켜셨죠? '그냥' 심심해서 오신 거 다 압니다 ㅋㅋ",
+                "방장님 저한테 뭐 불만 있으세요? '그냥...' 하고 얼버무리기 없기! ㅋㅋ"
+            ],
+            '어쩌라고': [
+                "방장님 표정 보니까 속으로 '어쩌라고' 생각하고 계신 거 다 보입니다 ㅋㅋㅋ",
+                "{target}님 제가 뭐라고 약 올려도 '어쩌라고' 마인드로 강철 멘탈 유지 중? ㅋㅋ"
+            ],
+            '알겠어': [
+                "방장님 제 말 알아들으셨으면 '알겠어'라고 힘차게 대답해보세요 ㅋㅋㅋ",
+                "{target}님 제 질문 이해하셨죠? '알겠어' 한마디면 힌트 드릴게요 ㅋㅋ"
+            ],
+            '알았어': [
+                "방장님 제 말 알아들으셨죠? 쿨하게 '알았어' 한번 해주세요 ㅋㅋㅋ",
+                "{target}님 잔소리 그만할 테니까 '알았어'라고 인정해보세요 ㅋㅋ"
+            ],
+            '어떻게': [
+                "방장님 이 판 어떻게 이기실 건가요? 필승 전략 좀 공유해주세요 ㅋㅋㅋ",
+                "{target}님 물에 빠지면 어떻게 헤엄쳐 나오실 거예요? 자유형? 접영? ㅋㅋㅋ"
+            ],
+            '잠깐': [
+                "방장님! 잠깐만요!! 말 멈춰보세요!! ㅋㅋㅋ",
+                "{target}님 당황하셨을 때 '잠깐, 잠깐만' 외치는 거 국룰이죠? ㅋㅋㅋ"
+            ],
+            '뭐라고': [
+                "방장님 방금 제가 한 말 잘 안 들리셨죠? '뭐라고?' 하시면 바로 날아갑니다 ㅋㅋㅋ",
+                "{target}님 방금 채팅창 보셨어요? '뭐라고' 써있는지 얼른 확인해보세요 ㅋㅋ"
+            ],
+            '하지마': [
+                "방장님 의자 흔들기 스킬 발동! 제발 '하지마'라고 애원해보세요 ㅋㅋㅋ",
+                "{target}님 괴롭히는 게 제일 재밌는데 '하지마'라고 하시면 더 하고 싶음 ㅋㅋ"
+            ]
+        };
+
+        const DYNAMIC_WORD_TRAPS = [
+            "방장님, 혹시 평소에 '{word}'라는 말 자주 쓰시는 편인가요? ㅋㅋㅋ",
+            "방장님 입술 모양 보니까 방금 '{word}' 말하려다 황급히 멈추신 것 같은데요? ㅋㅋㅋ",
+            "{target}님! 힌트 하나 드릴게요. 지금 머릿속에 '{word}' 단어가 막 맴돌지 않나요? ㅋㅋ",
+            "방장님, 이번 판 생존의 핵심 키워드는 바로 '{word}'입니다... 눈치채셨으려나? ㅋㅋㅋ",
+            "방장님, 제가 '{word}'라고 운 띄워드릴 테니까 뒷말 자연스럽게 이어보세요 ㅋㅋㅋ",
+            "{target}님, '{word}'라는 단어 들으니까 갑자기 등골이 서늘하고 쫄리지 않으세요? ㅋㅋㅋ",
+            "방장님 지금 머릿속에 '설마 내 금기어가 {word}인가?' 하고 동공 지진 오셨죠? ㅋㅋㅋ",
+            "{target}님, 혹시 본인 금기어가 '{word}'일 거라고는 꿈에도 생각 못 하셨죠? ㅋㅋㅋ",
+            "방장님! '{word}' 빼고 아무 말이나 편하게 해보세요. 설마 그것도 못 하심? ㅋㅋㅋ",
+            "{target}님, '{word}'라는 단어 한번 소리 내서 읽어보실래요? 입에 착 감기는데 ㅋㅋㅋ",
+            "방장님 방금 하려던 말 앞에 '{word}' 붙이면 문장 딱 완성되는데 인정? ㅋㅋㅋ",
+            "다들 왜 이렇게 조심스러워요? {word} 같은 단어라도 걸려있나? ㅋㅋ",
+            "{target}님! 아까 {word} 좋아하신다고 하지 않았어요? ㅋㅋ"
+        ];
+
         const BOT_DIALOGUE = {
             // 1. 토크쇼 & 일상 질문 (Conversation Starters & Debates)
             topics: [
-                "짜장면 vs 짬뽕! 평생 하나만 먹는다면 뭐 고르실 건가요?",
-                "민초 vs 반민초! 솔직히 민초 치약맛 인정하시죠? ㅋㅋ",
-                "탕수육 부먹인가요 찍먹인가요? 부먹이면 오늘 타깃 1순위임 ㅋㅋㅋ",
+                "짜장면 vs 짬뽕! 평생 하나만 먹는다면 뭐 고르실 건가요? 방장님부터!",
+                "민초 vs 반민초! 솔직히 민초 치약맛 인정하시죠? ㅋㅋㅋ 반박해보세요!",
+                "탕수육 부먹인가요 찍먹인가요? 부먹파는 오늘 첫 번째 입수 확정입니다 ㅋㅋㅋ",
                 "다들 MBTI E인가요 I인가요? 채팅 조용한 거 보니까 다 I인 듯 ㅋㅋㅋ",
                 "여름이 좋아요 겨울이 좋아요? 전 시원한 겨울이 최고인 듯",
-                "솔직히 지금 일이나 공부하다가 몰래 하시는 분 손 들어보세요 ㅋㅋ",
+                "솔직히 지금 일이나 공부하다가 몰래 하시는 분? 찔리시는 분 손 들어보세요 ㅋㅋ",
                 "오늘 점심 뭐 드셨어요? 메뉴 추천 좀 해주세요!",
-                "주말에 보통 침대에 누워서 유튜브만 보시는 분 계시나요? ㅋㅋ",
+                "주말에 보통 침대에 누워서 유튜브만 보시는 분 계시나요? 방장님 이야기 같은데 ㅋㅋ",
                 "요즘 넷플릭스나 유튜브 뭐 재밌는 거 있나요?",
                 "방장님 혹시 아침밥 챙겨 드시고 게임 켜신 건가요?",
-                "라면에 계란 푼다 vs 안 푼다! 뭐가 진리인가요?",
+                "라면에 계란 푼다 vs 안 푼다! 안 푼다는 분들 해명 부탁드립니다 ㅋㅋ",
                 "지금 의자 앉아계신 분들 긴장해서 표정 굳어있는 거 다 보임 ㅋㅋㅋ"
             ],
 
             // 2. 금기어 낚시 & 유도 질문 (Word Bait & Agreement Traps)
             traps: [
-                "오늘 날씨 진짜 덥지 않아요? 완전 찜통인데 맞죠?",
-                "솔직히 제가 여기서 제일 게임 잘하고 있는 거 인정하시나요? ㅋㅋ",
-                "{target}님! 아까 {word} 좋아하신다고 하지 않았어요?",
-                "설마 아직도 자기 금기어 뭔지 감 못 잡으신 분 계심? ㅋㅋㅋ",
                 "방장님, 제 질문에 '네' 아니면 '아니오'로만 대답해보세요 ㅋㅋㅋ",
+                "방장님 어제 치킨 드셨죠? 찔리시면 아무 말도 하지 마세요 ㅋㅋㅋ",
+                "방장님, 제가 3초 셀 테니까 아무 감탄사나 하나 질러보세요! 1, 2, 3!",
+                "방장님 솔직히 본인 금기어 뭔지 1도 감 안 오시죠? 표정에 다 쓰여있음 ㅋㅋㅋ",
+                "이 방에서 제일 먼저 입수할 사람 얼굴에 '나'라고 써있는데 방장님 거울 보셨나요? ㅋㅋ",
+                "{target}님 단어 너무 쉬워서 1분 안에 날려드릴 수 있을 듯 ㅋㅋ",
                 "근데 이 게임 진짜 은근히 심장 쫄깃하지 않나요? ㅋㅋㅋ",
-                "아까 {target}님이 그 말 하려다가 멈칫한 거 제가 봤습니다 ㅋㅋ",
-                "다들 왜 이렇게 조심스러워요? {word} 같은 단어라도 걸려있나? ㅋㅋ",
-                "방장님, 오늘 날씨 좋죠? 아니라고는 못 하실 걸요? ㅋㅋㅋ",
-                "{target}님 단어 너무 쉬워서 1분 안에 날려드릴 수 있을 듯 ㅋㅋ"
+                "아까 {target}님이 그 말 하려다가 멈칫한 거 제가 똑똑히 봤습니다 ㅋㅋ",
+                "오늘 날씨 진짜 덥지 않아요? 완전 찜통인데 맞죠?",
+                "솔직히 제가 여기서 제일 게임 잘하고 있는 거 인정하시나요? ㅋㅋ"
             ],
 
             // 3. 심리전 & 의심 & 블러핑 (Mindgames & Bluffing)
@@ -3407,7 +3585,17 @@
                 "말 안 하고 버티기 기술은 통하지 않습니다~ ㅋㅋㅋ"
             ],
 
-            // 5. 다른 플레이어 입수 시 리액션 (Reaction to others flying)
+            // 5. 유저 금기어 입수 시 리액션 (User fly with word)
+            userFly: [
+                "ㅋㅋㅋㅋㅋㅋㅋㅋ 방금 '{word}' 소리 나오자마자 의자 발사되는 거 보셨음? 🚀",
+                "와아아 방금 완벽하게 '{word}' 밟으셨다 ㅋㅋㅋ 물맛 어떠세요? 🏊",
+                "방장님 이제 본인 금기어가 '{word}'였다는 거 '확' 감 오시죠? ㅋㅋㅋㅋ",
+                "크으... '{word}' 한마디에 바로 공중 3회전 ㅋㅋㅋ 나이스 다이빙!",
+                "방장님 다음엔 '{word}' 절대 쓰지 마세요 ㅋㅋㅋ 물 엄청 차갑죠? 💦",
+                "거봐요 방장님! 제가 '{word}' 조심하라고 힌트 드렸잖아요 ㅋㅋㅋ 팡!!"
+            ],
+
+            // 6. 다른 플레이어 입수 시 리액션 (Reaction to others flying)
             otherFly: [
                 "ㅋㅋㅋㅋㅋㅋㅋㅋ 나이스 샷!! 각도 예술이었다 🚀",
                 "물 온도 어떠세요? 수영하기 딱 좋죠? 🏊",
@@ -3419,7 +3607,7 @@
                 "의자 젖혀지는 소리 완전 찰지네 ㅋㅋㅋ"
             ],
 
-            // 6. 본인 입수 시 절규 (Self fly scream)
+            // 7. 본인 입수 시 절규 (Self fly scream)
             selfFly: [
                 "으아아아악!! 내가 왜 날아가는데?! 🌊",
                 "아니 방금 무슨 단어였어?! ㅠㅠ 억울해!",
@@ -3430,7 +3618,7 @@
                 "단어 너무 흉악한 거 아니에요 방장님?! ㅋㅋㅋ"
             ],
 
-            // 7. 특수 이벤트 리액션 (Special Events)
+            // 8. 특수 이벤트 리액션 (Special Events)
             specialGull: [
                 "어어어? 하늘로 끌려가는데?! 날 어디로 데려가는 거야!! 🕊️",
                 "갈매기야 나 새우깡 아니야!! 내려줘!! 🦅"
@@ -3448,7 +3636,7 @@
                 "화면 핑 돈다... 기절 실화냐 😵"
             ],
 
-            // 8. 의자 복귀 시 (Returning to Chair)
+            // 9. 의자 복귀 시 (Returning to Chair)
             recover: [
                 "휴... 겨우 살아 돌아왔네. 의자 젖어서 축축해 ㅋㅋㅋ",
                 "살아서 돌아왔다! 이제부터 진짜 복수 시작합니다.",
@@ -3456,7 +3644,7 @@
                 "의자가 따뜻하네요... 방금까진 얼음물이었는데"
             ],
 
-            // 9. 유저 채팅에 대한 반응 티키타카 (User chat reaction)
+            // 10. 유저 채팅에 대한 반응 티키타카 (User chat reaction)
             replyToUser: [
                 "오... 방금 그 단어는 안전했나 보네요?",
                 "ㅋㅋㅋ 방금 엔터 치면서 엄청 쫄리셨죠?",
@@ -3467,17 +3655,34 @@
             ]
         };
 
-        function formatBotMessage(template, currentBot) {
+        function formatBotMessage(template, currentBot, targetPlayer = null, targetWord = null) {
             let msg = template;
-            const others = state.players.filter(p => p.id !== currentBot.id);
-            const randomTarget = others.length > 0 ? others[Math.floor(Math.random() * others.length)].name : '방장';
-            
-            const allWords = [];
-            state.players.forEach(p => Object.values(p.words).flat().forEach(w => allWords.push(w)));
-            const randomWord = allWords.length > 0 ? allWords[Math.floor(Math.random() * allWords.length)] : '그 단어';
+            const target = targetPlayer || (() => {
+                const others = state.players.filter(p => p.id !== currentBot.id);
+                return others.length > 0 ? others[Math.floor(Math.random() * others.length)] : null;
+            })();
 
-            msg = msg.replace(/\{target\}/g, randomTarget);
-            msg = msg.replace(/\{word\}/g, randomWord);
+            const targetName = target ? target.name : '방장';
+            
+            let word = targetWord;
+            if (!word) {
+                if (target && target.words) {
+                    const targetWords = Object.values(target.words).flat().filter(w => w && w !== '???');
+                    if (targetWords.length > 0) {
+                        word = targetWords[Math.floor(Math.random() * targetWords.length)];
+                    }
+                }
+            }
+            if (!word) {
+                const allWords = [];
+                state.players.forEach(p => Object.values(p.words).flat().forEach(w => {
+                    if (w && w !== '???') allWords.push(w);
+                }));
+                word = allWords.length > 0 ? allWords[Math.floor(Math.random() * allWords.length)] : '그 단어';
+            }
+
+            msg = msg.replace(/\{target\}/g, targetName);
+            msg = msg.replace(/\{word\}/g, word);
             return msg;
         }
 
@@ -3503,15 +3708,39 @@
             if (bots.length === 0) return;
             const bot = bots[Math.floor(Math.random() * bots.length)];
 
-            const r = Math.random();
-            let pool;
-            if (r < 0.30) pool = BOT_DIALOGUE.topics;
-            else if (r < 0.60) pool = BOT_DIALOGUE.traps;
-            else if (r < 0.80) pool = BOT_DIALOGUE.mindgames;
-            else pool = BOT_DIALOGUE.afk;
+            const me = state.players.find(p => p.id === state.myId);
+            const myWords = (me && me.words) ? Object.values(me.words).flat().filter(w => w && w !== '???') : [];
 
-            const rawMsg = pool[Math.floor(Math.random() * pool.length)];
-            const formatted = formatBotMessage(rawMsg, bot);
+            // In bot mode or when playing with human user, high chance (~60%) to specifically bait/target user's secret word
+            const targetMe = me && myWords.length > 0 && Math.random() < 0.60;
+            
+            let rawMsg = '';
+            let chosenWord = null;
+            let chosenTarget = null;
+
+            if (targetMe) {
+                chosenTarget = me;
+                chosenWord = myWords[Math.floor(Math.random() * myWords.length)];
+
+                // Check if there is tailored bait for this word
+                const baits = WORD_BAIT_MAP[chosenWord];
+                if (baits && baits.length > 0 && Math.random() < 0.75) {
+                    rawMsg = baits[Math.floor(Math.random() * baits.length)];
+                } else {
+                    // Dynamic smart trap with {word}
+                    rawMsg = DYNAMIC_WORD_TRAPS[Math.floor(Math.random() * DYNAMIC_WORD_TRAPS.length)];
+                }
+            } else {
+                const r = Math.random();
+                let pool;
+                if (r < 0.35) pool = BOT_DIALOGUE.topics;
+                else if (r < 0.70) pool = BOT_DIALOGUE.traps;
+                else if (r < 0.85) pool = BOT_DIALOGUE.mindgames;
+                else pool = BOT_DIALOGUE.afk;
+                rawMsg = pool[Math.floor(Math.random() * pool.length)];
+            }
+
+            const formatted = formatBotMessage(rawMsg, bot, chosenTarget, chosenWord);
             sendChat(bot.id, formatted);
             lastBotChatTime = Date.now();
         }
@@ -3534,14 +3763,20 @@
                     }
                 }, 500);
             } else {
-                if (Math.random() < 0.75) {
+                // Human player flew!
+                if (Math.random() < 0.85) {
                     const idleBots = state.players.filter(p => p.isBot && p.status === 'idle');
                     if (idleBots.length > 0) {
                         const bot = idleBots[Math.floor(Math.random() * idleBots.length)];
-                        const rawMsg = BOT_DIALOGUE.otherFly[Math.floor(Math.random() * BOT_DIALOGUE.otherFly.length)];
+                        let rawMsg;
+                        if (word && Math.random() < 0.70) {
+                            rawMsg = BOT_DIALOGUE.userFly[Math.floor(Math.random() * BOT_DIALOGUE.userFly.length)];
+                        } else {
+                            rawMsg = BOT_DIALOGUE.otherFly[Math.floor(Math.random() * BOT_DIALOGUE.otherFly.length)];
+                        }
                         setTimeout(() => {
                             if (state.room.status === 'playing' && bot.status === 'idle') {
-                                sendChat(bot.id, formatBotMessage(rawMsg, bot));
+                                sendChat(bot.id, formatBotMessage(rawMsg, bot, victim, word));
                             }
                         }, 800 + Math.random() * 600);
                     }
@@ -3550,11 +3785,26 @@
         }
 
         function handleBotReplyToUser(sender, text) {
-            if (Math.random() < 0.35) {
+            if (Math.random() < 0.45) {
                 const idleBots = state.players.filter(p => p.isBot && p.status === 'idle');
                 if (idleBots.length === 0) return;
                 const bot = idleBots[Math.floor(Math.random() * idleBots.length)];
-                const reply = BOT_DIALOGUE.replyToUser[Math.floor(Math.random() * BOT_DIALOGUE.replyToUser.length)];
+
+                const myWords = (sender && sender.words) ? Object.values(sender.words).flat().filter(w => w && w !== '???') : [];
+                const myWord = myWords.length > 0 ? myWords[Math.floor(Math.random() * myWords.length)] : null;
+
+                let reply;
+                if (myWord && Math.random() < 0.40) {
+                    const wordReplies = [
+                        `오 방장님... 방금 말씀 중에 '${myWord}' 비슷한 느낌이 싹 스쳤는데요? ㅋㅋㅋ`,
+                        `방장님 방금 그 말에 '${myWord}' 들어갔으면 바로 물 맞으셨을 뻔 ㅋㅋㅋ`,
+                        `ㅋㅋㅋ 방장님 침착하신 척하지만 '${myWord}' 생각하느라 진땀 빼시는 중?`
+                    ];
+                    reply = wordReplies[Math.floor(Math.random() * wordReplies.length)];
+                } else {
+                    reply = BOT_DIALOGUE.replyToUser[Math.floor(Math.random() * BOT_DIALOGUE.replyToUser.length)];
+                }
+
                 setTimeout(() => {
                     if (state.room.status === 'playing' && bot.status === 'idle') {
                         sendChat(bot.id, reply);
