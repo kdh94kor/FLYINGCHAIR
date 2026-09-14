@@ -321,7 +321,8 @@
         .item-btn.call_gator { background: rgba(46, 204, 113, 0.25); border-color: rgba(46, 204, 113, 0.6); color: #2ecc71; }
         .item-btn.call_gull { background: rgba(241, 196, 15, 0.25); border-color: rgba(241, 196, 15, 0.6); color: #f1c40f; }
 
-        /* Roaming Waiting Animals Layer & Elements */
+        /* Roaming Waiting Animals Layers & Elements */
+        #waiting-animals-sky-layer,
         #waiting-animals-layer {
             position: absolute;
             top: 0;
@@ -330,7 +331,17 @@
             height: 100%;
             pointer-events: none;
             overflow: hidden;
-            z-index: 8;
+            z-index: 28;
+        }
+        #waiting-animals-pool-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 4;
         }
         .roaming-animal {
             position: absolute;
@@ -342,64 +353,133 @@
             transform: scale(0.6) !important;
         }
 
-        /* 1. Gull: Roaming in the sky */
+        /* 1. Gull: Roaming in the sky (Head always points in travel direction) */
         .roaming-gull {
-            top: 25px;
+            top: 22px;
             width: 90px;
             height: 60px;
-            animation: gull-patrol-x 16s infinite ease-in-out, gull-patrol-y 3s infinite ease-in-out;
+            animation: gull-patrol 16s infinite ease-in-out;
             z-index: 28;
+            transform-origin: center center;
         }
-        @keyframes gull-patrol-x {
-            0% { left: -5%; transform: scaleX(1); }
-            48% { transform: scaleX(1); }
-            50% { left: 95%; transform: scaleX(-1); }
-            98% { transform: scaleX(-1); }
-            100% { left: -5%; transform: scaleX(1); }
-        }
-        @keyframes gull-patrol-y {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(22px); }
+        @keyframes gull-patrol {
+            0% {
+                left: -90px;
+                top: 22px;
+                transform: scaleX(1); /* Moving East (Right), head faces Right */
+            }
+            24% {
+                top: 36px;
+            }
+            48% {
+                left: calc(100% + 10px);
+                top: 24px;
+                transform: scaleX(1);
+            }
+            50% {
+                left: calc(100% + 10px);
+                top: 24px;
+                transform: scaleX(-1); /* Turns around, head faces Left */
+            }
+            74% {
+                top: 15px;
+            }
+            98% {
+                left: -90px;
+                top: 30px;
+                transform: scaleX(-1); /* Moving West (Left), head faces Left */
+            }
+            100% {
+                left: -90px;
+                top: 22px;
+                transform: scaleX(1);
+            }
         }
 
-        /* 2. Shark: Roaming in the pool */
+        /* 2. Shark: Strictly roaming in the water (Above sand shoreline, never on deck) */
         .roaming-shark {
-            bottom: 120px;
+            bottom: 38px;
             width: 100px;
             height: 60px;
-            animation: shark-patrol-x 13s infinite ease-in-out, shark-patrol-y 2.5s infinite ease-in-out;
+            animation: shark-patrol 14s infinite ease-in-out;
             z-index: 5;
+            transform-origin: center center;
         }
-        @keyframes shark-patrol-x {
-            0% { left: 92%; transform: scaleX(1); }
-            48% { transform: scaleX(1); }
-            50% { left: -2%; transform: scaleX(-1); }
-            98% { transform: scaleX(-1); }
-            100% { left: 92%; transform: scaleX(1); }
-        }
-        @keyframes shark-patrol-y {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(6px); }
+        @keyframes shark-patrol {
+            0% {
+                left: calc(100% - 100px);
+                bottom: 38px;
+                transform: scaleX(1); /* Moving West (Left), fin faces Left */
+            }
+            24% {
+                bottom: 44px;
+            }
+            48% {
+                left: 10px;
+                bottom: 39px;
+                transform: scaleX(1);
+            }
+            50% {
+                left: 10px;
+                bottom: 40px;
+                transform: scaleX(-1); /* Turns around, fin faces Right */
+            }
+            74% {
+                bottom: 45px;
+            }
+            98% {
+                left: calc(100% - 100px);
+                bottom: 39px;
+                transform: scaleX(-1); /* Moving East (Right), fin faces Right */
+            }
+            100% {
+                left: calc(100% - 100px);
+                bottom: 38px;
+                transform: scaleX(1);
+            }
         }
 
-        /* 3. Gator: Roaming in the pool */
+        /* 3. Gator: Strictly roaming in the water (Slightly above shark depth) */
         .roaming-gator {
-            bottom: 85px;
+            bottom: 52px;
             width: 90px;
             height: 45px;
-            animation: gator-patrol-x 17s infinite ease-in-out, gator-patrol-y 3.5s infinite ease-in-out;
+            animation: gator-patrol 18s infinite ease-in-out;
             z-index: 5;
+            transform-origin: center center;
         }
-        @keyframes gator-patrol-x {
-            0% { left: 5%; transform: scaleX(1); }
-            48% { transform: scaleX(1); }
-            50% { left: 88%; transform: scaleX(-1); }
-            98% { transform: scaleX(-1); }
-            100% { left: 5%; transform: scaleX(1); }
-        }
-        @keyframes gator-patrol-y {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(4px); }
+        @keyframes gator-patrol {
+            0% {
+                left: 15px;
+                bottom: 52px;
+                transform: scaleX(-1); /* Moving East (Right), snout faces Right */
+            }
+            24% {
+                bottom: 58px;
+            }
+            48% {
+                left: calc(100% - 110px);
+                bottom: 53px;
+                transform: scaleX(-1);
+            }
+            50% {
+                left: calc(100% - 110px);
+                bottom: 54px;
+                transform: scaleX(1); /* Turns around, snout faces Left */
+            }
+            74% {
+                bottom: 59px;
+            }
+            98% {
+                left: 15px;
+                bottom: 53px;
+                transform: scaleX(1); /* Moving West (Left), snout faces Left */
+            }
+            100% {
+                left: 15px;
+                bottom: 52px;
+                transform: scaleX(-1);
+            }
         }
 
         /* Modals */
@@ -1265,13 +1345,14 @@
         -->
 
         <div class="stage" id="stage">
-            <div id="waiting-animals-layer"></div>
+            <div id="waiting-animals-sky-layer"></div>
             <div style="position: absolute; top: 10px; left: 10px; z-index: 100; display:flex; gap:10px;">
                 <button id="mobile-leave-btn" class="btn btn-danger" style="width: auto; padding: 5px 10px; font-size: 0.8rem; display: none;" onclick="leaveRoom()">나가기</button>
                 <button id="end-game-btn" class="btn btn-warning hidden" style="width: auto; padding: 5px 10px; font-size: 0.8rem; color: #000;" onclick="endGame()">게임 종료</button>
             </div>
             <div id="item-timer" class="hidden" style="position: absolute; top: 15px; right: 20px; background: rgba(0,0,0,0.6); padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; border: 1px solid #f39c12; color: #f39c12; z-index: 100;"></div>
-            <div class="pool">
+            <div class="pool" id="pool">
+                <div id="waiting-animals-pool-layer"></div>
                 <div class="wave wave1"></div>
                 <div class="wave wave2"></div>
                 <div class="wave-bottom"></div>
@@ -3419,17 +3500,34 @@
         }
 
         // ─── Roaming Waiting Animals System (Single Source of Truth) ─────────
-        function getWaitingAnimalsLayer() {
-            let layer = document.getElementById('waiting-animals-layer');
+        function getWaitingAnimalsSkyLayer() {
+            let layer = document.getElementById('waiting-animals-sky-layer');
             if (!layer) {
                 const stage = document.getElementById('stage');
                 if (stage) {
                     layer = document.createElement('div');
-                    layer.id = 'waiting-animals-layer';
+                    layer.id = 'waiting-animals-sky-layer';
                     stage.appendChild(layer);
                 }
             }
             return layer;
+        }
+
+        function getWaitingAnimalsPoolLayer() {
+            let layer = document.getElementById('waiting-animals-pool-layer');
+            if (!layer) {
+                const pool = document.getElementById('pool');
+                if (pool) {
+                    layer = document.createElement('div');
+                    layer.id = 'waiting-animals-pool-layer';
+                    pool.appendChild(layer);
+                }
+            }
+            return layer;
+        }
+
+        function getWaitingAnimalsLayer() {
+            return getWaitingAnimalsSkyLayer();
         }
 
         function getRoamingGullSvg() {
@@ -3469,8 +3567,8 @@
         }
 
         function spawnWaitingAnimal(animal) {
-            const layer = getWaitingAnimalsLayer();
-            if (!layer) return;
+            const targetLayer = (animal === 'gull') ? getWaitingAnimalsSkyLayer() : getWaitingAnimalsPoolLayer();
+            if (!targetLayer) return;
             const existing = document.getElementById(`roaming-animal-${animal}`);
             if (existing) {
                 existing.classList.remove('fading-out');
@@ -3497,7 +3595,7 @@
                 el.innerHTML = getRoamingGatorSvg();
             }
 
-            layer.appendChild(el);
+            targetLayer.appendChild(el);
         }
 
         function removeWaitingAnimal(animal) {
@@ -3522,8 +3620,12 @@
 
         function clearAllWaitingAnimals() {
             if (state.room) state.room.waitingAnimals = [];
-            const layer = document.getElementById('waiting-animals-layer');
-            if (layer) layer.innerHTML = '';
+            const skyLayer = document.getElementById('waiting-animals-sky-layer');
+            if (skyLayer) skyLayer.innerHTML = '';
+            const poolLayer = document.getElementById('waiting-animals-pool-layer');
+            if (poolLayer) poolLayer.innerHTML = '';
+            const oldLayer = document.getElementById('waiting-animals-layer');
+            if (oldLayer) oldLayer.innerHTML = '';
         }
 
         // --- Smart Pin-to-Bottom Chat Engine ---
