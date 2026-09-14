@@ -317,6 +317,90 @@
         .item-btn.word_change { background: rgba(46,213,115,0.2); border-color: rgba(46,213,115,0.5); color: #2ed573; }
         .item-btn.word_add { background: rgba(156,136,255,0.2); border-color: rgba(156,136,255,0.5); color: #9c88ff; }
         .item-btn.word_delete { background: rgba(255,159,67,0.2); border-color: rgba(255,159,67,0.5); color: #ff9f43; }
+        .item-btn.call_shark { background: rgba(75, 101, 132, 0.25); border-color: rgba(75, 101, 132, 0.6); color: #778ca3; }
+        .item-btn.call_gator { background: rgba(46, 204, 113, 0.25); border-color: rgba(46, 204, 113, 0.6); color: #2ecc71; }
+        .item-btn.call_gull { background: rgba(241, 196, 15, 0.25); border-color: rgba(241, 196, 15, 0.6); color: #f1c40f; }
+
+        /* Roaming Waiting Animals Layer & Elements */
+        #waiting-animals-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 8;
+        }
+        .roaming-animal {
+            position: absolute;
+            pointer-events: none;
+            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+        }
+        .roaming-animal.fading-out {
+            opacity: 0 !important;
+            transform: scale(0.6) !important;
+        }
+
+        /* 1. Gull: Roaming in the sky */
+        .roaming-gull {
+            top: 25px;
+            width: 90px;
+            height: 60px;
+            animation: gull-patrol-x 16s infinite ease-in-out, gull-patrol-y 3s infinite ease-in-out;
+            z-index: 28;
+        }
+        @keyframes gull-patrol-x {
+            0% { left: -5%; transform: scaleX(1); }
+            48% { transform: scaleX(1); }
+            50% { left: 95%; transform: scaleX(-1); }
+            98% { transform: scaleX(-1); }
+            100% { left: -5%; transform: scaleX(1); }
+        }
+        @keyframes gull-patrol-y {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(22px); }
+        }
+
+        /* 2. Shark: Roaming in the pool */
+        .roaming-shark {
+            bottom: 120px;
+            width: 100px;
+            height: 60px;
+            animation: shark-patrol-x 13s infinite ease-in-out, shark-patrol-y 2.5s infinite ease-in-out;
+            z-index: 5;
+        }
+        @keyframes shark-patrol-x {
+            0% { left: 92%; transform: scaleX(1); }
+            48% { transform: scaleX(1); }
+            50% { left: -2%; transform: scaleX(-1); }
+            98% { transform: scaleX(-1); }
+            100% { left: 92%; transform: scaleX(1); }
+        }
+        @keyframes shark-patrol-y {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(6px); }
+        }
+
+        /* 3. Gator: Roaming in the pool */
+        .roaming-gator {
+            bottom: 85px;
+            width: 90px;
+            height: 45px;
+            animation: gator-patrol-x 17s infinite ease-in-out, gator-patrol-y 3.5s infinite ease-in-out;
+            z-index: 5;
+        }
+        @keyframes gator-patrol-x {
+            0% { left: 5%; transform: scaleX(1); }
+            48% { transform: scaleX(1); }
+            50% { left: 88%; transform: scaleX(-1); }
+            98% { transform: scaleX(-1); }
+            100% { left: 5%; transform: scaleX(1); }
+        }
+        @keyframes gator-patrol-y {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(4px); }
+        }
 
         /* Modals */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(3px); }
@@ -1092,6 +1176,7 @@
         -->
 
         <div class="stage" id="stage">
+            <div id="waiting-animals-layer"></div>
             <div style="position: absolute; top: 10px; left: 10px; z-index: 100; display:flex; gap:10px;">
                 <button id="mobile-leave-btn" class="btn btn-danger" style="width: auto; padding: 5px 10px; font-size: 0.8rem; display: none;" onclick="leaveRoom()">나가기</button>
                 <button id="end-game-btn" class="btn btn-warning hidden" style="width: auto; padding: 5px 10px; font-size: 0.8rem; color: #000;" onclick="endGame()">게임 종료</button>
@@ -1804,8 +1889,12 @@
                 if (state.room.status === 'playing') {
                     renderWordsPanel();
                     renderInventory();
+                    syncWaitingAnimalsVisuals();
                 } else if (state.room.status === 'finished') {
+                    clearAllWaitingAnimals();
                     showStatsModal();
+                } else {
+                    clearAllWaitingAnimals();
                 }
             } else if (data.type === 'CHAT_BROADCAST') {
                 const sender = state.players.find(p => p.id === data.payload.senderId);
@@ -1882,6 +1971,7 @@
             roomCode = null;
             state.room.status = 'lobby';
             updateBodyState();
+            clearAllWaitingAnimals();
             state.players = [];
             els.wordsPanel.innerHTML = '';
             clearChatUI();
@@ -2451,6 +2541,7 @@
         let chatUiInterval = null;
         function finalizeStart() {
             state.room.startedAt = Date.now();
+            clearAllWaitingAnimals();
             els.wordSettingModal.classList.add('hidden');
             clearChatUI();
             sysChat('게임이 시작되었습니다! 채팅을 자유롭게 시작하세요.');
@@ -2493,7 +2584,7 @@
                 return;
             }
             
-            const itemTypes = ['missile', 'shield', 'word_change', 'word_add', 'word_delete'];
+            const itemTypes = ['missile', 'shield', 'word_change', 'word_add', 'word_delete', 'call_shark', 'call_gator', 'call_gull'];
             state.players.forEach(p => {
                 const randomItem = itemTypes[Math.floor(Math.random() * itemTypes.length)];
                 if (!p.items) p.items = [];
@@ -2570,7 +2661,16 @@
                 return;
             }
             
-            const itemLabels = { 'missile': '🚀 미사일', 'shield': '🛡️ 방패', 'word_change': '🃏 변경권', 'word_add': '➕ 추가권', 'word_delete': '✂️ 삭제권' };
+            const itemLabels = {
+                'missile': '🚀 미사일',
+                'shield': '🛡️ 방패',
+                'word_change': '🃏 변경권',
+                'word_add': '➕ 추가권',
+                'word_delete': '✂️ 삭제권',
+                'call_shark': '🦈 상어부르기',
+                'call_gator': '🐊 악어부르기',
+                'call_gull': '🦅 갈매기부르기'
+            };
             
             const grouped = {};
             me.items.forEach(item => {
@@ -2594,10 +2694,23 @@
             
             // Allow word_change, word_add, and word_delete even if dead
             if (me.status !== 'idle' && item !== 'word_change' && item !== 'word_add' && item !== 'word_delete') {
-                return sysChat('행동 불능 상태에서는 미사일 등 공격 아이템을 사용할 수 없습니다.');
+                return sysChat('행동 불능 상태에서는 공격 및 소환 아이템을 사용할 수 없습니다.');
             }
             if (item === 'shield') {
-                alert('🛡️ 방패는 직접 사용할 수 없는 패시브 아이템입니다.\n치명적인 공격(상어, 악어, 미사일)을 받았을 때 자동으로 1회 막아줍니다.');
+                alert('🛡️ 방패는 직접 사용할 수 없는 패시브 아이템입니다.\n치명적인 공격(상어, 악어, 갈매기, 미사일)을 받았을 때 자동으로 1회 막아줍니다.');
+            } else if (item === 'call_shark' || item === 'call_gator' || item === 'call_gull') {
+                const animal = item.replace('call_', '');
+                const waitingList = (state.room && state.room.waitingAnimals) || [];
+                if (waitingList.includes(animal)) {
+                    const nameMap = { shark: '상어', gator: '악어', gull: '갈매기' };
+                    alert(`이미 ${nameMap[animal] || '동물'}가 대기 중입니다!`);
+                    return;
+                }
+                if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
+                    executeItem(state.myId, item, index, null, null);
+                } else {
+                    socket.emit('SEND_TO_HOST', { roomCode, type: 'USE_ITEM', payload: { item, index, targetId: null, extraData: null } });
+                }
             } else if (item === 'missile' || item === 'word_change') {
                 pendingItemUse = { item, index };
                 openTargetModal();
@@ -2695,6 +2808,7 @@
             if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
                 if (!confirm('정말 게임을 종료하시겠습니까? (통계가 표시됩니다)')) return;
                 state.room.status = 'finished';
+                clearAllWaitingAnimals();
                 broadcastState();
                 showStatsModal();
             }
@@ -2950,6 +3064,14 @@
                 } else {
                     extraData = { deletedWord: null };
                 }
+            } else if (item === 'call_shark' || item === 'call_gator' || item === 'call_gull') {
+                const animal = item.replace('call_', '');
+                if (!state.room.waitingAnimals) state.room.waitingAnimals = [];
+                if (!state.room.waitingAnimals.includes(animal)) {
+                    state.room.waitingAnimals.push(animal);
+                }
+                extraData = { animal };
+                if (currentMode === MODE_HOST) broadcastState();
             }
             
             // Broadcast event to trigger animation
@@ -3149,7 +3271,129 @@
                     broadcastState();
                     renderWordsPanel();
                 }
+            } else if (item === 'call_shark' || item === 'call_gator' || item === 'call_gull') {
+                const animal = (extraData && extraData.animal) || item.replace('call_', '');
+                if (!state.room.waitingAnimals) state.room.waitingAnimals = [];
+                if (!state.room.waitingAnimals.includes(animal)) {
+                    state.room.waitingAnimals.push(animal);
+                }
+                const nameMap = {
+                    shark: { name: '상어', icon: '🦈', desc: '바다에 굶주린 상어를 소환했습니다! 다음 입수자를 노립니다.' },
+                    gator: { name: '악어 떼', icon: '🐊', desc: '수영장에 사나운 악어 떼를 소환했습니다! 다음 입수자를 노립니다.' },
+                    gull: { name: '거대 갈매기', icon: '🦅', desc: '하늘에 거대 갈매기를 소환했습니다! 다음 입수자를 노립니다.' }
+                };
+                const info = nameMap[animal] || { name: animal, icon: '⚠️', desc: '소환되었습니다!' };
+                sysChat(`${info.icon} ${sender.name}님이 [${animal === 'shark' ? '🦈 상어부르기' : (animal === 'gator' ? '🐊 악어부르기' : '🦅 갈매기부르기')}]를 사용하여 ${info.desc}`);
+                spawnWaitingAnimal(animal);
             }
+        }
+
+        // ─── Roaming Waiting Animals System (Single Source of Truth) ─────────
+        function getWaitingAnimalsLayer() {
+            let layer = document.getElementById('waiting-animals-layer');
+            if (!layer) {
+                const stage = document.getElementById('stage');
+                if (stage) {
+                    layer = document.createElement('div');
+                    layer.id = 'waiting-animals-layer';
+                    stage.appendChild(layer);
+                }
+            }
+            return layer;
+        }
+
+        function getRoamingGullSvg() {
+            return `
+            <svg viewBox="0 0 150 100" style="width:100%; height:100%; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.35));">
+                <path id="gull-wing-b-roam" d="M 60 40 Q 40 0 90 0 Q 70 20 60 40 Z" fill="#b2bec3"/>
+                <path d="M 40 50 Q 10 50 10 30 Q 30 20 50 30 Q 80 40 100 30 Q 120 50 80 60 Q 60 65 40 50 Z" fill="white"/>
+                <path d="M 15 35 L 0 25 L 5 45 Z" fill="white"/>
+                <circle cx="100" cy="35" r="14" fill="white"/>
+                <circle cx="105" cy="32" r="2.5" fill="black"/>
+                <path d="M 112 35 L 135 40 L 110 43 Z" fill="#f1c40f"/>
+                <path id="gull-wing-f-roam" d="M 65 45 Q 45 -10 100 -10 Q 75 15 65 45 Z" fill="#dfe6e9" stroke="#b2bec3" stroke-width="1"/>
+                <path d="M 50 60 L 50 75 M 45 75 L 55 75 M 60 60 L 60 75 M 55 75 L 65 75" stroke="#e67e22" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+            </svg>`;
+        }
+
+        function getRoamingSharkSvg() {
+            return `
+            <svg viewBox="0 0 160 100" style="width:100%; height:100%; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));">
+                <path d="M 75 85 Q 100 35 110 15 Q 102 65 130 85 Z" fill="#4b6584"/>
+                <ellipse cx="102" cy="86" rx="45" ry="7" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="2" stroke-dasharray="8 4"/>
+                <ellipse cx="102" cy="88" rx="26" ry="4" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+            </svg>`;
+        }
+
+        function getRoamingGatorSvg() {
+            return `
+            <svg viewBox="0 0 140 70" style="width:100%; height:100%; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));">
+                <path d="M 20 45 Q 60 30 110 40 Q 120 45 105 52 Q 60 55 20 45 Z" fill="#27ae60" stroke="#1e8449" stroke-width="1.5"/>
+                <ellipse cx="25" cy="44" rx="3" ry="1.5" fill="#145a32"/>
+                <ellipse cx="80" cy="33" rx="8" ry="6" fill="#27ae60" stroke="#1e8449" stroke-width="1"/>
+                <circle cx="80" cy="33" r="4.5" fill="#f1c40f"/>
+                <ellipse cx="80" cy="33" rx="1.5" ry="4" fill="#000"/>
+                <path d="M 90 42 L 95 38 L 100 42 L 105 39 L 110 43" stroke="#196f3d" stroke-width="2" fill="none"/>
+                <ellipse cx="65" cy="50" rx="55" ry="6" fill="none" stroke="rgba(255,255,255,0.65)" stroke-width="2" stroke-dasharray="10 5"/>
+            </svg>`;
+        }
+
+        function spawnWaitingAnimal(animal) {
+            const layer = getWaitingAnimalsLayer();
+            if (!layer) return;
+            const existing = document.getElementById(`roaming-animal-${animal}`);
+            if (existing) {
+                existing.classList.remove('fading-out');
+                return;
+            }
+
+            const el = document.createElement('div');
+            el.id = `roaming-animal-${animal}`;
+            el.className = `roaming-animal roaming-${animal}`;
+
+            if (animal === 'gull') {
+                el.innerHTML = getRoamingGullSvg();
+                const style = document.createElement('style');
+                style.innerHTML = `
+                    @keyframes flap-f-roam { 0% { transform: rotate(0deg); } 50% { transform: rotate(45deg); } 100% { transform: rotate(0deg); } }
+                    @keyframes flap-b-roam { 0% { transform: rotate(0deg); } 50% { transform: rotate(35deg); } 100% { transform: rotate(0deg); } }
+                    #gull-wing-f-roam { transform-origin: 65px 45px; animation: flap-f-roam 0.35s infinite; }
+                    #gull-wing-b-roam { transform-origin: 60px 40px; animation: flap-b-roam 0.35s infinite; }
+                `;
+                el.appendChild(style);
+            } else if (animal === 'shark') {
+                el.innerHTML = getRoamingSharkSvg();
+            } else if (animal === 'gator') {
+                el.innerHTML = getRoamingGatorSvg();
+            }
+
+            layer.appendChild(el);
+        }
+
+        function removeWaitingAnimal(animal) {
+            const el = document.getElementById(`roaming-animal-${animal}`);
+            if (!el) return;
+            el.classList.add('fading-out');
+            setTimeout(() => {
+                if (el.parentNode) el.parentNode.removeChild(el);
+            }, 500);
+        }
+
+        function syncWaitingAnimalsVisuals() {
+            const waitingList = (state.room && state.room.waitingAnimals) || [];
+            ['shark', 'gator', 'gull'].forEach(animal => {
+                if (waitingList.includes(animal)) {
+                    spawnWaitingAnimal(animal);
+                } else {
+                    removeWaitingAnimal(animal);
+                }
+            });
+        }
+
+        function clearAllWaitingAnimals() {
+            if (state.room) state.room.waitingAnimals = [];
+            const layer = document.getElementById('waiting-animals-layer');
+            if (layer) layer.innerHTML = '';
         }
 
         // --- Smart Pin-to-Bottom Chat Engine ---
@@ -3827,10 +4071,16 @@
         // --- Game Mechanics & Animation ---
         function triggerRandomFly(playerId, triggerReason) {
             let specialEvent = null;
-            const r = Math.random();
-            if (r < 0.02) specialEvent = 'gull';
-            else if (r < 0.12) specialEvent = 'shark';
-            else if (r < 0.17) specialEvent = 'gator';
+            if (state.room && state.room.waitingAnimals && state.room.waitingAnimals.length > 0) {
+                specialEvent = state.room.waitingAnimals.shift();
+                if (currentMode === MODE_HOST) broadcastState();
+                removeWaitingAnimal(specialEvent);
+            } else {
+                const r = Math.random();
+                if (r < 0.02) specialEvent = 'gull';
+                else if (r < 0.12) specialEvent = 'shark';
+                else if (r < 0.17) specialEvent = 'gator';
+            }
             
             triggerFly(playerId, triggerReason, specialEvent);
             if (currentMode === MODE_HOST) {
@@ -4177,6 +4427,10 @@
         function triggerFly(playerId, word, specialEvent = null) {
             const player = state.players.find(p => p.id === playerId);
             if (!player) return;
+
+            if (specialEvent) {
+                removeWaitingAnimal(specialEvent);
+            }
 
             // --- Shield Intercept ---
             if (specialEvent === 'shark' || specialEvent === 'gator' || specialEvent === 'gull') {
