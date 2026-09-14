@@ -4,15 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>아이템 도감 & 밸런스 분석 - 위험한 초대 (플라잉 체어)</title>
-    <meta name="description" content="'위험한 초대 - 실시간 플라잉 체어'의 5종 전략 특수 아이템(유도 미사일, 방패, 단어 변경, 추가, 삭제)의 스펙, 발동 메커니즘, 쿨다운 및 카운터 상성 전략 완벽 가이드.">
-    <meta name="keywords" content="플라잉체어아이템, 위험한초대아이템, 웹게임아이템, 게임도감, 유도미사일, 방패, 금기어변경, 게임공략">
+    <meta name="description" content="'위험한 초대 - 실시간 플라잉 체어'의 8종 전략 특수 아이템(유도 미사일, 방패, 단어 변경/추가/삭제, 상어/악어/갈매기 소환)의 스펙, 발동 메커니즘, 쿨다운 및 카운터 상성 전략 완벽 가이드.">
+    <meta name="keywords" content="플라잉체어아이템, 위험한초대아이템, 웹게임아이템, 게임도감, 유도미사일, 방패, 금기어변경, 상어부르기, 악어부르기, 갈매기부르기, 게임공략">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://flyingchair.onrender.com/guide/items">
 
     <!-- Open Graph -->
     <meta property="og:type" content="article">
     <meta property="og:title" content="아이템 도감 & 밸런스 분석 - 위험한 초대">
-    <meta property="og:description" content="전세를 단숨에 뒤집는 5가지 특수 아이템의 상세 스펙과 카운터 전략 완벽 분석.">
+    <meta property="og:description" content="전세를 단숨에 뒤집는 8가지 특수 아이템의 상세 스펙과 카운터 전략 완벽 분석.">
     <meta property="og:url" content="https://flyingchair.onrender.com/guide/items">
 
     <!-- Pretendard Font -->
@@ -74,6 +74,9 @@
         .item-icon-circle.green { background: rgba(46, 213, 115, 0.15); }
         .item-icon-circle.purple { background: rgba(156, 136, 255, 0.15); }
         .item-icon-circle.orange { background: rgba(255, 159, 67, 0.15); }
+        .item-icon-circle.cyan { background: rgba(9, 132, 227, 0.15); }
+        .item-icon-circle.teal { background: rgba(0, 184, 148, 0.15); }
+        .item-icon-circle.sky { background: rgba(116, 185, 255, 0.15); }
         .item-title-group h2 { font-size: 1.4rem; font-weight: 800; color: #fff; margin-bottom: 4px; }
         .item-badge-row { display: flex; gap: 8px; }
         .badge { font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
@@ -82,6 +85,7 @@
         .badge.utility { background: rgba(46, 213, 115, 0.2); color: #2ed573; }
         .badge.curse { background: rgba(156, 136, 255, 0.2); color: #9c88ff; }
         .badge.buff { background: rgba(255, 159, 67, 0.2); color: #ffa502; }
+        .badge.summon { background: rgba(9, 132, 227, 0.2); color: #0984e3; }
 
         /* Specs table */
         .specs-table { width: 100%; border-collapse: collapse; margin: 18px 0; background: var(--toss-card-sub); border-radius: var(--radius-sm); overflow: hidden; }
@@ -152,9 +156,9 @@
         <!-- Doc Header -->
         <section class="doc-header">
             <span class="doc-badge">🎒 ITEM COMPENDIUM</span>
-            <h1 class="doc-title">전략 특수 아이템 5종 도감 & 밸런스 분석</h1>
+            <h1 class="doc-title">전략 특수 아이템 8종 도감 & 밸런스 분석</h1>
             <p class="doc-desc">
-                아이템 모드 활성화 시 주기적으로 인벤토리에 보급되는 5가지 특수 아이템의 상세 스펙과 발동 조건,
+                아이템 모드 활성화 시 주기적으로 인벤토리에 보급되는 8가지 특수 아이템의 상세 스펙과 발동 조건,
                 그리고 상대를 카운터치기 위한 실전 밸런스 분석을 제공합니다.
             </p>
         </section>
@@ -288,6 +292,90 @@
             </div>
         </article>
 
+        <!-- Item 6: 상어부르기 -->
+        <article class="item-detail-card">
+            <div class="item-top">
+                <div class="item-icon-circle cyan">🦈</div>
+                <div class="item-title-group">
+                    <h2>상어부르기 (Call Shark)</h2>
+                    <div class="item-badge-row">
+                        <span class="badge summon">소환형</span>
+                        <span class="badge" style="background: rgba(255,255,255,0.1); color:#ccc;">수중 매복 트랩</span>
+                    </div>
+                </div>
+            </div>
+            <p style="color: var(--toss-text-sub); font-size: 0.95rem;">
+                바다에 굶주린 거대 상어를 소환하여 수면을 배회하게 합니다. 누군가가 금기어를 말하거나 침묵 페널티로 입수하는 순간 즉시 덮쳐 30초 동안 지속되는 치명적인 기절 상태(사망 디버프)에 빠뜨립니다.
+            </p>
+            <table class="specs-table">
+                <tr><th>발동 방식</th><td>아이템 사용 즉시 바다 수면에 상어 지느러미 순찰 엔티티 소환</td></tr>
+                <tr><th>매복 대기</th><td>누군가 입수할 때까지 수면에 영구 대기 (FIFO 선착순 1회성 소진)</td></tr>
+                <tr><th>적중 효과</th><td>다음 입수자 30초 기절(침수 디버프) 및 피 이펙트 발생</td></tr>
+                <tr><th>중복 방지</th><td>이미 상어가 수면에 대기 중일 때는 중복 소환 불가 (아이템 보존)</td></tr>
+                <tr><th>카운터 아이템</th><td>이지스 방패(Shield)를 보유한 대상 입수 시 방패가 깨지며 공격 무효화</td></tr>
+            </table>
+            <div class="strategy-block">
+                <h4>🦈 실전 운용 전략</h4>
+                <p>상대방 중 금기어가 탄로났거나 침묵 타이머가 임박한 유저가 있을 때 기습 소환해두면, 다음 입수 순간 확실하게 30초간 게임에서 이탈시켜 승기를 굳힐 수 있습니다.</p>
+            </div>
+        </article>
+
+        <!-- Item 7: 악어부르기 -->
+        <article class="item-detail-card">
+            <div class="item-top">
+                <div class="item-icon-circle teal">🐊</div>
+                <div class="item-title-group">
+                    <h2>악어부르기 (Call Gator)</h2>
+                    <div class="item-badge-row">
+                        <span class="badge summon">소환형</span>
+                        <span class="badge" style="background: rgba(255,255,255,0.1); color:#ccc;">수영장 매복 트랩</span>
+                    </div>
+                </div>
+            </div>
+            <p style="color: var(--toss-text-sub); font-size: 0.95rem;">
+                수영장에 사나운 악어 떼를 소환하여 잠복 순찰하게 합니다. 다음 입수자가 발생하는 순간 악어가 덮쳐 물속으로 끌고 들어가 30초간 기절 상태로 만듭니다.
+            </p>
+            <table class="specs-table">
+                <tr><th>발동 방식</th><td>아이템 사용 즉시 수영장 수면에 악어 머리 잠복 순찰 엔티티 소환</td></tr>
+                <tr><th>매복 대기</th><td>다음 입수 발생 시까지 대기 (FIFO 큐 방식으로 다중 동물 중복 공격 방지)</td></tr>
+                <tr><th>적중 효과</th><td>다음 입수자 30초 기절 및 격렬한 물보라 디버프</td></tr>
+                <tr><th>중복 방지</th><td>이미 악어가 대기 중일 때는 추가 소환 차단 (자원 낭비 방지)</td></tr>
+                <tr><th>카운터 아이템</th><td>이지스 방패(Shield)로 1회 완전 방어 가능</td></tr>
+            </table>
+            <div class="strategy-block">
+                <h4>🐊 실전 운용 전략</h4>
+                <p>다수의 참가자가 치열하게 공방을 벌이는 난전 상황에서 소환해 두면, 누구든 물에 빠지는 순간 악어의 제물이 되어 심리적 압박감을 극대화합니다.</p>
+            </div>
+        </article>
+
+        <!-- Item 8: 갈매기부르기 -->
+        <article class="item-detail-card">
+            <div class="item-top">
+                <div class="item-icon-circle sky">🦅</div>
+                <div class="item-title-group">
+                    <h2>갈매기부르기 (Call Gull)</h2>
+                    <div class="item-badge-row">
+                        <span class="badge summon">소환형</span>
+                        <span class="badge" style="background: rgba(255,255,255,0.1); color:#ccc;">상공 선회 트랩</span>
+                    </div>
+                </div>
+            </div>
+            <p style="color: var(--toss-text-sub); font-size: 0.95rem;">
+                하늘 상공에 거대한 바다 갈매기를 소환하여 선회 비행하게 합니다. 누군가가 날아오르는 순간 공중에서 낚아채어 30초간 공중 납치(기절) 페널티를 안깁니다.
+            </p>
+            <table class="specs-table">
+                <tr><th>발동 방식</th><td>아이템 사용 즉시 하늘 상공에 날갯짓하며 선회하는 갈매기 소환</td></tr>
+                <tr><th>매복 대기</th><td>다음 발사(플라잉 체어) 이벤트 발생 시까지 대기</td></tr>
+                <tr><th>적중 효과</th><td>발사된 대상 공중 낚아채기(납치) 및 30초 행동 불능 디버프</td></tr>
+                <tr><th>중복 방지</th><td>이미 갈매기가 비행 중일 때 중복 소환 차단</td></tr>
+                <tr><th>카운터 아이템</th><td>이지스 방패(Shield) 소지 시 방패 1회 차감으로 방어 성공</td></tr>
+            </table>
+            <div class="strategy-block">
+                <h4>🦅 실전 운용 전략</h4>
+                <p>상어/악어가 바다에서 기다린다면 갈매기는 공중에서 즉시 낚아채므로, 비행 궤적 자체를 차단하는 공포감을 심어줄 수 있습니다.</p>
+            </div>
+        </article>
+
         <!-- Balance Matrix Section -->
         <article class="matrix-section">
             <h3>⚖️ 아이템 상성 및 밸런스 매트릭스</h3>
@@ -297,10 +385,13 @@
                 </thead>
                 <tbody>
                     <tr><td>🚀 유도 미사일</td><td>침묵 직전 유저, 입담 좋은 1위 독주자 제압</td><td>이지스 방패 보유자에게 차단당함</td></tr>
-                    <tr><td>🛡️ 이지스 방패</td><td>적의 표적 저격 방어 및 어그로 핑퐁</td><td>금기어 추가/변경 등 간접 공격에는 무력</td></tr>
+                    <tr><td>🛡️ 이지스 방패</td><td>적의 표적 저격 방어 및 어그로 핑퐁, 맹수 공격 방어</td><td>금기어 추가/변경 등 간접 공격에는 무력</td></tr>
                     <tr><td>🔀 금기어 변경권</td><td>상대가 내 단어 패턴을 완전히 읽었을 때</td><td>대상의 새로운 말버릇을 모르면 낭비됨</td></tr>
                     <tr><td>➕ 금기어 추가권</td><td>생존자가 적은 후반부 1:1 진흙탕 싸움</td><td>단어 삭제권에 의해 허무하게 지워질 수 있음</td></tr>
                     <tr><td>➖ 금기어 삭제권</td><td>다수의 참가자가 나에게 집중 포화를 퍼부을 때</td><td>남은 금기어가 1개뿐일 때의 타이밍 계산 필요</td></tr>
+                    <tr><td>🦈 상어부르기</td><td>침묵 임박자·금기어 노출자 입수 제압</td><td>이지스 방패로 방어 가능, 타깃 미지정(누구든 첫 입수자 대상)</td></tr>
+                    <tr><td>🐊 악어부르기</td><td>난전 상황 속 집단 심리 위축 및 추가 페널티</td><td>이지스 방패로 방어 가능, 본인이 실수로 입수할 위험</td></tr>
+                    <tr><td>🦅 갈매기부르기</td><td>의자 발사 궤적 공중 낚아채기 및 기습 납치</td><td>이지스 방패로 방어 가능, 동물 중복 소환 차단</td></tr>
                 </tbody>
             </table>
         </article>
