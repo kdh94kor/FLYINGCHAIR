@@ -1261,7 +1261,7 @@
                         <span class="card-tag">아이템</span>
                     </div>
                     <h4>8종 특수 아이템 도감</h4>
-                    <p>유도 미사일, 방패, 금기어 조작 및 상어/악어/갈매기 소환 등 8가지 특수 아이템 스펙 & 밸런스 분석</p>
+                    <p>유도 미사일, 방패, 금기어 조작 및 상어/악어/부산갈매기 소환 등 8가지 특수 아이템 스펙 & 밸런스 분석</p>
                     <span class="card-action">자세히 보기 &rarr;</span>
                 </a>
 
@@ -2839,7 +2839,7 @@
                 'word_delete': '✂️ 삭제권',
                 'call_shark': '🦈 상어부르기',
                 'call_gator': '🐊 악어부르기',
-                'call_gull': '🦅 갈매기부르기'
+                'call_gull': '🦅 부산갈매기부르기'
             };
             
             const grouped = {};
@@ -2867,12 +2867,12 @@
                 return sysChat('행동 불능 상태에서는 공격 및 소환 아이템을 사용할 수 없습니다.');
             }
             if (item === 'shield') {
-                alert('🛡️ 방패는 직접 사용할 수 없는 패시브 아이템입니다.\n치명적인 공격(상어, 악어, 갈매기, 미사일)을 받았을 때 자동으로 1회 막아줍니다.');
+                alert('🛡️ 방패는 직접 사용할 수 없는 패시브 아이템입니다.\n치명적인 공격(상어, 악어, 부산갈매기, 미사일)을 받았을 때 자동으로 1회 막아줍니다.');
             } else if (item === 'call_shark' || item === 'call_gator' || item === 'call_gull') {
                 const animal = item.replace('call_', '');
                 const waitingList = (state.room && state.room.waitingAnimals) || [];
                 if (waitingList.includes(animal)) {
-                    const nameMap = { shark: '상어', gator: '악어', gull: '갈매기' };
+                    const nameMap = { shark: '상어', gator: '악어', gull: '부산갈매기' };
                     alert(`이미 ${nameMap[animal] || '동물'}가 대기 중입니다!`);
                     return;
                 }
@@ -3491,10 +3491,10 @@
                 const nameMap = {
                     shark: { name: '상어', icon: '🦈', desc: '바다에 굶주린 상어를 소환했습니다! 조심하세요!!' },
                     gator: { name: '악어 떼', icon: '🐊', desc: '수영장에 사나운 악어 떼를 소환했습니다! 조심하세요!!' },
-                    gull: { name: '거대 갈매기', icon: '🦅', desc: '하늘에 거대 갈매기를 소환했습니다! 조심하세요!!' }
+                    gull: { name: '부산갈매기', icon: '🦅', desc: '하늘에 거대한 부산갈매기를 소환했습니다! 조심하세요!!' }
                 };
                 const info = nameMap[animal] || { name: animal, icon: '⚠️', desc: '소환되었습니다!' };
-                sysChat(`${info.icon} ${sender.name}님이 [${animal === 'shark' ? '🦈 상어부르기' : (animal === 'gator' ? '🐊 악어부르기' : '🦅 갈매기부르기')}]를 사용하여 ${info.desc}`);
+                sysChat(`${info.icon} ${sender.name}님이 [${animal === 'shark' ? '🦈 상어부르기' : (animal === 'gator' ? '🐊 악어부르기' : '🦅 부산갈매기부르기')}]를 사용하여 ${info.desc}`);
                 spawnWaitingAnimal(animal);
             }
         }
@@ -4675,7 +4675,7 @@
             if (specialEvent === 'shark' || specialEvent === 'gator' || specialEvent === 'gull') {
                 if (player.items && player.items.includes('shield')) {
                     player.items.splice(player.items.indexOf('shield'), 1); // Consume shield
-                    const attackName = specialEvent === 'shark' ? '상어' : (specialEvent === 'gator' ? '악어 떼' : '거대 갈매기');
+                    const attackName = specialEvent === 'shark' ? '상어' : (specialEvent === 'gator' ? '악어 떼' : '부산갈매기');
                     sysChat(`🛡️ ${player.name}님이 방패로 ${attackName}의 치명적인 공격을 방어했습니다!`);
                     createShieldEffect(playerId);
                     if (currentMode === MODE_HOST || currentMode === MODE_BOT) broadcastState();
@@ -4759,7 +4759,7 @@
                     if (player.flySequenceId !== mySequenceId) return;
                     chair.classList.add('tilted');
                     playFlySound();
-                    sysChat(`🦅 [비상] 거대한 부산 갈매기가 ${player.name} 님을 낚아챘습니다! (1분 채팅 금지)`);
+                    sysChat(`🦅 [비상] 거대한 부산갈매기가 ${player.name} 님을 낚아챘습니다! (1분 채팅 금지)`);
                     player.penaltyEndTime = Date.now() + 60000;
                     updateStatus(playerId, 'snatched');
                 });
