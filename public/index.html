@@ -868,22 +868,41 @@
             body.state-playing .main-area { height: 100%; flex: 1; min-height: 0; display: flex; flex-direction: column; }
             body.state-playing #mobile-leave-btn { display: block !important; }
             
-            /* Mobile: stage fills remaining space, bottom-panel fixed height, natural flex flow */
-            body.state-playing .stage { flex: 1; height: auto; min-height: 0; }
-            body.state-playing .bottom-panel { height: 260px; max-height: 48%; min-height: 160px; flex-shrink: 0; }
+            /* Mobile: stage fills remaining space, pool guaranteed visible */
+            body.state-playing .stage { flex: 1; height: auto; min-height: 0; display: flex; flex-direction: column; }
+            body.state-playing .pool { flex: 1; min-height: 85px; position: relative; }
+            body.state-playing .bottom-panel { height: 230px; max-height: 44%; min-height: 140px; flex-shrink: 0; }
+
+            /* Virtual Keyboard Open state (adaptive layout for Chunjiin / mobile keyboard) */
+            body.state-playing.keyboard-open .bottom-panel {
+                height: 125px !important;
+                min-height: 85px !important;
+                max-height: 35% !important;
+            }
+            body.state-playing.keyboard-open .deck {
+                height: 68px !important;
+            }
+            body.state-playing.keyboard-open .chair-slot {
+                transform: scale(0.85);
+                transform-origin: bottom center;
+            }
+            body.state-playing.keyboard-open .words-bar {
+                height: 24px !important;
+                padding: 2px 6px !important;
+            }
             
             .bottom-panel { display: flex; flex-direction: column; }
             .chat-section { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
             .chat-messages-container { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; overflow: hidden; }
-            .chat-messages { flex: 1; min-height: 0; padding: 10px 12px 6px; gap: 8px; overflow-y: auto; }
-            .chat-messages::after { content: ''; display: block; height: 8px; flex-shrink: 0; }
+            .chat-messages { flex: 1; min-height: 0; padding: 8px 10px 4px; gap: 6px; overflow-y: auto; }
+            .chat-messages::after { content: ''; display: block; height: 6px; flex-shrink: 0; }
             .chat-scroll-bottom-btn { bottom: 10px; right: 12px; width: 34px; height: 34px; }
             .chat-scroll-bottom-btn svg { width: 16px; height: 16px; }
             .chat-unread-badge { top: -3px; right: -3px; min-width: 16px; height: 16px; font-size: 0.62rem; padding: 0 4px; }
             .chat-input-area {
                 position: static;
-                padding: 8px 10px;
-                padding-bottom: max(8px, env(safe-area-inset-bottom));
+                padding: 6px 10px;
+                padding-bottom: max(6px, env(safe-area-inset-bottom));
                 z-index: 10;
                 background: var(--bg-darker);
                 box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
@@ -893,18 +912,88 @@
             .inventory-label { display: none; }
             .item-btn { font-size: 0.7rem; padding: 4px 8px; }
 
-            .words-bar { padding: 4px 6px; gap: 4px; }
-            .word-chip { font-size: 0.65rem; padding: 1px 5px; }
+            /* Mobile 1-row sleek horizontal scroll for Taboo Words Bar */
+            .words-bar {
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: nowrap !important;
+                overflow-x: auto !important;
+                overflow-y: hidden !important;
+                white-space: nowrap !important;
+                padding: 3px 8px !important;
+                gap: 8px !important;
+                height: 28px !important;
+                align-items: center !important;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .words-bar::-webkit-scrollbar { display: none; }
+            .words-row {
+                display: inline-flex !important;
+                align-items: center !important;
+                gap: 4px !important;
+                flex-shrink: 0 !important;
+                background: rgba(255, 255, 255, 0.05);
+                padding: 2px 6px !important;
+                border-radius: 4px !important;
+            }
+            .words-row-name { font-size: 0.68rem !important; }
+            .words-row-sep { font-size: 0.68rem !important; opacity: 0.4; }
+            .words-row-words { display: inline-flex !important; gap: 3px !important; }
+            .word-chip { font-size: 0.65rem !important; padding: 1px 4px !important; }
 
-            .deck { gap: 20px; padding-top: 3px; }
+            /* Mobile Deck & Stage Optimization */
+            .deck {
+                height: 85px !important;
+                gap: 15px !important;
+                padding-bottom: 2px !important;
+                padding-top: 0 !important;
+            }
             .chair-slot { width: 50px; height: 80px; }
             .chair-base { width: 50px; height: 40px; margin-left: -25px; }
             .chair-back { width: 30px; height: 35px; bottom: 40px; left: 10px; }
             .character-wrapper { width: 50px; height: 70px; bottom: 15px; margin-left: -25px; }
             .name-tag { font-size: 0.65rem; top: -16px; padding: 1px 3px; }
             .badge-count { width: 18px; height: 18px; font-size: 0.7rem; top: -25px; right: -5px; }
-            .speech-bubble { font-size: 0.7rem; padding: 4px 6px; max-width: 100px; }
-            .subtitle { font-size: 1.5rem; padding: 10px 20px; }
+            
+            /* Speech bubble 2-line clamp to avoid ballooning */
+            .speech-bubble {
+                font-size: 0.68rem !important;
+                padding: 3px 6px !important;
+                max-width: 105px !important;
+                max-height: 42px !important;
+                overflow: hidden !important;
+                display: -webkit-box !important;
+                -webkit-line-clamp: 2 !important;
+                -webkit-box-orient: vertical !important;
+                text-overflow: ellipsis !important;
+                line-height: 1.25 !important;
+                word-break: break-word !important;
+            }
+
+            /* Subtitle Redesign: Slim Modern Top Pill Toast */
+            .subtitle-layer {
+                top: 8px !important;
+                padding: 0 10px !important;
+                box-sizing: border-box !important;
+            }
+            .subtitle {
+                font-size: 0.85rem !important;
+                font-weight: 800 !important;
+                padding: 4px 14px !important;
+                border-radius: 20px !important;
+                border: 1.5px solid #ff4757 !important;
+                background: rgba(18, 18, 26, 0.9) !important;
+                backdrop-filter: blur(8px) !important;
+                -webkit-backdrop-filter: blur(8px) !important;
+                box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6) !important;
+                letter-spacing: -0.01em !important;
+                max-width: 92% !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                text-shadow: none !important;
+            }
             
             .modal { padding: 15px; }
             .modal h2 { font-size: 1.2rem; margin-bottom: 15px; padding-bottom: 10px; }
@@ -2944,6 +3033,27 @@
             if (!window.tabooWordsTop100 || window.tabooWordsTop100.length <= 25) {
                 fetchTabooWords();
             }
+
+            function refreshWordChangeUI() {
+                const inputs = document.querySelectorAll('.word-change-input');
+                inputs.forEach(inp => {
+                    const btn = inp.parentElement.querySelector('.slot-btn');
+                    const isChanged = inp.value !== inp.dataset.initialValue;
+                    if (isChanged) {
+                        inp.style.borderColor = '#2ed573';
+                        inp.style.backgroundColor = 'rgba(46, 213, 115, 0.15)';
+                    } else {
+                        inp.style.borderColor = '#555';
+                        inp.style.backgroundColor = '#222';
+                    }
+                    inp.disabled = false;
+                    inp.style.opacity = '1';
+                    if (btn && Date.now() >= tabooRecommendCooldownUntil) {
+                        btn.disabled = false;
+                    }
+                });
+            }
+
             allWords.forEach((w, idx) => {
                 const row = document.createElement('div');
                 row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:8px;';
@@ -2961,7 +3071,7 @@
                 input.dataset.idx = idx;
                 input.value = isMe ? '???' : w;
                 input.dataset.initialValue = input.value; // Store initial value
-                input.style.cssText = 'padding:8px; border-radius:4px; border:1px solid #555; background:#222; color:#fff; flex:1; min-width:0;';
+                input.style.cssText = 'padding:8px; border-radius:4px; border:1px solid #555; background:#222; color:#fff; flex:1; min-width:0; transition:border-color 0.2s, background 0.2s;';
                 
                 const slotBtn = document.createElement('button');
                 slotBtn.type = 'button';
@@ -2969,26 +3079,40 @@
                 slotBtn.title = '랜덤 금기어 추천';
                 slotBtn.innerHTML = '🎲 추천';
                 slotBtn.onclick = () => {
-                    if (input.disabled) return;
+                    const inputs = document.querySelectorAll('.word-change-input');
+                    inputs.forEach(otherInp => {
+                        if (otherInp !== input && otherInp.value !== otherInp.dataset.initialValue) {
+                            otherInp.value = otherInp.dataset.initialValue;
+                        }
+                    });
                     rollTabooWord(inputId, slotBtn);
                 };
 
-                input.addEventListener('input', (e) => {
+                input.addEventListener('focus', () => {
                     const inputs = document.querySelectorAll('.word-change-input');
-                    const hasChanged = Array.from(inputs).some(inp => inp.value !== inp.dataset.initialValue);
-                    
-                    inputs.forEach(inp => {
-                        const btn = inp.parentElement.querySelector('.slot-btn');
-                        if (hasChanged && inp.value === inp.dataset.initialValue) {
-                            inp.disabled = true; // Lock others
-                            inp.style.opacity = '0.5';
-                            if (btn) btn.disabled = true;
-                        } else {
-                            inp.disabled = false;
-                            inp.style.opacity = '1';
-                            if (btn && Date.now() >= tabooRecommendCooldownUntil) btn.disabled = false;
+                    inputs.forEach(otherInp => {
+                        if (otherInp !== input && otherInp.value !== otherInp.dataset.initialValue) {
+                            otherInp.value = otherInp.dataset.initialValue;
                         }
                     });
+                    refreshWordChangeUI();
+                });
+
+                input.addEventListener('input', () => {
+                    const inputs = document.querySelectorAll('.word-change-input');
+                    inputs.forEach(otherInp => {
+                        if (otherInp !== input && otherInp.value !== otherInp.dataset.initialValue) {
+                            otherInp.value = otherInp.dataset.initialValue;
+                        }
+                    });
+                    refreshWordChangeUI();
+                });
+
+                input.addEventListener('blur', () => {
+                    if (input.value.trim() === '') {
+                        input.value = input.dataset.initialValue;
+                    }
+                    refreshWordChangeUI();
                 });
                 
                 row.appendChild(label);
@@ -3013,16 +3137,22 @@
             const inputs = document.querySelectorAll('.word-change-input');
             let changedIdx = -1;
             let newWord = '';
+            let changedCount = 0;
             
             inputs.forEach((inp) => {
                 if (inp.value !== inp.dataset.initialValue) {
                     changedIdx = parseInt(inp.dataset.idx, 10);
                     newWord = inp.value.trim();
+                    changedCount++;
                 }
             });
             
-            if (changedIdx === -1) {
+            if (changedCount === 0 || changedIdx === -1) {
                 alert('단어를 변경해주세요.');
+                return;
+            }
+            if (changedCount > 1) {
+                alert('한 번에 하나의 단어만 변경할 수 있습니다.');
                 return;
             }
             if (newWord.length < 2) {
@@ -4121,11 +4251,18 @@
 
         function showSubtitle(text) {
             const layer = document.getElementById('subtitle-layer');
+            if (!layer) return;
+            layer.innerHTML = '';
             const sub = document.createElement('div');
             sub.className = 'subtitle'; sub.textContent = text;
             layer.appendChild(sub);
             setTimeout(() => sub.classList.add('show'), 10);
-            setTimeout(() => { sub.classList.remove('show'); setTimeout(() => sub.remove(), 300); }, 3000);
+            setTimeout(() => {
+                sub.classList.remove('show');
+                setTimeout(() => {
+                    if (sub.parentNode) sub.remove();
+                }, 300);
+            }, 1800);
         }
 
         function createSplashEffect(x, y) {
@@ -4841,6 +4978,38 @@
         window.openWordAddModal = openWordAddModal;
         window.openWordChangeModal = openWordChangeModal;
         window.updateCooldownUI = updateCooldownUI;
+
+        // Mobile Virtual Keyboard responsive handler
+        function initKeyboardResponsive() {
+            const chatInput = els.chatInput || document.getElementById('chat-input');
+            if (chatInput) {
+                chatInput.addEventListener('focus', () => {
+                    if (window.innerWidth <= 768) {
+                        document.body.classList.add('keyboard-open');
+                        setTimeout(() => {
+                            if (typeof scrollToBottom === 'function') scrollToBottom(true);
+                        }, 100);
+                    }
+                });
+                chatInput.addEventListener('blur', () => {
+                    document.body.classList.remove('keyboard-open');
+                });
+            }
+
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', () => {
+                    if (window.innerWidth <= 768) {
+                        const isKeyboard = window.visualViewport.height < window.innerHeight * 0.78;
+                        if (isKeyboard) {
+                            document.body.classList.add('keyboard-open');
+                        } else if (document.activeElement !== chatInput) {
+                            document.body.classList.remove('keyboard-open');
+                        }
+                    }
+                });
+            }
+        }
+        initKeyboardResponsive();
 
         // Initial 1-time pre-fetch of top 100 taboo words for client-side zero-overhead rolling
         fetchTabooWords();
