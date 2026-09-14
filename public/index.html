@@ -3489,9 +3489,9 @@
                     state.room.waitingAnimals.push(animal);
                 }
                 const nameMap = {
-                    shark: { name: '상어', icon: '🦈', desc: '바다에 굶주린 상어를 소환했습니다! 다음 입수자를 노립니다.' },
-                    gator: { name: '악어 떼', icon: '🐊', desc: '수영장에 사나운 악어 떼를 소환했습니다! 다음 입수자를 노립니다.' },
-                    gull: { name: '거대 갈매기', icon: '🦅', desc: '하늘에 거대 갈매기를 소환했습니다! 다음 입수자를 노립니다.' }
+                    shark: { name: '상어', icon: '🦈', desc: '바다에 굶주린 상어를 소환했습니다! 조심하세요!!' },
+                    gator: { name: '악어 떼', icon: '🐊', desc: '수영장에 사나운 악어 떼를 소환했습니다! 조심하세요!!' },
+                    gull: { name: '거대 갈매기', icon: '🦅', desc: '하늘에 거대 갈매기를 소환했습니다! 조심하세요!!' }
                 };
                 const info = nameMap[animal] || { name: animal, icon: '⚠️', desc: '소환되었습니다!' };
                 sysChat(`${info.icon} ${sender.name}님이 [${animal === 'shark' ? '🦈 상어부르기' : (animal === 'gator' ? '🐊 악어부르기' : '🦅 갈매기부르기')}]를 사용하여 ${info.desc}`);
