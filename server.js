@@ -107,6 +107,18 @@ app.get('/api/admin/stats', basicAuth, async (req, res) => {
   res.json(await statsManager.getStats(from, to));
 });
 
+app.get('/api/admin/taboo-words', basicAuth, async (req, res) => {
+  try {
+    if (req.query.refresh === 'true') {
+      await tabooWordsManager.refreshFromDb();
+    }
+    res.json(tabooWordsManager.getTabooWordsStats());
+  } catch (err) {
+    console.error('Error fetching admin taboo words stats:', err);
+    res.status(500).json({ error: '금기어 통계를 불러오지 못했습니다.' });
+  }
+});
+
 // Top 100 Taboo Words Endpoint (Cached)
 app.get('/api/taboo-words/top100', (req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=300');

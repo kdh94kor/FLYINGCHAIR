@@ -106,6 +106,7 @@ async function flushToDb() {
 
 // 60초 주기 자동 플러시 타이머
 flushTimer = setInterval(flushToDb, DB_FLUSH_INTERVAL_MS);
+if (flushTimer.unref) flushTimer.unref();
 
 // ── 5. Supabase DB 초기 하이드레이션 & 시딩 (Non-blocking) ────────────────────
 async function initDbSync() {
@@ -116,7 +117,7 @@ async function initDbSync() {
       .from('taboo_words')
       .select('word, count')
       .order('count', { ascending: false })
-      .limit(300);
+      .limit(5000);
 
     if (error) {
       // 테이블이 아직 없는 경우 (사용자가 SQL 실행 전)
@@ -189,6 +190,60 @@ function recordWordsFromPayload(targetWords) {
   recordWords(list);
 }
 
+// ── 7. 관리자용 전체 금기어 랭킹 및 통계 집계 ────────────────────────────────────
+function getTabooWordsStats() {
+  const entries = Object.entries(wordCounts).sort((a, b) => {
+    if (b[1] !== a[1]) return b[1] - a[1]; // 카운트 내림차순
+    return a[0].localeCompare(b[0], 'ko'); // 동일 카운트 시 가나다순
+  });
+
+  const totalUniqueWords = entries.length;
+  const totalUsageCount = entries.reduce((sum, [, count]) => sum + count, 0);
+  const avgCount = totalUniqueWords > 0 ? Number((totalUsageCount / totalUniqueWords).toFixed(1)) : 0;
+
+  const words = entries.map(([word, count], idx) => {
+    const percentage = totalUsageCount > 0 ? Number(((count / totalUsageCount) * 100).toFixed(2)) : 0;
+    return {
+      rank: idx + 1,
+      word,
+      count,
+      percentage
+    };
+  });
+
+  return {
+    summary: {
+      totalUniqueWords,
+      totalUsageCount,
+      topWord: entries.length > 0 ? entries[0][0] : null,
+      topWordCount: entries.length > 0 ? entries[0][1] : 0,
+      avgCount
+    },
+    words
+  };
+}
+
+async function refreshFromDb() {
+  if (!supabase) return;
+  try {
+    const { data: rows, error } = await supabase
+      .from('taboo_words')
+      .select('word, count')
+      .order('count', { ascending: false })
+      .limit(5000);
+
+    if (!error && rows && rows.length > 0) {
+      for (const r of rows) {
+        wordCounts[r.word] = Math.max(wordCounts[r.word] || 0, r.count);
+      }
+      computeTop100();
+      console.log(`[TabooWords] Refreshed ${rows.length} words from Supabase.`);
+    }
+  } catch (err) {
+    console.warn('[TabooWords] DB refresh error:', err.message || err);
+  }
+}
+
 // 프로세스 종료 시 잔여 버퍼 플러시
 process.on('SIGTERM', async () => {
   if (flushTimer) clearInterval(flushTimer);
@@ -197,6 +252,8 @@ process.on('SIGTERM', async () => {
 
 module.exports = {
   getTop100Words,
+  getTabooWordsStats,
+  refreshFromDb,
   recordWords,
   recordWordsFromPayload,
   flushToDb, // For manual trigger in tests
