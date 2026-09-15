@@ -2791,13 +2791,15 @@
                 applySubmittedWords(state.myId, myTargetWords);
             }
 
-            // Record submitted words for learning
-            const allWordsToRecord = [];
-            for (const tid in myTargetWords) {
-                if (Array.isArray(myTargetWords[tid])) allWordsToRecord.push(...myTargetWords[tid]);
-            }
-            if (allWordsToRecord.length > 0 && socket) {
-                socket.emit('RECORD_TABOO_WORDS', { words: allWordsToRecord });
+            // Record submitted words for learning (봇 모드 제외, 순수 유저만)
+            if (currentMode !== MODE_BOT) {
+                const allWordsToRecord = [];
+                for (const tid in myTargetWords) {
+                    if (Array.isArray(myTargetWords[tid])) allWordsToRecord.push(...myTargetWords[tid]);
+                }
+                if (allWordsToRecord.length > 0 && socket) {
+                    socket.emit('RECORD_TABOO_WORDS', { words: allWordsToRecord });
+                }
             }
         }
 
@@ -2820,18 +2822,25 @@
                 state.room.status = 'playing';
                 updateBodyState();
 
-                // 모든 참가자(호스트, 게스트, 봇)의 금기어를 전수 수집하여 집계 시스템에 기록
-                const allGameWords = [];
-                state.players.forEach(p => {
-                    if (p.words) {
-                        Object.values(p.words).forEach(wList => {
-                            if (Array.isArray(wList)) allGameWords.push(...wList);
-                            else if (typeof wList === 'string') allGameWords.push(wList);
-                        });
+                // 순수 유저가 설정한 금기어만 선별 수집 (봇 모드 및 봇이 설정한 단어 제외)
+                if (currentMode !== MODE_BOT) {
+                    const realPlayerIds = new Set(state.players.filter(p => !p.isBot).map(p => p.id));
+                    const userWords = [];
+                    state.players.forEach(p => {
+                        if (p.words) {
+                            for (const submitterId in p.words) {
+                                // 봇이 아닌 실제 유저가 설정한 금기어만 수집
+                                if (realPlayerIds.has(submitterId)) {
+                                    const wList = p.words[submitterId];
+                                    if (Array.isArray(wList)) userWords.push(...wList);
+                                    else if (typeof wList === 'string') userWords.push(wList);
+                                }
+                            }
+                        }
+                    });
+                    if (userWords.length > 0 && socket) {
+                        socket.emit('RECORD_TABOO_WORDS', { words: userWords });
                     }
-                });
-                if (allGameWords.length > 0 && socket) {
-                    socket.emit('RECORD_TABOO_WORDS', { words: allGameWords });
                 }
 
                 if (currentMode === MODE_HOST) {
@@ -3121,10 +3130,12 @@
             
             closeWordAddModal();
             
-            // 추가된 신규 금기어 즉시 집계 시스템에 기록
-            const addedWords = Object.values(wordMap).filter(w => typeof w === 'string' && w.trim().length > 0);
-            if (addedWords.length > 0 && socket) {
-                socket.emit('RECORD_TABOO_WORDS', { words: addedWords });
+            // 추가된 신규 금기어 즉시 집계 시스템에 기록 (봇 모드 제외)
+            if (currentMode !== MODE_BOT) {
+                const addedWords = Object.values(wordMap).filter(w => typeof w === 'string' && w.trim().length > 0);
+                if (addedWords.length > 0 && socket) {
+                    socket.emit('RECORD_TABOO_WORDS', { words: addedWords });
+                }
             }
 
             const extraData = { wordMap };
@@ -3414,8 +3425,8 @@
             
             closeWordChangeModal();
             
-            // 변경된 신규 금기어 즉시 집계 시스템에 기록
-            if (newWord && socket) {
+            // 변경된 신규 금기어 즉시 집계 시스템에 기록 (봇 모드 제외)
+            if (currentMode !== MODE_BOT && newWord && socket) {
                 socket.emit('RECORD_TABOO_WORDS', { words: [newWord] });
             }
 
@@ -3476,7 +3487,7 @@
             
             // Broadcast event to trigger animation
             if (currentMode === MODE_HOST) {
-                broadcast({ type: 'EVENT_ITEM', payload: { senderId, item, targetId, extraData } });
+                broadcast({ type: 'EVENT_ITEM', payload: { senderId, senderIsBot: sender.isBot || false, item, targetId, extraData } });
             }
             
             // Local fallback for Host/Bot
@@ -3634,10 +3645,13 @@
             } else if (item === 'word_change') {
                 if (!target || !extraData) return;
                 sysChat(`🃏 ${target.name}님의 금기어가 변경되었습니다.`);
-                if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
-                    if (extraData.newWord && socket) {
+                if (currentMode === MODE_HOST) {
+                    const sender = state.players.find(p => p.id === senderId);
+                    if (sender && !sender.isBot && extraData.newWord && socket) {
                         socket.emit('RECORD_TABOO_WORDS', { words: [extraData.newWord] });
                     }
+                }
+                if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
                     const allWords = Object.values(target.words).flat();
                     if (allWords.length > extraData.wordIdx) {
                         allWords[extraData.wordIdx] = extraData.newWord;
@@ -3649,11 +3663,16 @@
             } else if (item === 'word_add') {
                 if (!extraData || !extraData.wordMap) return;
                 sysChat(`➕ 참가자들에게 각각 새로운 금기어가 1개씩 추가되었습니다.`);
-                if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
-                    const newWords = Object.values(extraData.wordMap).filter(w => typeof w === 'string' && w.trim().length > 0);
-                    if (newWords.length > 0 && socket) {
-                        socket.emit('RECORD_TABOO_WORDS', { words: newWords });
+                if (currentMode === MODE_HOST) {
+                    const sender = state.players.find(p => p.id === senderId);
+                    if (sender && !sender.isBot) {
+                        const newWords = Object.values(extraData.wordMap).filter(w => typeof w === 'string' && w.trim().length > 0);
+                        if (newWords.length > 0 && socket) {
+                            socket.emit('RECORD_TABOO_WORDS', { words: newWords });
+                        }
                     }
+                }
+                if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
                     state.players.forEach(p => {
                         const newWord = extraData.wordMap[p.id];
                         if (newWord) {
