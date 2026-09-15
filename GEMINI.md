@@ -15,3 +15,8 @@
   - **규칙 & 공략집**: `public/guide/rules.html`, `public/guide/strategy.html`의 신규 시스템 룰 및 공략 팁 갱신.
   - **FAQ & SEO**: `public/guide/faq.html`의 관련 Q&A 및 필요 시 Schema.org 구조화 데이터 갱신.
 
+## QA & Testing Workflow (Blind Agent Testing)
+- 기능 추가 또는 버그 수정 작업 시:
+  1. 사전 지식이 없는 독립된 블라인드 테스트 에이전트(`invoke_subagent`)를 실행하여 요구사항 기반의 철저한 블랙박스/회귀 테스트를 수행합니다.
+  2. 테스트 통과 시에만 최종 배포(Git commit 및 push)를 진행합니다.
+  3. 테스트 실패 시 원인을 파악하여 코드를 재수정하고 블라인드 재검증을 통과할 때까지 반복합니다.
