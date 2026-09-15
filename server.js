@@ -241,7 +241,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Handle game start to record stats
+  // Handle game start to record stats and taboo words
   socket.on('GAME_STARTED', (data) => {
     const roomCode = sanitizeRoomCode(data && data.roomCode);
     if (!roomCode) return;
@@ -249,6 +249,9 @@ io.on('connection', (socket) => {
     if (room && room.hostId === socket.id) {
       room.status = 'playing';
       statsManager.recordGameStart(data.options, data.playerCount);
+      if (data.allWords && Array.isArray(data.allWords)) {
+        tabooWordsManager.recordWords(data.allWords);
+      }
     }
   });
 
@@ -283,6 +286,13 @@ io.on('connection', (socket) => {
     if (room) {
       if (cleaned.type === 'SUBMIT_WORDS' && cleaned.payload && cleaned.payload.targetWords) {
         tabooWordsManager.recordWordsFromPayload(cleaned.payload.targetWords);
+      } else if (cleaned.type === 'USE_ITEM' && cleaned.payload) {
+        // 단어 변경권 / 추가권 실시간 가로채어 금기어 집계 저장
+        if (cleaned.payload.item === 'word_change' && cleaned.payload.extraData && cleaned.payload.extraData.newWord) {
+          tabooWordsManager.recordWords([cleaned.payload.extraData.newWord]);
+        } else if (cleaned.payload.item === 'word_add' && cleaned.payload.extraData && cleaned.payload.extraData.wordMap) {
+          tabooWordsManager.recordWords(Object.values(cleaned.payload.extraData.wordMap));
+        }
       }
       io.to(room.hostId).emit('DATA_FROM_GUEST', { guestId: socket.id, type: cleaned.type, payload: cleaned.payload });
     }
@@ -309,6 +319,16 @@ io.on('connection', (socket) => {
     if (!cleaned) return;
     const roomCode = sanitizeRoomCode(data.roomCode);
     if (!roomCode) return;
+
+    // 호스트가 실행한 아이템 이벤트 중 단어 변경/추가권 실시간 가로채어 금기어 집계 저장
+    if (cleaned.type === 'EVENT_ITEM' && cleaned.payload) {
+      if (cleaned.payload.item === 'word_change' && cleaned.payload.extraData && cleaned.payload.extraData.newWord) {
+        tabooWordsManager.recordWords([cleaned.payload.extraData.newWord]);
+      } else if (cleaned.payload.item === 'word_add' && cleaned.payload.extraData && cleaned.payload.extraData.wordMap) {
+        tabooWordsManager.recordWords(Object.values(cleaned.payload.extraData.wordMap));
+      }
+    }
+
     socket.to(roomCode).emit('DATA_FROM_HOST', { type: cleaned.type, payload: cleaned.payload });
   });
 

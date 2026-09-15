@@ -928,7 +928,13 @@
                 renderTabooDashboard();
             } catch (err) {
                 console.error('[TabooWords] Fetch error:', err);
-                if (infoEl) infoEl.innerText = '⚠️ 금기어 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.';
+                if (infoEl) {
+                    if (err.message && err.message.includes('404')) {
+                        infoEl.innerHTML = '⚠️ 백엔드 서버(Render)에 신규 금기어 통계 API가 아직 배포 전입니다.<br><span style="font-size:0.85rem; color:#888;">Render 대시보드에서 <strong>Manual Deploy &gt; Deploy latest commit</strong>을 실행해 주세요.</span>';
+                    } else {
+                        infoEl.innerText = '⚠️ 금기어 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.';
+                    }
+                }
             }
         }
 

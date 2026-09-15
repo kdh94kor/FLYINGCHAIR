@@ -2819,6 +2819,21 @@
             if (allSubmitted && realPlayers.length > 0) {
                 state.room.status = 'playing';
                 updateBodyState();
+
+                // 모든 참가자(호스트, 게스트, 봇)의 금기어를 전수 수집하여 집계 시스템에 기록
+                const allGameWords = [];
+                state.players.forEach(p => {
+                    if (p.words) {
+                        Object.values(p.words).forEach(wList => {
+                            if (Array.isArray(wList)) allGameWords.push(...wList);
+                            else if (typeof wList === 'string') allGameWords.push(wList);
+                        });
+                    }
+                });
+                if (allGameWords.length > 0 && socket) {
+                    socket.emit('RECORD_TABOO_WORDS', { words: allGameWords });
+                }
+
                 if (currentMode === MODE_HOST) {
                     broadcastState();
                     broadcast({ type: 'START_PLAYING' });
@@ -3106,6 +3121,12 @@
             
             closeWordAddModal();
             
+            // 추가된 신규 금기어 즉시 집계 시스템에 기록
+            const addedWords = Object.values(wordMap).filter(w => typeof w === 'string' && w.trim().length > 0);
+            if (addedWords.length > 0 && socket) {
+                socket.emit('RECORD_TABOO_WORDS', { words: addedWords });
+            }
+
             const extraData = { wordMap };
             if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
                 executeItem(state.myId, item, index, null, extraData);
@@ -3393,6 +3414,11 @@
             
             closeWordChangeModal();
             
+            // 변경된 신규 금기어 즉시 집계 시스템에 기록
+            if (newWord && socket) {
+                socket.emit('RECORD_TABOO_WORDS', { words: [newWord] });
+            }
+
             const extraData = { wordIdx: changedIdx, newWord };
             if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
                 executeItem(state.myId, item, index, targetId, extraData);
@@ -3609,6 +3635,9 @@
                 if (!target || !extraData) return;
                 sysChat(`🃏 ${target.name}님의 금기어가 변경되었습니다.`);
                 if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
+                    if (extraData.newWord && socket) {
+                        socket.emit('RECORD_TABOO_WORDS', { words: [extraData.newWord] });
+                    }
                     const allWords = Object.values(target.words).flat();
                     if (allWords.length > extraData.wordIdx) {
                         allWords[extraData.wordIdx] = extraData.newWord;
@@ -3621,6 +3650,10 @@
                 if (!extraData || !extraData.wordMap) return;
                 sysChat(`➕ 참가자들에게 각각 새로운 금기어가 1개씩 추가되었습니다.`);
                 if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
+                    const newWords = Object.values(extraData.wordMap).filter(w => typeof w === 'string' && w.trim().length > 0);
+                    if (newWords.length > 0 && socket) {
+                        socket.emit('RECORD_TABOO_WORDS', { words: newWords });
+                    }
                     state.players.forEach(p => {
                         const newWord = extraData.wordMap[p.id];
                         if (newWord) {

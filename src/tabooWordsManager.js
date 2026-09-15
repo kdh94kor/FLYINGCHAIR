@@ -66,7 +66,20 @@ function scheduleLocalSave() {
 }
 
 // ── 4. Supabase DB 비동기 배치 플러시 (Write-Behind Cache) ────────────────────
+let dbDebounceTimer = null;
+function scheduleDbFlush() {
+  if (dbDebounceTimer) return;
+  dbDebounceTimer = setTimeout(async () => {
+    dbDebounceTimer = null;
+    await flushToDb();
+  }, 2000);
+}
+
 async function flushToDb() {
+  if (dbDebounceTimer) {
+    clearTimeout(dbDebounceTimer);
+    dbDebounceTimer = null;
+  }
   const wordsToFlush = Object.keys(pendingDeltas);
   if (wordsToFlush.length === 0 || !supabase) return;
 
@@ -163,7 +176,7 @@ function recordWords(wordList) {
   for (const item of wordList) {
     if (typeof item !== 'string') continue;
     const clean = item.trim();
-    if (clean.length >= 2 && clean.length <= 20) {
+    if (clean.length >= 1 && clean.length <= 30) {
       wordCounts[clean] = (wordCounts[clean] || 0) + 1;
       pendingDeltas[clean] = (pendingDeltas[clean] || 0) + 1;
       updated = true;
@@ -172,7 +185,9 @@ function recordWords(wordList) {
 
   if (updated) {
     isDirty = true;
+    computeTop100(); // 즉시 캐시 갱신
     scheduleLocalSave();
+    scheduleDbFlush(); // 2초 후 Supabase DB로 플러시
   }
 }
 
@@ -225,6 +240,8 @@ function getTabooWordsStats() {
 
 async function refreshFromDb() {
   if (!supabase) return;
+  // DB에서 읽어오기 전, 메모리에 남아있던 증분들을 먼저 DB로 커밋
+  await flushToDb();
   try {
     const { data: rows, error } = await supabase
       .from('taboo_words')
