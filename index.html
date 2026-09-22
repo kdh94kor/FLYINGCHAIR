@@ -1883,12 +1883,17 @@
                     // Sanitize
                     sanitized.players.forEach(sp => {
                         // 1. Hide the guest's own words from themselves
-                        if (sp.id === p.id && sp.words && state.room.status !== 'finished') {
-                            Object.keys(sp.words).forEach(k => {
-                                if (Array.isArray(sp.words[k])) {
-                                    sp.words[k] = sp.words[k].map(() => '???');
-                                }
-                            });
+                        if (sp.id === p.id && state.room.status !== 'finished') {
+                            if (sp.words) {
+                                Object.keys(sp.words).forEach(k => {
+                                    if (Array.isArray(sp.words[k])) {
+                                        sp.words[k] = sp.words[k].map(() => '???');
+                                    }
+                                });
+                            }
+                            if (sp.assignedWords) {
+                                sp.assignedWords = sp.assignedWords.map(() => '???');
+                            }
                         }
                         // 2. Hide other players' items from the guest
                         if (sp.id !== p.id && sp.items) {
@@ -1939,14 +1944,32 @@
             delete state.disconnectAnnounced[guestId];
             state.players = state.players.filter(p => p.id !== guestId);
 
-            state.players.forEach(p => {
-                if (p.words && p.words[guestId]) {
-                    delete p.words[guestId];
-                }
-            });
+            // 대기실 상태에서 나간 경우에만 단어 맵 정리.
+            // 게임 진행 중이거나 종료된 후에는 상대방의 금기어가 유실되지 않도록 보존합니다.
+            if (state.room && state.room.status === 'waiting') {
+                state.players.forEach(p => {
+                    if (p.words && p.words[guestId]) {
+                        delete p.words[guestId];
+                    }
+                });
+            }
             updateRoomUI();
             renderStage();
             sysChat(`[시스템] ${deptName}님이 퇴장했습니다.`);
+
+            // 게임 진행 중 남은 실제 플레이어가 1명 이하가 된 경우 게임 자동 종료 및 최종 통계 출력
+            if (state.room && state.room.status === 'playing') {
+                const remainingHumans = state.players.filter(p => !p.isBot);
+                if (remainingHumans.length < 2) {
+                    sysChat(`[시스템] 다른 참가자가 퇴장하여 게임이 종료되었습니다.`);
+                    state.room.status = 'finished';
+                    clearAllWaitingAnimals();
+                    broadcastState();
+                    showStatsModal();
+                    return;
+                }
+            }
+
             broadcastState();
         }
 
@@ -2003,7 +2026,7 @@
                         state.myId = 'host';
                         state.room = { status: 'waiting', title: '멀티플레이 방', wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds };
                         updateBodyState();
-                        state.players = [{ id: state.myId, name: myName, gender: myGender, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0 } }];
+                        state.players = [{ id: state.myId, name: myName, gender: myGender, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0 } }];
                         
                         switchView('room-view');
                         updateRoomUI();
@@ -2114,9 +2137,16 @@
             socket.on('DATA_FROM_HOST', handleDataFromHost);
 
             socket.on('HOST_DISCONNECTED', (data) => {
-                const msg = (data && data.message) || '방장이 방을 나갔습니다. 로비로 이동합니다.';
-                alert(msg);
-                leaveRoom();
+                const msg = (data && data.message) || '방장이 방을 나갔습니다.';
+                if (state.room && state.room.status === 'playing') {
+                    sysChat(`[시스템] ${msg} 게임이 종료되어 최종 통계를 표시합니다.`);
+                    state.room.status = 'finished';
+                    clearAllWaitingAnimals();
+                    showStatsModal();
+                } else {
+                    alert(msg);
+                    leaveRoom();
+                }
             });
 
             socket.on('disconnect', (reason) => {
@@ -2183,7 +2213,7 @@
                 
                 if (state.room.status !== 'waiting') return socket.emit('SEND_TO_GUEST', { guestId, type: 'REJECT_JOIN', payload: { reason: '이미 게임이 시작되어 입장할 수 없습니다.' } });
                 if (state.players.length >= 6) return socket.emit('SEND_TO_GUEST', { guestId, type: 'REJECT_JOIN', payload: { reason: '방이 꽉 찼습니다.' } });
-                state.players.push({ ...data.payload, id: guestId, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0 } });
+                state.players.push({ ...data.payload, id: guestId, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0 } });
                 broadcastState();
                 updateRoomUI();
                 renderStage();
@@ -2264,7 +2294,7 @@
             const { wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds } = options;
             state.room = { status: 'waiting', title: '시뮬레이션 방', wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds };
             updateBodyState();
-            state.players = [{ id: state.myId, name: sanitizeNickname(els.nickname.value.trim(), '게스트'), gender: document.querySelector('input[name="gender"]:checked').value, isBot: false, isReady: true, words: {}, splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0 } }];
+            state.players = [{ id: state.myId, name: sanitizeNickname(els.nickname.value.trim(), '게스트'), gender: document.querySelector('input[name="gender"]:checked').value, isBot: false, isReady: true, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0 } }];
             
             switchView('room-view');
             document.getElementById('host-controls').classList.remove('hidden');
@@ -2282,7 +2312,7 @@
             const botGender = r < 0.33 ? 'M' : (r < 0.66 ? 'F' : 'A');
             state.players.push({
                 id: botId, name: `봇 ${botNum}호`, gender: botGender,
-                isBot: true, isReady: true, words: {}, splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0 }
+                isBot: true, isReady: true, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0 }
             });
             updateRoomUI();
             renderStage();
@@ -2589,8 +2619,13 @@
                     state.players.forEach(target => {
                         if (bot.id !== target.id) {
                             target.words[bot.id] = [];
+                            if (!target.assignedWords) target.assignedWords = [];
                             for(let i=0; i<wordsPerPlayer; i++) {
-                                target.words[bot.id].push(dictionary[Math.floor(Math.random() * dictionary.length)]);
+                                const picked = dictionary[Math.floor(Math.random() * dictionary.length)];
+                                target.words[bot.id].push(picked);
+                                if (!target.assignedWords.includes(picked)) {
+                                    target.assignedWords.push(picked);
+                                }
                             }
                         }
                     });
@@ -2840,7 +2875,19 @@
             
             for (const targetId in targetWords) {
                 const targetPlayer = state.players.find(p => p.id === targetId);
-                if (targetPlayer) targetPlayer.words[submitterId] = targetWords[targetId];
+                if (targetPlayer) {
+                    if (!targetPlayer.words) targetPlayer.words = {};
+                    targetPlayer.words[submitterId] = targetWords[targetId];
+                    if (!targetPlayer.assignedWords) targetPlayer.assignedWords = [];
+                    const wList = targetWords[targetId];
+                    if (Array.isArray(wList)) {
+                        wList.forEach(w => {
+                            if (w && typeof w === 'string' && w.trim().length > 0 && !targetPlayer.assignedWords.includes(w.trim())) {
+                                targetPlayer.assignedWords.push(w.trim());
+                            }
+                        });
+                    }
+                }
             }
             checkAllWordsSubmitted();
         }
@@ -3206,10 +3253,34 @@
             const wordsList = document.getElementById('stats-my-words-list');
             wordsList.innerHTML = '';
             
-            // Reconstruct my words from what others assigned to me (or system)
+            // Reconstruct my words with multi-layered fallback:
+            // 1. Current active words in me.words (excluding '???')
+            // 2. Permanent assigned words history in me.assignedWords
+            // 3. Fallback to triggered words in me.stats.words (words that actually launched me)
             let myWords = [];
+            
             if (me.words) {
-                myWords = Object.values(me.words).flat();
+                Object.values(me.words).flat().forEach(w => {
+                    if (w && typeof w === 'string' && w.trim().length > 0 && w !== '???' && !myWords.includes(w.trim())) {
+                        myWords.push(w.trim());
+                    }
+                });
+            }
+            
+            if (Array.isArray(me.assignedWords)) {
+                me.assignedWords.forEach(w => {
+                    if (w && typeof w === 'string' && w.trim().length > 0 && w !== '???' && !myWords.includes(w.trim())) {
+                        myWords.push(w.trim());
+                    }
+                });
+            }
+            
+            if (me.stats && me.stats.words) {
+                Object.keys(me.stats.words).forEach(w => {
+                    if (w && typeof w === 'string' && !w.includes('침묵') && !myWords.includes(w.trim())) {
+                        myWords.push(w.trim());
+                    }
+                });
             }
             
             if (myWords.length === 0) {
@@ -3688,6 +3759,8 @@
                         allWords[extraData.wordIdx] = extraData.newWord;
                     }
                     target.words = { 'system': allWords }; // Replace the entire map to prevent appending
+                    if (!target.assignedWords) target.assignedWords = [];
+                    if (!target.assignedWords.includes(extraData.newWord)) target.assignedWords.push(extraData.newWord);
                     broadcastState();
                     renderWordsPanel();
                 }
@@ -3710,6 +3783,8 @@
                             if (!p.words) p.words = {};
                             if (!p.words['system']) p.words['system'] = [];
                             p.words['system'].push(newWord);
+                            if (!p.assignedWords) p.assignedWords = [];
+                            if (!p.assignedWords.includes(newWord)) p.assignedWords.push(newWord);
                         }
                     });
                     broadcastState();
