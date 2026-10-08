@@ -72,6 +72,26 @@ app.get('/guide/strategy', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'guide', 'strategy.html'));
 });
 
+app.get('/guide/party', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'guide', 'party.html'));
+});
+
+app.get('/guide/characters', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'guide', 'characters.html'));
+});
+
+app.get('/words', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'words.html'));
+});
+
+app.get('/history', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'history.html'));
+});
+
+app.get('/updates', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'updates.html'));
+});
+
 app.get('/faq', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'faq.html'));
 });
@@ -91,6 +111,10 @@ app.get('/terms', (req, res) => {
 
 app.get('/robots.txt', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'robots.txt'));
+});
+
+app.get('/ads.txt', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'ads.txt'));
 });
 
 app.get('/sitemap.xml', (req, res) => {

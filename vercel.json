@@ -15,6 +15,26 @@
       "destination": "/guide/strategy.html"
     },
     {
+      "source": "/guide/party",
+      "destination": "/guide/party.html"
+    },
+    {
+      "source": "/guide/characters",
+      "destination": "/guide/characters.html"
+    },
+    {
+      "source": "/words",
+      "destination": "/words.html"
+    },
+    {
+      "source": "/history",
+      "destination": "/history.html"
+    },
+    {
+      "source": "/updates",
+      "destination": "/updates.html"
+    },
+    {
       "source": "/faq",
       "destination": "/faq.html"
     },

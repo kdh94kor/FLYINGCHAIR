@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>캐릭터 도감 & 수영장 입수 물리 엔진 시뮬레이션 - 위험한 초대</title>
+    <meta name="description" content="플라잉 체어 온라인 캐릭터 4종(스탠다드, 개구리, 로봇, 닌자) 도감과 HTML5 Canvas 2D 물리 엔진의 포물선 발사 궤적, 수면 충돌 파티클, 60fps 렌더링 최적화 기술 가이드.">
+    <meta name="keywords" content="플라잉체어캐릭터, 웹게임물리엔진, 캔버스물리시뮬레이션, 위험한초대캐릭터, 포물선운동웹게임, 파티클이펙트, 2D게임엔진">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://www.flying-chair.com/guide/characters">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="캐릭터 도감 & 수영장 입수 물리 엔진 시뮬레이션 - 위험한 초대">
+    <meta property="og:description" content="개성 만점 4인 캐릭터 프로필과 브라우저 위에서 구현된 실시간 물리 엔진의 놀라운 원리.">
+    <meta property="og:url" content="https://www.flying-chair.com/guide/characters">
+
+    <!-- Google AdSense Official Script -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4269446769353106" crossorigin="anonymous"></script>
+
+    <!-- Pretendard Font -->
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+
+    <!-- Schema.org Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": "캐릭터 도감 & 수영장 입수 물리 엔진 시뮬레이션",
+      "description": "플라잉 체어 온라인 공식 캐릭터 소개 및 캔버스 2D 물리 엔진 작동 원리.",
+      "author": {
+        "@type": "Organization",
+        "name": "Flying Chair Team"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Flying Chair Online",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://www.flying-chair.com/favicon.ico"
+        }
+      },
+      "mainEntityOfPage": "https://www.flying-chair.com/guide/characters"
+    }
+    </script>
+
+    <style>
+        :root {
+            --toss-blue: #3182f6;
+            --toss-blue-hover: #1b64da;
+            --toss-blue-light: rgba(49, 130, 246, 0.12);
+            --toss-bg: #14151a;
+            --toss-card-bg: #1f2128;
+            --toss-card-sub: #272a34;
+            --toss-border: rgba(255, 255, 255, 0.08);
+            --toss-text-main: #f2f4f6;
+            --toss-text-sub: #8b95a1;
+            --toss-text-muted: #4e5968;
+            --accent-red: #ff4757;
+            --accent-green: #2ed573;
+            --accent-orange: #ffa502;
+            --accent-purple: #9c88ff;
+            --radius-lg: 20px;
+            --radius-md: 14px;
+            --radius-sm: 8px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+        body { background-color: var(--toss-bg); color: var(--toss-text-main); line-height: 1.6; min-height: 100vh; display: flex; flex-direction: column; }
+
+        /* GNB */
+        .toss-gnb { position: sticky; top: 0; z-index: 1000; background: rgba(20, 21, 26, 0.88); backdrop-filter: blur(14px); border-bottom: 1px solid var(--toss-border); padding: 0 24px; height: 64px; display: flex; align-items: center; justify-content: space-between; }
+        .gnb-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #fff; font-size: 1.15rem; font-weight: 800; }
+        .gnb-brand-logo { font-size: 1.4rem; }
+        .gnb-nav { display: flex; align-items: center; gap: 4px; list-style: none; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        .gnb-nav::-webkit-scrollbar { display: none; }
+        .gnb-link { color: var(--toss-text-sub); text-decoration: none; font-size: 0.88rem; font-weight: 600; padding: 7px 11px; border-radius: var(--radius-sm); transition: all 0.15s; white-space: nowrap; }
+        .gnb-link:hover { color: #fff; background: rgba(255, 255, 255, 0.05); }
+        .gnb-link.active { color: var(--toss-blue); background: var(--toss-blue-light); font-weight: 700; }
+        .gnb-cta { background: var(--toss-blue); color: #fff; padding: 8px 18px; border-radius: 9999px; text-decoration: none; font-size: 0.88rem; font-weight: 700; transition: background 0.2s; white-space: nowrap; }
+        .gnb-cta:hover { background: var(--toss-blue-hover); }
+
+        /* Container */
+        .container { width: 100%; max-width: 960px; margin: 0 auto; padding: 40px 20px 80px; flex: 1; }
+        .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--toss-text-muted); margin-bottom: 20px; }
+        .breadcrumb a { color: var(--toss-text-sub); text-decoration: none; }
+        .breadcrumb a:hover { color: var(--toss-text-main); text-decoration: underline; }
+
+        /* Header */
+        .doc-header { margin-bottom: 36px; }
+        .doc-badge { display: inline-block; background: var(--toss-blue-light); color: var(--toss-blue); font-size: 0.8rem; font-weight: 700; padding: 4px 12px; border-radius: 9999px; margin-bottom: 14px; }
+        .doc-title { font-size: 2.2rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 14px; line-height: 1.3; }
+        .doc-desc { font-size: 1.05rem; color: var(--toss-text-sub); line-height: 1.7; word-break: keep-all; }
+
+        /* Section Card */
+        .doc-section { background: var(--toss-card-bg); border: 1px solid var(--toss-border); border-radius: var(--radius-lg); padding: 32px 28px; margin-bottom: 28px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+        .doc-section h2 { font-size: 1.35rem; font-weight: 700; margin-bottom: 16px; color: #fff; display: flex; align-items: center; gap: 10px; }
+        .doc-section h3 { font-size: 1.12rem; font-weight: 700; color: #fff; margin: 24px 0 12px; }
+        .doc-section p { font-size: 0.95rem; color: var(--toss-text-sub); line-height: 1.8; margin-bottom: 16px; word-break: keep-all; }
+        .doc-section p:last-child { margin-bottom: 0; }
+
+        /* Characters Grid */
+        .char-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 18px; }
+        .char-card { background: var(--toss-card-sub); border: 1px solid var(--toss-border); border-radius: var(--radius-md); padding: 22px 18px; text-align: center; }
+        .char-avatar { font-size: 3rem; margin-bottom: 12px; display: inline-block; }
+        .char-name { font-size: 1.15rem; font-weight: 800; color: #fff; margin-bottom: 6px; }
+        .char-role { font-size: 0.78rem; font-weight: 700; color: var(--toss-blue); background: var(--toss-blue-light); padding: 3px 10px; border-radius: 9999px; display: inline-block; margin-bottom: 12px; }
+        .char-desc { font-size: 0.85rem; color: var(--toss-text-sub); line-height: 1.6; text-align: left; }
+
+        /* Physics Math Box */
+        .math-box { background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-md); padding: 18px; margin: 16px 0; font-family: 'Courier New', Courier, monospace; color: #a5b4fc; }
+
+        /* Footer */
+        .toss-footer { background: var(--toss-card-bg); border-top: 1px solid var(--toss-border); padding: 48px 24px; text-align: center; }
+        .footer-nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; margin-bottom: 20px; }
+        .footer-nav a { color: var(--toss-text-sub); text-decoration: none; font-size: 0.86rem; font-weight: 500; transition: color 0.15s; }
+        .footer-nav a:hover { color: #fff; }
+        .footer-copy { font-size: 0.82rem; color: var(--toss-text-muted); line-height: 1.6; }
+
+        @media (max-width: 768px) {
+            .doc-title { font-size: 1.7rem; }
+            .doc-section { padding: 24px 18px; }
+            .char-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- GNB -->
+    <nav class="toss-gnb">
+        <a href="/" class="gnb-brand">
+            <span class="gnb-brand-logo">🪑</span>
+            <span>위험한 초대</span>
+        </a>
+        <ul class="gnb-nav">
+            <li><a href="/guide/rules" class="gnb-link">규칙</a></li>
+            <li><a href="/guide/items" class="gnb-link">아이템</a></li>
+            <li><a href="/guide/strategy" class="gnb-link">공략</a></li>
+            <li><a href="/words" class="gnb-link">금기어 백과</a></li>
+            <li><a href="/history" class="gnb-link">예능 역사</a></li>
+            <li><a href="/guide/party" class="gnb-link">파티 매뉴얼</a></li>
+            <li><a href="/guide/characters" class="gnb-link active">캐릭터</a></li>
+            <li><a href="/updates" class="gnb-link">패치노트</a></li>
+            <li><a href="/faq" class="gnb-link">FAQ</a></li>
+            <li><a href="/about" class="gnb-link">소개</a></li>
+        </ul>
+        <a href="/" class="gnb-cta">게임 시작하기</a>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="container">
+        <!-- Breadcrumb -->
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="/">홈</a>
+            <span>›</span>
+            <span style="color: var(--toss-text-main);">캐릭터 도감 & 물리 엔진 (Characters & Physics)</span>
+        </nav>
+
+        <!-- Doc Header -->
+        <header class="doc-header">
+            <span class="doc-badge">🎮 CHARACTER PROFILE & PHYSICS ENGINE</span>
+            <h1 class="doc-title">캐릭터 도감 & 수영장 입수 물리 엔진 시뮬레이션</h1>
+            <p class="doc-desc">
+                플라잉 체어 세트장을 수놓는 4종의 매력적인 캐릭터 프로필과,
+                웹 브라우저 HTML5 Canvas 2D 환경에서 60 FPS로 부드럽게 렌더링되는 뉴턴 역학 물리 시뮬레이션의 비하인드를 공개합니다.
+            </p>
+        </header>
+
+        <!-- Section 1: Characters Profile -->
+        <section class="doc-section">
+            <h2><span>👤</span> 4인 4색 캐릭터 도감 (Character Profiles)</h2>
+            <p>
+                플레이어는 로비에서 자신의 개성을 표현할 캐릭터를 자유롭게 선택할 수 있습니다.
+                각 캐릭터는 고유한 비주얼 스프라이트와 입수 애니메이션을 보유하고 있습니다:
+            </p>
+            <div class="char-grid">
+                <div class="char-card">
+                    <span class="char-avatar">👦</span>
+                    <h3 class="char-name">스탠다드 보이</h3>
+                    <span class="char-role">클래식 MC 스타일</span>
+                    <p class="char-desc">원조 예능 진행자의 정석을 보여주는 베이직 캐릭터. 단정하지만 날아갈 때의 허탈한 표정 변화가 일품인 국민 캐릭터입니다.</p>
+                </div>
+                <div class="char-card">
+                    <span class="char-avatar">🐸</span>
+                    <h3 class="char-name">개구리 점퍼</h3>
+                    <span class="char-role">공중 곡예사</span>
+                    <p class="char-desc">초록빛 수영복을 입고 입수 시 특유의 공중 360도 텀블링 궤적을 선보이며 가장 높은 고도까지 도약하는 탄성형 캐릭터입니다.</p>
+                </div>
+                <div class="char-card">
+                    <span class="char-avatar">🤖</span>
+                    <h3 class="char-name">메카 사이보그</h3>
+                    <span class="char-role">중량급 거인</span>
+                    <p class="char-desc">금속 장갑을 두른 미래형 안드로이드. 날아갈 때 제트 분사 잔상이 생기며 수면에 닿는 순간 가장 거대한 물보라 충격을 발생시킵니다.</p>
+                </div>
+                <div class="char-card">
+                    <span class="char-avatar">🥷</span>
+                    <h3 class="char-name">닌자 섀도우</h3>
+                    <span class="char-role">스텔스 마스터</span>
+                    <p class="char-desc">검은 복면의 날렵한 암살자. 기습적인 발사에도 공중 제비를 돌며 착지하며, 물속으로 미끄러지듯 잠수하는 세련된 모션을 자랑합니다.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Physics Engine Math -->
+        <section class="doc-section">
+            <h2><span>📐</span> 캔버스 2D 물리 엔진의 수학적 원리</h2>
+            <p>
+                단순한 GIF나 스프라이트 반복 재생이 아닙니다. '위험한 초대'의 모든 발사 장면은
+                실시간 프레임 단위의 수학적 물리 모델에 따라 계산되어 그려집니다:
+            </p>
+            <h3>1. 2D 탄도학 포물선 궤적 (Projectile Trajectory)</h3>
+            <p>
+                의자가 격발되는 순간 캐릭터에게는 상향과 후방을 향한 초기 속도 벡터 \(v_0\)가 주어집니다.
+                이후 프레임마다 중력 가속도 \(g\)와 수평 감속 계수가 적용됩니다:
+            </p>
+            <div class="math-box">
+                // 수평 위치: x(t) = x_0 + (v_0 * cos(θ) * t)<br>
+                // 수직 위치: y(t) = y_0 - (v_0 * sin(θ) * t) + (0.5 * g * t^2)<br>
+                // 초기 발사각 θ = 65° | 중력 가속도 g = 9.8 m/s²
+            </div>
+            <h3>2. 수면 충돌 및 물방울 파티클 시뮬레이션 (Water Splash Particles)</h3>
+            <p>
+                캐릭터의 \(y\) 좌표가 수면 레벨(Waterline)에 도달하면 입수 충돌 이벤트가 발생합니다.
+                이때 수면 중앙에서 총 32개의 독립적인 물방울 파티클이 방사형으로 생성되며, 각 파티클은 개별적인 수명(Life), 크기, 투명도, 비산 속도를 가집니다:
+            </p>
+            <div class="math-box">
+                particle.vx = (Math.random() - 0.5) * splashForce;<br>
+                particle.vy = -Math.random() * splashForce * 1.5; // 상향 비산<br>
+                particle.alpha -= particle.decayRate; // 투명도 지수 감쇠
+            </div>
+        </section>
+
+        <!-- Section 3: Summon Animals -->
+        <section class="doc-section">
+            <h2><span>🦈</span> 소환수(상어, 악어, 갈매기) 인터랙션 메커니즘</h2>
+            <p>
+                수영장은 안전한 곳만이 아닙니다! 아이템전을 활성화하면 소환된 수중/상공 동물들이 수영장을 휘젓고 다닙니다:
+            </p>
+            <ul style="list-style: none; display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
+                <li style="color: var(--toss-text-sub); font-size: 0.95rem;">• <strong>죠스 상어:</strong> 수면 위로 검은 삼각 지느러미를 드러내며 좌우로 순항하다가, 플레이어가 입수하는 지점으로 고속 돌진하여 거대한 물보라를 만듭니다.</li>
+                <li style="color: var(--toss-text-sub); font-size: 0.95rem;">• <strong>늪지대 악어:</strong> 수면 아래 숨죽이고 있다가 플레이어가 착수할 때 턱을 쩍 벌리는 코믹한 특수 이펙트를 발생시킵니다.</li>
+                <li style="color: var(--toss-text-sub); font-size: 0.95rem;">• <strong>부산 갈매기:</strong> 상공을 우아하게 선회하며 의자가 솟구칠 때 놀라서 깃털을 흩날리는 공중 앰비언트 효과를 연출합니다.</li>
+            </ul>
+        </section>
+
+        <!-- Section 4: Performance -->
+        <section class="doc-section">
+            <h2><span>⚡</span> 브라우저 60 FPS 보장을 위한 최적화 기법</h2>
+            <p>
+                저사양 스마트폰이나 오래된 노트북 브라우저에서도 끊김 없이 부드러운 60 FPS를 유지하기 위해 다음의 엔지니어링 최적화가 적용되었습니다:
+            </p>
+            <p>
+                <strong>1. RequestAnimationFrame 동기화:</strong> 타이머(setInterval) 기반의 불규칙한 호출을 배제하고 디스플레이 주사율과 1:1로 일치하는 네이티브 렌더 루프를 사용합니다.<br>
+                <strong>2. 파티클 풀링(Object Pooling):</strong> 가비지 컬렉터(GC) 부하를 방지하기 위해 입수 때마다 새 객체를 메모리에 할당하지 않고 사전 생성된 파티클 배열을 재사용합니다.<br>
+                <strong>3. 뷰포트 상대 해상도(DPR) 보정:</strong> 레티나 디스플레이에서도 글자와 캐릭터가 선명하게 보이도록 디바이스 픽셀 비율(Device Pixel Ratio)을 동적으로 감지하여 캔버스 크기를 스케일링합니다.
+            </p>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="toss-footer">
+        <nav class="footer-nav">
+            <a href="/">게임 홈</a>
+            <a href="/guide/rules">상세 규칙</a>
+            <a href="/guide/items">아이템 도감</a>
+            <a href="/guide/strategy">심리전 공략</a>
+            <a href="/words">금기어 백과</a>
+            <a href="/history">예능의 역사</a>
+            <a href="/guide/party">파티 매뉴얼</a>
+            <a href="/guide/characters">캐릭터 도감</a>
+            <a href="/updates">패치노트</a>
+            <a href="/faq">자주 묻는 질문</a>
+            <a href="/about">서비스 소개</a>
+            <a href="/privacy">개인정보처리방침</a>
+            <a href="/terms">이용약관</a>
+        </nav>
+        <p class="footer-copy">
+            위험한 초대 (Flying Chair Online) · 웹 기반 실시간 멀티플레이어 파티 게임<br>
+            공식 문의 및 피드백: <a href="mailto:kdh94kor@gmail.com" style="color:var(--toss-blue); text-decoration:none;">kdh94kor@gmail.com</a> · © 2026 Flying Chair Team. All rights reserved.
+        </p>
+    </footer>
+
+</body>
+</html>

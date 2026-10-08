@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>디스코드 & 모임 파티 게임 진행자(MC) 실전 매뉴얼 - 위험한 초대</title>
+    <meta name="description" content="디스코드 음성 채널, 대학 MT, 동아리, 워크샵, 술자리에서 플라잉 체어를 200% 활용하는 방장 및 진행자(MC) 가이드. 인원수별 최적 룰셋, 화면 공유 세팅, 아이스브레이킹 대화 스크립트.">
+    <meta name="keywords" content="디스코드파티게임, 술게임추천, MT레크리에이션, 웹파티게임, 플라잉체어공략, 디스코드게임추천, 아이스브레이킹, 온라인모임게임">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://www.flying-chair.com/guide/party">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="디스코드 & 모임 파티 게임 진행자(MC) 실전 매뉴얼 - 위험한 초대">
+    <meta property="og:description" content="모임 분위기를 단 3분 만에 끌어올리는 플라잉 체어 파티 진행 노하우와 꿀팁 총정리.">
+    <meta property="og:url" content="https://www.flying-chair.com/guide/party">
+
+    <!-- Google AdSense Official Script -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4269446769353106" crossorigin="anonymous"></script>
+
+    <!-- Pretendard Font -->
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+
+    <!-- Schema.org Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": "디스코드 & 모임 파티 게임 진행자(MC) 실전 매뉴얼",
+      "description": "디스코드 음성통화 및 오프라인 모임에서 플라잉 체어 웹게임을 활용한 파티 진행 매뉴얼.",
+      "author": {
+        "@type": "Organization",
+        "name": "Flying Chair Team"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Flying Chair Online",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://www.flying-chair.com/favicon.ico"
+        }
+      },
+      "mainEntityOfPage": "https://www.flying-chair.com/guide/party"
+    }
+    </script>
+
+    <style>
+        :root {
+            --toss-blue: #3182f6;
+            --toss-blue-hover: #1b64da;
+            --toss-blue-light: rgba(49, 130, 246, 0.12);
+            --toss-bg: #14151a;
+            --toss-card-bg: #1f2128;
+            --toss-card-sub: #272a34;
+            --toss-border: rgba(255, 255, 255, 0.08);
+            --toss-text-main: #f2f4f6;
+            --toss-text-sub: #8b95a1;
+            --toss-text-muted: #4e5968;
+            --accent-red: #ff4757;
+            --accent-green: #2ed573;
+            --accent-orange: #ffa502;
+            --radius-lg: 20px;
+            --radius-md: 14px;
+            --radius-sm: 8px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+        body { background-color: var(--toss-bg); color: var(--toss-text-main); line-height: 1.6; min-height: 100vh; display: flex; flex-direction: column; }
+
+        /* GNB */
+        .toss-gnb { position: sticky; top: 0; z-index: 1000; background: rgba(20, 21, 26, 0.88); backdrop-filter: blur(14px); border-bottom: 1px solid var(--toss-border); padding: 0 24px; height: 64px; display: flex; align-items: center; justify-content: space-between; }
+        .gnb-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #fff; font-size: 1.15rem; font-weight: 800; }
+        .gnb-brand-logo { font-size: 1.4rem; }
+        .gnb-nav { display: flex; align-items: center; gap: 4px; list-style: none; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        .gnb-nav::-webkit-scrollbar { display: none; }
+        .gnb-link { color: var(--toss-text-sub); text-decoration: none; font-size: 0.88rem; font-weight: 600; padding: 7px 11px; border-radius: var(--radius-sm); transition: all 0.15s; white-space: nowrap; }
+        .gnb-link:hover { color: #fff; background: rgba(255, 255, 255, 0.05); }
+        .gnb-link.active { color: var(--toss-blue); background: var(--toss-blue-light); font-weight: 700; }
+        .gnb-cta { background: var(--toss-blue); color: #fff; padding: 8px 18px; border-radius: 9999px; text-decoration: none; font-size: 0.88rem; font-weight: 700; transition: background 0.2s; white-space: nowrap; }
+        .gnb-cta:hover { background: var(--toss-blue-hover); }
+
+        /* Container */
+        .container { width: 100%; max-width: 960px; margin: 0 auto; padding: 40px 20px 80px; flex: 1; }
+        .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--toss-text-muted); margin-bottom: 20px; }
+        .breadcrumb a { color: var(--toss-text-sub); text-decoration: none; }
+        .breadcrumb a:hover { color: var(--toss-text-main); text-decoration: underline; }
+
+        /* Header */
+        .doc-header { margin-bottom: 36px; }
+        .doc-badge { display: inline-block; background: var(--toss-blue-light); color: var(--toss-blue); font-size: 0.8rem; font-weight: 700; padding: 4px 12px; border-radius: 9999px; margin-bottom: 14px; }
+        .doc-title { font-size: 2.2rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 14px; line-height: 1.3; }
+        .doc-desc { font-size: 1.05rem; color: var(--toss-text-sub); line-height: 1.7; word-break: keep-all; }
+
+        /* Section Card */
+        .doc-section { background: var(--toss-card-bg); border: 1px solid var(--toss-border); border-radius: var(--radius-lg); padding: 32px 28px; margin-bottom: 28px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+        .doc-section h2 { font-size: 1.35rem; font-weight: 700; margin-bottom: 16px; color: #fff; display: flex; align-items: center; gap: 10px; }
+        .doc-section h3 { font-size: 1.12rem; font-weight: 700; color: #fff; margin: 24px 0 12px; }
+        .doc-section p { font-size: 0.95rem; color: var(--toss-text-sub); line-height: 1.8; margin-bottom: 16px; word-break: keep-all; }
+        .doc-section p:last-child { margin-bottom: 0; }
+
+        /* Grid Cards */
+        .party-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 18px; }
+        .party-card { background: var(--toss-card-sub); border: 1px solid var(--toss-border); border-radius: var(--radius-md); padding: 20px; }
+        .party-card h4 { font-size: 1.1rem; font-weight: 700; color: #fff; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .party-card p { font-size: 0.88rem; color: var(--toss-text-sub); line-height: 1.6; margin-bottom: 8px; }
+        .party-card-badge { display: inline-block; font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 9999px; background: rgba(49,130,246,0.15); color: var(--toss-blue); border: 1px solid rgba(49,130,246,0.3); margin-bottom: 10px; }
+
+        /* Steps list */
+        .step-list { list-style: none; display: flex; flex-direction: column; gap: 14px; margin-top: 14px; }
+        .step-item { background: var(--toss-card-sub); border: 1px solid var(--toss-border); border-radius: var(--radius-md); padding: 18px; display: flex; gap: 16px; align-items: flex-start; }
+        .step-num { width: 32px; height: 32px; border-radius: 50%; background: var(--toss-blue); color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .step-content h4 { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 4px; }
+        .step-content p { font-size: 0.88rem; color: var(--toss-text-sub); line-height: 1.6; margin-bottom: 0; }
+
+        /* Footer */
+        .toss-footer { background: var(--toss-card-bg); border-top: 1px solid var(--toss-border); padding: 48px 24px; text-align: center; }
+        .footer-nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; margin-bottom: 20px; }
+        .footer-nav a { color: var(--toss-text-sub); text-decoration: none; font-size: 0.86rem; font-weight: 500; transition: color 0.15s; }
+        .footer-nav a:hover { color: #fff; }
+        .footer-copy { font-size: 0.82rem; color: var(--toss-text-muted); line-height: 1.6; }
+
+        @media (max-width: 768px) {
+            .doc-title { font-size: 1.7rem; }
+            .doc-section { padding: 24px 18px; }
+            .party-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- GNB -->
+    <nav class="toss-gnb">
+        <a href="/" class="gnb-brand">
+            <span class="gnb-brand-logo">🪑</span>
+            <span>위험한 초대</span>
+        </a>
+        <ul class="gnb-nav">
+            <li><a href="/guide/rules" class="gnb-link">규칙</a></li>
+            <li><a href="/guide/items" class="gnb-link">아이템</a></li>
+            <li><a href="/guide/strategy" class="gnb-link">공략</a></li>
+            <li><a href="/words" class="gnb-link">금기어 백과</a></li>
+            <li><a href="/history" class="gnb-link">예능 역사</a></li>
+            <li><a href="/guide/party" class="gnb-link active">파티 매뉴얼</a></li>
+            <li><a href="/guide/characters" class="gnb-link">캐릭터</a></li>
+            <li><a href="/updates" class="gnb-link">패치노트</a></li>
+            <li><a href="/faq" class="gnb-link">FAQ</a></li>
+            <li><a href="/about" class="gnb-link">소개</a></li>
+        </ul>
+        <a href="/" class="gnb-cta">게임 시작하기</a>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="container">
+        <!-- Breadcrumb -->
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="/">홈</a>
+            <span>›</span>
+            <span style="color: var(--toss-text-main);">파티 & 모임 진행자 매뉴얼 (Party Host Manual)</span>
+        </nav>
+
+        <!-- Doc Header -->
+        <header class="doc-header">
+            <span class="doc-badge">🎉 PARTY HOST & DISCORD MANUAL</span>
+            <h1 class="doc-title">디스코드 & 모임 파티 게임 진행자(MC) 실전 매뉴얼</h1>
+            <p class="doc-desc">
+                친구나 직장 동료, 동아리 모임에서 플라잉 체어를 200% 활용하는 방장(호스트) 전용 지침서입니다.
+                디스코드 음성 통화 세팅법부터 인원수별 황금 룰셋, 어색한 분위기를 단숨에 깨는 아이스브레이킹 화제까지 모두 담았습니다.
+            </p>
+        </header>
+
+        <!-- Section 1: Discord Setup -->
+        <section class="doc-section">
+            <h2><span>🎧</span> 디스코드(Discord) 방송 & 음성 연동 가이드</h2>
+            <p>
+                '위험한 초대'는 텍스트 채팅만으로도 즐길 수 있지만, <strong>디스코드 음성 채널이나 보이스톡을 병행할 때 재미가 500% 극대화</strong>됩니다.
+                참가자들의 생생한 비명과 웃음소리가 실시간 입수 애니메이션과 완벽한 시너지를 내기 때문입니다.
+            </p>
+            <div class="party-grid">
+                <div class="party-card">
+                    <span class="party-card-badge">추천 1위</span>
+                    <h4>🖥️ 방장 화면 공유 + 모바일/PC 개별 플레이</h4>
+                    <p>방장이 PC로 디스코드 화면 공유를 켜고 웹 브라우저를 송출합니다. 참가자들은 각자 스마트폰이나 듀얼 모니터로 게임 링크에 접속하여 채팅을 칩니다.</p>
+                    <p style="color: var(--toss-blue); font-weight: 600;">✨ 장점: 큰 화면으로 다 같이 입수 장면을 감상하며 예능 방송 보는 듯한 몰입감 제공.</p>
+                </div>
+                <div class="party-card">
+                    <span class="party-card-badge">자유형</span>
+                    <h4>📱 전원 개별 브라우저 + 순수 보이스 채널</h4>
+                    <p>별도의 화면 공유 없이 음성 통화만 켜둔 상태에서 각자의 디바이스 화면을 보며 플레이합니다. 네트워크 대역폭 부담이 적어 사양이 낮은 환경에서도 쾌적합니다.</p>
+                    <p style="color: var(--accent-green); font-weight: 600;">✨ 장점: 세팅이 가장 간편하며 스마트폰 단독으로도 완벽 지원.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Player Count Rulesets -->
+        <section class="doc-section">
+            <h2><span>⚖️</span> 참가 인원수별 최적 추천 방 설정 (Custom Room Settings)</h2>
+            <p>
+                모임의 인원수에 따라 방 설정(침묵 타이머, 금기어 개수, 아이템 허용 여부)을 조절하면 지루할 틈 없는 전개가 가능합니다:
+            </p>
+            <ul class="step-list">
+                <li class="step-item">
+                    <div class="step-num">2인</div>
+                    <div class="step-content">
+                        <h4>1:1 서든데스 쇼다운 (진검승부 모드)</h4>
+                        <p><strong>추천 세팅:</strong> 1인당 금기어 3개 / 침묵 타이머 30초 / 아이템 OFF / 단어 변경 불가</p>
+                        <p>단둘이서 치열하게 심리전을 펼치는 모드로, 빠른 침묵 타이머로 쉴 새 없이 몰아쳐야 합니다. '아니', '진짜' 같은 S티어 단어보다는 '취미', '약속' 같은 구체적 단어로 질문 공세를 펴는 것이 핵심입니다.</p>
+                    </div>
+                </li>
+                <li class="step-item">
+                    <div class="step-num">3~4인</div>
+                    <div class="step-content">
+                        <h4>스탠다드 파티 모드 (황금 밸런스)</h4>
+                        <p><strong>추천 세팅:</strong> 1인당 금기어 2개 / 침묵 타이머 45초 / 아이템 ALL ON / 변경권 1회</p>
+                        <p>가장 이상적인 밸런스를 자랑합니다. 서로가 서로의 금기어를 노리는 다자간 심리전이 벌어지며, '유도 미사일'과 '방패' 아이템으로 위기 상황을 역전하는 쾌감을 만끽할 수 있습니다.</p>
+                    </div>
+                </li>
+                <li class="step-item">
+                    <div class="step-num">5~6인</div>
+                    <div class="step-content">
+                        <h4>카오스 대난투 (혼돈의 수영장)</h4>
+                        <p><strong>추천 세팅:</strong> 1인당 금기어 1개 / 침묵 타이머 60초 / 동물 소환 아이템 활성화</p>
+                        <p>한마디만 쳐도 누군가의 금기어에 걸려 사방에서 연쇄 폭발이 일어나는 축제 모드입니다. 상어, 악어, 부산갈매기 소환 아이템을 적극 활용하여 웃음바다를 만들어 보세요.</p>
+                    </div>
+                </li>
+            </ul>
+        </section>
+
+        <!-- Section 3: Icebreaking Script -->
+        <section class="doc-section">
+            <h2><span>🎤</span> MC를 위한 실패 없는 아이스브레이킹 대화 스크립트</h2>
+            <p>
+                처음 모인 자리에서 어색한 침묵이 흐르지 않도록 방장(진행자)이 던지기 좋은 만능 대화 테마 4가지입니다:
+            </p>
+            <div class="party-grid">
+                <div class="party-card">
+                    <h4>🍔 음식 & 배달앱 토크</h4>
+                    <p>"다들 오늘 저녁 뭐 먹었어? 나 배달 시키려는데 추천 좀 해줘!"</p>
+                    <p style="font-size:0.83rem; color:var(--toss-text-muted);">'치킨', '피자', '배고파', '맛있겠다' 등의 단어가 쏟아지며 자연스럽게 낚시 성공.</p>
+                </div>
+                <div class="party-card">
+                    <h4>🎬 넷플릭스 & 유튜브 밈</h4>
+                    <p>"요즘 핫한 넷플릭스 드라마나 알고리즘 영상 본 사람 있어?"</p>
+                    <p style="font-size:0.83rem; color:var(--toss-text-muted);">'진짜', '대박', '미쳤다', '결말' 등의 리액션 폭발 유도에 최적화.</p>
+                </div>
+                <div class="party-card">
+                    <h4>💼 MBTI & T/F 논쟁</h4>
+                    <p>"친구가 '나 우울해서 빵 샀어'라고 하면 뭐라고 답할 거야?"</p>
+                    <p style="font-size:0.83rem; color:var(--toss-text-muted);">'왜', '무슨', '빵', '너' 등 한국인이 절대 참지 못하는 과몰입 유발.</p>
+                </div>
+                <div class="party-card">
+                    <h4>✈️ 여행 & 과거 흑역사</h4>
+                    <p>"살면서 가본 여행지 중에 최악이었던 곳이나 황당했던 썰 있어?"</p>
+                    <p style="font-size:0.83rem; color:var(--toss-text-muted);">'아니', '비행기', '돈', '호텔' 등의 명사 함정으로 즉사 유도.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Drinking Game Rules -->
+        <section class="doc-section">
+            <h2><span>🍻</span> 오프라인 술자리 & MT 벌칙 연동 규칙</h2>
+            <p>
+                대학 MT나 친구들과의 술자리 모임에서 웹게임을 아날로그 벌칙과 결합하는 공식 룰셋입니다:
+            </p>
+            <ul style="list-style: none; display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
+                <li style="color: var(--toss-text-sub); font-size: 0.95rem;">• <strong>입수 벌칙주:</strong> 인게임에서 의자가 발사되어 수영장에 빠진 유저는 벌칙주 반 잔 또는 음료 원샷!</li>
+                <li style="color: var(--toss-text-sub); font-size: 0.95rem;">• <strong>방패 성공 보너스:</strong> 상대의 낚시 질문에 방패를 켜고 당당히 방어해낸 유저는 공격자에게 역벌칙을 지목할 권리 획득!</li>
+                <li style="color: var(--toss-text-sub); font-size: 0.95rem;">• <strong>최후의 1인 우승자:</strong> 모든 라운드가 끝나고 발사 횟수가 가장 적은 생존자에게 소원권 또는 다음 모임 메뉴 선택권 부여.</li>
+            </ul>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="toss-footer">
+        <nav class="footer-nav">
+            <a href="/">게임 홈</a>
+            <a href="/guide/rules">상세 규칙</a>
+            <a href="/guide/items">아이템 도감</a>
+            <a href="/guide/strategy">심리전 공략</a>
+            <a href="/words">금기어 백과</a>
+            <a href="/history">예능의 역사</a>
+            <a href="/guide/party">파티 매뉴얼</a>
+            <a href="/guide/characters">캐릭터 도감</a>
+            <a href="/updates">패치노트</a>
+            <a href="/faq">자주 묻는 질문</a>
+            <a href="/about">서비스 소개</a>
+            <a href="/privacy">개인정보처리방침</a>
+            <a href="/terms">이용약관</a>
+        </nav>
+        <p class="footer-copy">
+            위험한 초대 (Flying Chair Online) · 웹 기반 실시간 멀티플레이어 파티 게임<br>
+            공식 문의 및 피드백: <a href="mailto:kdh94kor@gmail.com" style="color:var(--toss-blue); text-decoration:none;">kdh94kor@gmail.com</a> · © 2026 Flying Chair Team. All rights reserved.
+        </p>
+    </footer>
+
+</body>
+</html>

@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>개발자 노트 & 정기 패치노트 아카이브 - 위험한 초대 (실시간 플라잉 체어)</title>
+    <meta name="description" content="'위험한 초대 - 실시간 플라잉 체어'의 버전별 공식 업데이트 기록, 밸런스 패치 내역, 시스템 개선 일지 및 향후 개발 로드맵. 지속적 서비스 큐레이션 및 품질 유지관리.">
+    <meta name="keywords" content="플라잉체어패치노트, 위험한초대업데이트, 웹게임개발일지, 게임패치노트, 실시간게임로드맵, 개발자노트">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://www.flying-chair.com/updates">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="개발자 노트 & 정기 패치노트 아카이브 - 위험한 초대">
+    <meta property="og:description" content="위험한 초대의 지속적인 발전과 안정적인 서비스를 위한 버전별 패치 내역과 개발 로드맵.">
+    <meta property="og:url" content="https://www.flying-chair.com/updates">
+
+    <!-- Google AdSense Official Script -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4269446769353106" crossorigin="anonymous"></script>
+
+    <!-- Pretendard Font -->
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+
+    <!-- Schema.org Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": "개발자 노트 & 정기 패치노트 아카이브",
+      "description": "위험한 초대 온라인의 버전별 공식 업데이트 내역 및 지속적인 유지관리 일지.",
+      "author": {
+        "@type": "Organization",
+        "name": "Flying Chair Team"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Flying Chair Online",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://www.flying-chair.com/favicon.ico"
+        }
+      },
+      "mainEntityOfPage": "https://www.flying-chair.com/updates"
+    }
+    </script>
+
+    <style>
+        :root {
+            --toss-blue: #3182f6;
+            --toss-blue-hover: #1b64da;
+            --toss-blue-light: rgba(49, 130, 246, 0.12);
+            --toss-bg: #14151a;
+            --toss-card-bg: #1f2128;
+            --toss-card-sub: #272a34;
+            --toss-border: rgba(255, 255, 255, 0.08);
+            --toss-text-main: #f2f4f6;
+            --toss-text-sub: #8b95a1;
+            --toss-text-muted: #4e5968;
+            --accent-red: #ff4757;
+            --accent-green: #2ed573;
+            --accent-orange: #ffa502;
+            --radius-lg: 20px;
+            --radius-md: 14px;
+            --radius-sm: 8px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+        body { background-color: var(--toss-bg); color: var(--toss-text-main); line-height: 1.6; min-height: 100vh; display: flex; flex-direction: column; }
+
+        /* GNB */
+        .toss-gnb { position: sticky; top: 0; z-index: 1000; background: rgba(20, 21, 26, 0.88); backdrop-filter: blur(14px); border-bottom: 1px solid var(--toss-border); padding: 0 24px; height: 64px; display: flex; align-items: center; justify-content: space-between; }
+        .gnb-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #fff; font-size: 1.15rem; font-weight: 800; }
+        .gnb-brand-logo { font-size: 1.4rem; }
+        .gnb-nav { display: flex; align-items: center; gap: 4px; list-style: none; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        .gnb-nav::-webkit-scrollbar { display: none; }
+        .gnb-link { color: var(--toss-text-sub); text-decoration: none; font-size: 0.88rem; font-weight: 600; padding: 7px 11px; border-radius: var(--radius-sm); transition: all 0.15s; white-space: nowrap; }
+        .gnb-link:hover { color: #fff; background: rgba(255, 255, 255, 0.05); }
+        .gnb-link.active { color: var(--toss-blue); background: var(--toss-blue-light); font-weight: 700; }
+        .gnb-cta { background: var(--toss-blue); color: #fff; padding: 8px 18px; border-radius: 9999px; text-decoration: none; font-size: 0.88rem; font-weight: 700; transition: background 0.2s; white-space: nowrap; }
+        .gnb-cta:hover { background: var(--toss-blue-hover); }
+
+        /* Container */
+        .container { width: 100%; max-width: 960px; margin: 0 auto; padding: 40px 20px 80px; flex: 1; }
+        .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--toss-text-muted); margin-bottom: 20px; }
+        .breadcrumb a { color: var(--toss-text-sub); text-decoration: none; }
+        .breadcrumb a:hover { color: var(--toss-text-main); text-decoration: underline; }
+
+        /* Header */
+        .doc-header { margin-bottom: 36px; }
+        .doc-badge { display: inline-block; background: var(--toss-blue-light); color: var(--toss-blue); font-size: 0.8rem; font-weight: 700; padding: 4px 12px; border-radius: 9999px; margin-bottom: 14px; }
+        .doc-title { font-size: 2.2rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 14px; line-height: 1.3; }
+        .doc-desc { font-size: 1.05rem; color: var(--toss-text-sub); line-height: 1.7; word-break: keep-all; }
+
+        /* Patch Card */
+        .patch-card { background: var(--toss-card-bg); border: 1px solid var(--toss-border); border-radius: var(--radius-lg); padding: 32px 28px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+        .patch-card.latest { border-color: rgba(49, 130, 246, 0.4); }
+        .patch-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+        .patch-ver { font-size: 1.4rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 10px; }
+        .patch-badge-latest { font-size: 0.75rem; font-weight: 700; background: var(--toss-blue); color: #fff; padding: 3px 10px; border-radius: 9999px; }
+        .patch-date { font-size: 0.88rem; color: var(--toss-text-muted); }
+        .patch-highlight { font-size: 0.98rem; font-weight: 600; color: var(--toss-blue); margin-bottom: 16px; }
+        .patch-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+        .patch-list li { font-size: 0.92rem; color: var(--toss-text-sub); line-height: 1.7; position: relative; padding-left: 20px; }
+        .patch-list li::before { content: '•'; position: absolute; left: 6px; color: var(--toss-blue); font-weight: bold; }
+        .patch-list strong { color: var(--toss-text-main); }
+
+        /* Roadmap Grid */
+        .roadmap-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 18px; }
+        .roadmap-card { background: var(--toss-card-sub); border: 1px solid var(--toss-border); border-radius: var(--radius-md); padding: 20px; }
+        .roadmap-quarter { font-size: 0.78rem; font-weight: 800; color: var(--accent-orange); text-transform: uppercase; margin-bottom: 6px; }
+        .roadmap-card h4 { font-size: 1.05rem; font-weight: 700; color: #fff; margin-bottom: 8px; }
+        .roadmap-card p { font-size: 0.86rem; color: var(--toss-text-sub); line-height: 1.6; margin-bottom: 0; }
+
+        /* Footer */
+        .toss-footer { background: var(--toss-card-bg); border-top: 1px solid var(--toss-border); padding: 48px 24px; text-align: center; }
+        .footer-nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; margin-bottom: 20px; }
+        .footer-nav a { color: var(--toss-text-sub); text-decoration: none; font-size: 0.86rem; font-weight: 500; transition: color 0.15s; }
+        .footer-nav a:hover { color: #fff; }
+        .footer-copy { font-size: 0.82rem; color: var(--toss-text-muted); line-height: 1.6; }
+
+        @media (max-width: 768px) {
+            .doc-title { font-size: 1.7rem; }
+            .patch-card { padding: 24px 18px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- GNB -->
+    <nav class="toss-gnb">
+        <a href="/" class="gnb-brand">
+            <span class="gnb-brand-logo">🪑</span>
+            <span>위험한 초대</span>
+        </a>
+        <ul class="gnb-nav">
+            <li><a href="/guide/rules" class="gnb-link">규칙</a></li>
+            <li><a href="/guide/items" class="gnb-link">아이템</a></li>
+            <li><a href="/guide/strategy" class="gnb-link">공략</a></li>
+            <li><a href="/words" class="gnb-link">금기어 백과</a></li>
+            <li><a href="/history" class="gnb-link">예능 역사</a></li>
+            <li><a href="/guide/party" class="gnb-link">파티 매뉴얼</a></li>
+            <li><a href="/guide/characters" class="gnb-link">캐릭터</a></li>
+            <li><a href="/updates" class="gnb-link active">패치노트</a></li>
+            <li><a href="/faq" class="gnb-link">FAQ</a></li>
+            <li><a href="/about" class="gnb-link">소개</a></li>
+        </ul>
+        <a href="/" class="gnb-cta">게임 시작하기</a>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="container">
+        <!-- Breadcrumb -->
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="/">홈</a>
+            <span>›</span>
+            <span style="color: var(--toss-text-main);">개발자 노트 & 패치노트 (Updates & Patch Notes)</span>
+        </nav>
+
+        <!-- Doc Header -->
+        <header class="doc-header">
+            <span class="doc-badge">🚀 CONTINUOUS MAINTENANCE & LOGS</span>
+            <h1 class="doc-title">개발자 노트 & 정기 패치노트 아카이브</h1>
+            <p class="doc-desc">
+                유저 여러분의 피드백을 바탕으로 매주 안정성과 밸런스를 개선해 나가고 있습니다.
+                버전별 상세 변경 내역과 기술 개선 사항, 향후 기능 로드맵을 투명하게 공개합니다.
+            </p>
+        </header>
+
+        <!-- Latest Patch: v1.3.5 -->
+        <article class="patch-card latest">
+            <div class="patch-top">
+                <div class="patch-ver">
+                    <span>v1.3.5</span>
+                    <span class="patch-badge-latest">LATEST RELEASE</span>
+                </div>
+                <div class="patch-date">2026. 10. 08</div>
+            </div>
+            <div class="patch-highlight">✨ 통계 복원 신뢰성 강화 & 고품질 가이드 대규모 확장</div>
+            <ul class="patch-list">
+                <li><strong>게임 종료 시 내 금기어 복원 엔진 고도화:</strong> 참가자 중도 퇴장, 방장 연결 끊김(Host Disconnect), 정상 게임 종료 등 모든 상황에서 세션 종료 후 내 금기어가 '없음'으로 누락되지 않고 100% 정상 표시되도록 3중 폴백 복원 구조 완성.</li>
+                <li><strong>순수 유저 금기어 집계 필터링 엔진 탑재:</strong> AI 봇 모드 시 봇이 사용하는 금기어가 데이터베이스 통계에 혼입되지 않도록 정제 필터 구축 (순수 인간 유저 데이터의 가치 보존).</li>
+                <li><strong>신규 고가치 지식 베이스 구축:</strong> '실시간 금기어 100선 백과사전(/words)', '2000년대 예능 위험한 초대 역사(/history)', '디스코드 파티 진행 매뉴얼(/guide/party)', '캐릭터 및 물리엔진 가이드(/guide/characters)' 공식 개설.</li>
+                <li><strong>사이트 전역 반응형 뷰포트 & 웹 접근성 개선:</strong> 모바일 스마트폰 화면에서 팝업창 및 모달이 화면을 벗어나지 않도록 스크롤 영역 최적화.</li>
+            </ul>
+        </article>
+
+        <!-- Patch: v1.3.0 -->
+        <article class="patch-card">
+            <div class="patch-top">
+                <div class="patch-ver">
+                    <span>v1.3.0</span>
+                </div>
+                <div class="patch-date">2026. 09. 28</div>
+            </div>
+            <div class="patch-highlight">📊 실시간 금기어 전주기 수집 엔진 및 관리자 대시보드 구축</div>
+            <ul class="patch-list">
+                <li><strong>비동기 DB 플러시 아키텍처:</strong> 게임 시작, 아이템 사용(단어 추가/변경) 시 발생하는 모든 금기어를 메모리 버퍼에 즉시 기록하고 10초 단위로 PostgreSQL 백엔드에 안전하게 일괄 저장하는 고성능 큐 시스템 구축.</li>
+                <li><strong>관리자 텔레메트리 대시보드(/admin):</strong> 실시간 누적 금기어 랭킹, 고유 방문자 수, 아이템 사용 통계 차트 시각화 탑재.</li>
+                <li><strong>비매너 단어 필터링 강화:</strong> 1글자 자음 단독 제출 및 비속어 입력 방지 로직 적용.</li>
+            </ul>
+        </article>
+
+        <!-- Patch: v1.2.0 -->
+        <article class="patch-card">
+            <div class="patch-top">
+                <div class="patch-ver">
+                    <span>v1.2.0</span>
+                </div>
+                <div class="patch-date">2026. 09. 15</div>
+            </div>
+            <div class="patch-highlight">🤖 스마트 AI 봇 시뮬레이션 모드 출시</div>
+            <ul class="patch-list">
+                <li><strong>1인 플레이 지원 AI 봇 엔진:</strong> 친구를 기다리지 않고도 게임 규칙을 즉시 익힐 수 있는 '봇과 함께 테스트' 모드 탑재. 3인의 지능형 봇이 자연스러운 대화와 리액션을 수행.</li>
+                <li><strong>방장 커스텀 옵션 확장:</strong> 침묵 방지(AFK) 타이머를 30초, 45초, 60초, 90초 중 자유롭게 선택할 수 있는 방장 전용 슬라이더 추가.</li>
+                <li><strong>대기실 캐릭터 미리보기 강화:</strong> 닉네임과 함께 선택한 캐릭터 아바타가 실시간으로 동기화되어 표시.</li>
+            </ul>
+        </article>
+
+        <!-- Patch: v1.1.0 -->
+        <article class="patch-card">
+            <div class="patch-top">
+                <div class="patch-ver">
+                    <span>v1.1.0</span>
+                </div>
+                <div class="patch-date">2026. 09. 05</div>
+            </div>
+            <div class="patch-highlight">⚡ 8종 특수 전략 아이템 시스템 업데이트</div>
+            <ul class="patch-list">
+                <li><strong>공격/방어/변수 아이템 8종 추가:</strong> 유도 미사일, 방패, 단어 변경, 단어 추가, 단어 삭제, 상어 부르기, 악어 부르기, 부산갈매기 부르기 전격 도입.</li>
+                <li><strong>발사 궤적 물리 엔진 개선:</strong> 공기 저항 계수와 32개 수면 파티클을 도입하여 한층 박진감 넘치는 입수 연출 구현.</li>
+                <li><strong>아이템 쿨다운 및 밸런스 조정:</strong> 무분별한 연속 사용 방지를 위해 각 아이템별 독립 쿨다운 타이머 적용.</li>
+            </ul>
+        </article>
+
+        <!-- Patch: v1.0.0 -->
+        <article class="patch-card">
+            <div class="patch-top">
+                <div class="patch-ver">
+                    <span>v1.0.0</span>
+                </div>
+                <div class="patch-date">2026. 08. 20</div>
+            </div>
+            <div class="patch-highlight">🎉 '위험한 초대 - 실시간 플라잉 체어' 오픈 베타 론칭</div>
+            <ul class="patch-list">
+                <li><strong>웹 표준 기술 기반 실시간 멀티플레이:</strong> 브라우저 링크 하나로 접속하는 무설치 파티 게임 서비스 오픈.</li>
+                <li><strong>초저지연 소켓 네트워킹:</strong> Socket.io 기반으로 50ms 미만의 초고속 발사 판정 시스템 구축.</li>
+                <li><strong>HTML5 Canvas 2D 렌더러 탑재:</strong> 모바일과 PC 전 기종을 아우르는 부드러운 60 FPS 화면 렌더링.</li>
+            </ul>
+        </article>
+
+        <!-- Roadmap Section -->
+        <section class="patch-card" style="margin-top: 36px;">
+            <h2 style="font-size: 1.35rem; font-weight: 700; color: #fff; margin-bottom: 16px; display: flex; align-items: center; gap: 10px;">
+                <span>🗺️</span> 2026 - 2027 개발 로드맵 (Upcoming Roadmap)
+            </h2>
+            <p style="font-size: 0.95rem; color: var(--toss-text-sub); line-height: 1.7;">
+                Flying Chair Team은 항상 유저 중심의 개발을 지향합니다. 앞으로 추가될 주요 기능들을 미리 확인해 보세요:
+            </p>
+            <div class="roadmap-grid">
+                <div class="roadmap-card">
+                    <div class="roadmap-quarter">2026 Q4</div>
+                    <h4>관전 모드 (Spectator)</h4>
+                    <p>인원 제한 없이 더 많은 친구들이 수영장 밖 관중석에서 실시간 채팅을 치며 게임을 구경할 수 있는 관전 시스템 도입.</p>
+                </div>
+                <div class="roadmap-card">
+                    <div class="roadmap-quarter">2026 Q4</div>
+                    <h4>QR 코드 간편 초대</h4>
+                    <p>스마트폰 카메라로 비추기만 하면 3초 만에 같은 방으로 입장할 수 있는 원터치 QR 모바일 입장 시스템 지원.</p>
+                </div>
+                <div class="roadmap-card">
+                    <div class="roadmap-quarter">2027 Q1</div>
+                    <h4>시즌 테마 수영장 스킨</h4>
+                    <p>겨울철 김이 모락모락 피어나는 '노천 온천탕' 세트장, 레트로 감성의 '80년대 야외 풀장' 등 다양한 비주얼 테마 추가.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="toss-footer">
+        <nav class="footer-nav">
+            <a href="/">게임 홈</a>
+            <a href="/guide/rules">상세 규칙</a>
+            <a href="/guide/items">아이템 도감</a>
+            <a href="/guide/strategy">심리전 공략</a>
+            <a href="/words">금기어 백과</a>
+            <a href="/history">예능의 역사</a>
+            <a href="/guide/party">파티 매뉴얼</a>
+            <a href="/guide/characters">캐릭터 도감</a>
+            <a href="/updates">패치노트</a>
+            <a href="/faq">자주 묻는 질문</a>
+            <a href="/about">서비스 소개</a>
+            <a href="/privacy">개인정보처리방침</a>
+            <a href="/terms">이용약관</a>
+        </nav>
+        <p class="footer-copy">
+            위험한 초대 (Flying Chair Online) · 웹 기반 실시간 멀티플레이어 파티 게임<br>
+            공식 문의 및 피드백: <a href="mailto:kdh94kor@gmail.com" style="color:var(--toss-blue); text-decoration:none;">kdh94kor@gmail.com</a> · © 2026 Flying Chair Team. All rights reserved.
+        </p>
+    </footer>
+
+</body>
+</html>
