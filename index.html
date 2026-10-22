@@ -154,6 +154,14 @@
         .chair-back { position: absolute; bottom: 60px; left: 15px; width: 40px; height: 50px; background: linear-gradient(to right, #555, #444); border: 2px solid #222; border-bottom: none; border-radius: 6px 6px 0 0; }
 
         .character-wrapper { position: absolute; bottom: 25px; left: 50%; margin-left: -35px; width: 70px; height: 90px; z-index: 15; transform-origin: bottom center; }
+        /* Declarative fallback for the missile stun pose. Inline styles (applied by
+           applyMissileStunPose) take precedence, so the revive transition still works;
+           this rule guarantees the flip survives any DOM re-render that drops inline
+           styles, keeping it in lockstep with the .status-dead-missile X_X face. */
+        .character-wrapper.status-dead-missile {
+            transform: translate(0, -80px) rotate(180deg) scale(0.8);
+            transition: transform 0.6s ease-out;
+        }
         .name-tag { text-align: center; font-size: 0.75rem; font-weight: bold; background: rgba(0,0,0,0.6); color: #fff; border-radius: 4px; padding: 2px 4px; margin-bottom: 2px; position: absolute; top: -20px; left: 50%; transform: translateX(-50%); white-space: nowrap; z-index:20; }
         .badge-count { position: absolute; top: -30px; right: -10px; background: var(--accent); color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 0.8rem; font-weight: bold; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; z-index: 20; }
         
@@ -959,9 +967,17 @@
 
             /* Virtual Keyboard Open state (adaptive layout for Chunjiin / mobile keyboard) */
             body.state-playing.keyboard-open .bottom-panel {
-                height: 125px !important;
-                min-height: 85px !important;
-                max-height: 35% !important;
+                /* Keep the message list at ~2-3 rows while typing instead of
+                   collapsing it to a single line (125px was below the combined
+                   height of the input row + inventory bar). */
+                height: 168px !important;
+                min-height: 152px !important;
+                max-height: 46% !important;
+            }
+            /* Hard floor so the list can never be squeezed into one row, even on
+               very short viewports or when the inventory bar is visible. */
+            body.state-playing.keyboard-open .chat-messages-container {
+                min-height: 62px;
             }
             body.state-playing.keyboard-open .deck {
                 height: 68px !important;
@@ -1759,7 +1775,13 @@
         };
         
         function updateBodyState() {
-            document.body.className = `state-${state.room.status}`;
+            // Swap only the state-* class. Assigning body.className wholesale used to
+            // wipe `keyboard-open` on every SYNC_STATE, which made the chat panel
+            // jump between the compact and expanded heights while the user typed.
+            Array.from(document.body.classList)
+                .filter(c => c.startsWith('state-'))
+                .forEach(c => document.body.classList.remove(c));
+            document.body.classList.add(`state-${state.room.status}`);
         }
         
         // --- DOM Elements ---
@@ -2592,6 +2614,48 @@
             </svg>`;
         }
 
+        // ─── State-driven character pose (Single Source of Truth) ────────────────
+        // The missile stun pose MUST be derived from `player.status`, never from a
+        // one-off side effect. Host, guest and every re-render all funnel through
+        // these helpers, so the "X_X eyes + flipped body" pair can never desync.
+        const MISSILE_STUN_POSE = 'translate(0, -80px) rotate(180deg) scale(0.8)';
+
+        function applyMissileStunPose(playerId, animate = true) {
+            const wrap = document.getElementById(`char-wrap-${playerId}`);
+            const chair = document.getElementById(`chair-${playerId}`);
+            if (chair) chair.classList.remove('tilted');
+            if (!wrap) return;
+            wrap.style.animation = 'none';
+            wrap.style.transition = animate ? 'transform 0.6s ease-out, opacity 0.3s' : 'none';
+            wrap.style.opacity = '1';
+            wrap.style.transform = MISSILE_STUN_POSE;
+        }
+
+        function clearCharacterPose(playerId) {
+            const wrap = document.getElementById(`char-wrap-${playerId}`);
+            if (wrap) {
+                wrap.style.transform = 'none';
+                wrap.style.opacity = '1';
+            }
+            const chair = document.getElementById(`chair-${playerId}`);
+            if (chair) chair.classList.remove('tilted');
+        }
+
+        // Applies the correct inline pose for a player's current status.
+        // Flying / swimming / snatched states intentionally keep whatever inline
+        // transform their animation owns — we only touch idle and missile-stun.
+        function syncPlayerStatusVisual(p, opts = {}) {
+            if (!p) return;
+            const wrap = document.getElementById(`char-wrap-${p.id}`);
+            if (!wrap) return;
+            wrap.className = `character-wrapper status-${p.status}`;
+            if (p.status === PlayerState.STATUS.DEAD_MISSILE) {
+                applyMissileStunPose(p.id, opts.animate !== false);
+            } else if (PlayerState.isHealthySeated(p)) {
+                clearCharacterPose(p.id);
+            }
+        }
+
         function renderStage() {
             updateStageGap();
             
@@ -2618,6 +2682,10 @@
                         </div>`;
                     els.chairsContainer.appendChild(slot);
                 });
+                // A full rebuild creates brand-new elements with no inline styles.
+                // Re-apply status-driven poses here, otherwise a player who is hit
+                // during a rebuild keeps the X_X face but silently loses the flip.
+                state.players.forEach(p => syncPlayerStatusVisual(p, { animate: true }));
             } else {
                 // Surgical update to PRESERVE inline animations (fixes teleporting during supply drops)
                 state.players.forEach(p => {
@@ -2628,16 +2696,9 @@
                         else readyBadge.classList.add('hidden');
                     }
                     
-                    const charWrap = document.getElementById(`char-wrap-${p.id}`);
-                    if (charWrap) {
-                        charWrap.className = `character-wrapper status-${p.status}`;
-                        if (PlayerState.isHealthySeated(p)) {
-                            charWrap.style.transform = 'none';
-                            charWrap.style.opacity = '1';
-                            const chair = document.getElementById(`chair-${p.id}`);
-                            if (chair) chair.classList.remove('tilted');
-                        }
-                    }
+                    // Single entry point: keeps the class (X_X eyes) and the pose
+                    // (180° flip) in lockstep for both host and guest clients.
+                    syncPlayerStatusVisual(p);
                     
                     const badge = document.getElementById(`badge-${p.id}`);
                     if (badge) {
@@ -3686,16 +3747,8 @@
             }
             target.penaltyEndTime = now + totalStunMs;
             
-            // Visual: stun pose (flipped)
-            const wrap = document.getElementById(`char-wrap-${targetId}`);
-            const chair = document.getElementById(`chair-${targetId}`);
-            if (chair) chair.classList.remove('tilted');
-            if (wrap) {
-                wrap.style.animation = 'none';
-                wrap.style.transition = 'transform 0.6s ease-out, opacity 0.3s';
-                wrap.style.opacity = '1';
-                wrap.style.transform = 'translate(0, -80px) rotate(180deg) scale(0.8)';
-            }
+            // Visual: stun pose (flipped) — same helper used by renderStage/updateStatus
+            applyMissileStunPose(targetId, true);
             
             updateStatus(targetId, PlayerState.STATUS.DEAD_MISSILE); // internally calls broadcastState
             
@@ -5028,10 +5081,12 @@
                 wrap.className = `character-wrapper status-${newStatus}`;
                 if (PlayerState.isHealthySeated(newStatus)) {
                     // Force clear any lingering inline styles from interrupted animations
-                    wrap.style.transform = 'none';
-                    wrap.style.opacity = '1';
-                    const chair = document.getElementById(`chair-${id}`);
-                    if (chair) chair.classList.remove('tilted');
+                    clearCharacterPose(id);
+                } else if (newStatus === PlayerState.STATUS.DEAD_MISSILE) {
+                    // Atomic guarantee: entering the missile-stun state always applies
+                    // the flipped pose together with the X_X face, no matter which
+                    // code path (immediate hit, deferred landing, state re-sync) did it.
+                    applyMissileStunPose(id, true);
                 }
             }
             if (id === state.myId) updateChatUI();
@@ -5249,9 +5304,12 @@
                                 chair.classList.remove('tilted');
                                 
                                 addTimer(() => {
-                                    finalizeIdle(playerId); // checks pendingMissileStunMs before going idle
+                                    // Reset the swim/landing pose FIRST. finalizeIdle() may
+                                    // apply a pending missile stun on landing, and that
+                                    // stun's flip must not be overwritten right after.
                                     wrap.style.transition = 'none';
                                     wrap.style.transform = 'none';
+                                    finalizeIdle(playerId); // checks pendingMissileStunMs before going idle
                                 }, 500);
                             }, 2000);
                         }, 1500);
@@ -5460,35 +5518,160 @@
         window.openWordChangeModal = openWordChangeModal;
         window.updateCooldownUI = updateCooldownUI;
 
-        // Mobile Virtual Keyboard responsive handler
-        function initKeyboardResponsive() {
-            const chatInput = els.chatInput || document.getElementById('chat-input');
-            if (chatInput) {
-                chatInput.addEventListener('focus', () => {
-                    if (window.innerWidth <= 768) {
-                        document.body.classList.add('keyboard-open');
-                        setTimeout(() => {
-                            if (typeof scrollToBottom === 'function') scrollToBottom(true);
-                        }, 100);
-                    }
-                });
-                chatInput.addEventListener('blur', () => {
-                    document.body.classList.remove('keyboard-open');
-                });
+        // ─── Mobile Virtual Keyboard Responsive Handler ─────────────────────────
+        // The compact layout used to be driven by focus/blur only, and the
+        // visualViewport branch refused to remove `keyboard-open` while the input
+        // still had focus. On Android the keyboard can be dismissed (back button /
+        // gesture) without blurring the input, and `window.innerHeight` had already
+        // shrunk because of `interactive-widget=resizes-content`, so the old ratio
+        // test could never detect "keyboard closed". The class therefore stayed
+        // until the user tapped the chat area (which finally fired blur) — the chat
+        // list remained one line tall.
+        //
+        // The state is now derived from viewport metrics against a keyboard-less
+        // baseline, so it recovers automatically as soon as the keyboard closes.
+        const MOBILE_LAYOUT_MQ = window.matchMedia('(max-width: 768px)');
+        const KEYBOARD_OCCLUSION_PX = 120;
+        let viewportBaselineH = 0;
+        let keyboardFocusGraceUntil = 0;
+        let keyboardSyncRaf = 0;
+
+        function isMobileLayout() {
+            return MOBILE_LAYOUT_MQ.matches;
+        }
+
+        function readViewportMetrics() {
+            const vv = window.visualViewport;
+            return {
+                layoutH: document.documentElement.clientHeight || window.innerHeight || 0,
+                visualH: vv ? vv.height : (window.innerHeight || 0),
+                offsetTop: vv ? vv.offsetTop : 0
+            };
+        }
+
+        function captureViewportBaseline(force = false) {
+            // Never lock in a height that was measured while the keyboard was open.
+            if (!force && document.body.classList.contains('keyboard-open')) return;
+            const m = readViewportMetrics();
+            viewportBaselineH = Math.max(m.layoutH, m.visualH);
+        }
+
+        function isVirtualKeyboardOpen() {
+            if (!isMobileLayout()) return false;
+            const m = readViewportMetrics();
+            // iOS Safari: layout viewport keeps its size, visual viewport shrinks.
+            if (m.layoutH - (m.visualH + m.offsetTop) > KEYBOARD_OCCLUSION_PX) return true;
+            // Android (resizes-content): the layout viewport itself shrinks.
+            if (viewportBaselineH && viewportBaselineH - m.layoutH > KEYBOARD_OCCLUSION_PX) return true;
+            // Fallback that also works when the visual viewport is scrolled.
+            if (viewportBaselineH && viewportBaselineH - m.visualH > KEYBOARD_OCCLUSION_PX) return true;
+            return false;
+        }
+
+        function syncKeyboardLayout() {
+            const chatInput = els.chatInput;
+
+            if (!isMobileLayout()) {
+                document.body.classList.remove('keyboard-open');
+                return;
             }
 
-            if (window.visualViewport) {
-                window.visualViewport.addEventListener('resize', () => {
-                    if (window.innerWidth <= 768) {
-                        const isKeyboard = window.visualViewport.height < window.innerHeight * 0.78;
-                        if (isKeyboard) {
-                            document.body.classList.add('keyboard-open');
-                        } else if (document.activeElement !== chatInput) {
-                            document.body.classList.remove('keyboard-open');
-                        }
-                    }
-                });
+            const keyboardOpen = isVirtualKeyboardOpen();
+            const inputFocused = !!chatInput && document.activeElement === chatInput;
+
+            if (keyboardOpen) {
+                document.body.classList.add('keyboard-open');
+                return;
             }
+            // Grace period: the OS needs a moment to animate the keyboard in.
+            if (inputFocused && Date.now() < keyboardFocusGraceUntil) {
+                document.body.classList.add('keyboard-open');
+                return;
+            }
+
+            // Keyboard is closed -> always restore, even if the input keeps focus.
+            const wasOpen = document.body.classList.contains('keyboard-open');
+            document.body.classList.remove('keyboard-open');
+
+            requestAnimationFrame(() => {
+                // Re-measure the restored layout (keeps the baseline honest across
+                // rotations / URL-bar changes) and force a synchronous reflow so the
+                // chat list regains its height without any user tap.
+                const m = readViewportMetrics();
+                viewportBaselineH = Math.max(m.layoutH, m.visualH);
+                if (wasOpen) {
+                    void document.body.offsetHeight;
+                    if (typeof scrollToBottom === 'function') scrollToBottom(false);
+                }
+            });
+        }
+
+        function scheduleKeyboardSync() {
+            if (keyboardSyncRaf) return;
+            keyboardSyncRaf = requestAnimationFrame(() => {
+                keyboardSyncRaf = 0;
+                syncKeyboardLayout();
+            });
+        }
+
+        function initKeyboardResponsive() {
+            const chatInput = els.chatInput || document.getElementById('chat-input');
+            if (!chatInput) return;
+
+            captureViewportBaseline(true);
+
+            chatInput.addEventListener('focus', () => {
+                if (!isMobileLayout()) return;
+                keyboardFocusGraceUntil = Date.now() + 450;
+                document.body.classList.add('keyboard-open');
+                setTimeout(() => {
+                    syncKeyboardLayout();
+                    if (typeof scrollToBottom === 'function') scrollToBottom(true);
+                }, 120);
+                // If no keyboard actually appeared (hardware keyboard), drop back.
+                setTimeout(syncKeyboardLayout, 520);
+            });
+
+            chatInput.addEventListener('blur', () => {
+                keyboardFocusGraceUntil = 0;
+                document.body.classList.remove('keyboard-open');
+                // Re-verify once the viewport has settled.
+                setTimeout(syncKeyboardLayout, 250);
+                setTimeout(syncKeyboardLayout, 650);
+            });
+
+            if (window.visualViewport) {
+                // Also fires when the keyboard is dismissed via "done"/back, which
+                // does not reliably blur the input on Android.
+                window.visualViewport.addEventListener('resize', scheduleKeyboardSync);
+                window.visualViewport.addEventListener('scroll', scheduleKeyboardSync);
+            }
+            // Android's resizes-content fires a window resize on open/close.
+            window.addEventListener('resize', scheduleKeyboardSync);
+            window.addEventListener('pageshow', () => {
+                keyboardFocusGraceUntil = 0;
+                document.body.classList.remove('keyboard-open');
+                captureViewportBaseline(true);
+                syncKeyboardLayout();
+            });
+            window.addEventListener('orientationchange', () => {
+                keyboardFocusGraceUntil = 0;
+                document.body.classList.remove('keyboard-open');
+                setTimeout(() => {
+                    captureViewportBaseline(true);
+                    syncKeyboardLayout();
+                }, 300);
+            });
+            document.addEventListener('focusout', scheduleKeyboardSync);
+
+            const onLayoutModeChange = () => {
+                keyboardFocusGraceUntil = 0;
+                if (!isMobileLayout()) document.body.classList.remove('keyboard-open');
+                captureViewportBaseline(true);
+                syncKeyboardLayout();
+            };
+            if (MOBILE_LAYOUT_MQ.addEventListener) MOBILE_LAYOUT_MQ.addEventListener('change', onLayoutModeChange);
+            else if (MOBILE_LAYOUT_MQ.addListener) MOBILE_LAYOUT_MQ.addListener(onLayoutModeChange);
         }
         initKeyboardResponsive();
 
