@@ -22,7 +22,7 @@
   <img src="https://img.shields.io/badge/Deploy-Vercel%20%2B%20Render-black?style=flat-square&logo=vercel&logoColor=white" alt="Deploy">
 </p>
 
-[🎮 지금 바로 플레이하기 (Live Demo)](https://www.flying-chair.com) • [📖 상세 규칙 매뉴얼](https://www.flying-chair.com/guide/rules) • [🧪 아이템 도감](https://www.flying-chair.com/guide/items) • [📊 관리자 대시보드](https://www.flying-chair.com/admin)
+[🎮 지금 바로 플레이하기 (Live Demo)](https://flying-chair.com) • [📖 상세 규칙 매뉴얼](https://flying-chair.com/guide/rules) • [🧪 아이템 도감](https://flying-chair.com/guide/items) • [📊 관리자 대시보드](https://flying-chair.com/admin)
 
 </div>
 

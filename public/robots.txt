@@ -1,4 +1,6 @@
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /api/
 
-Sitemap: https://www.flying-chair.com/sitemap.xml
+Sitemap: https://flying-chair.com/sitemap.xml

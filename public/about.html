@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>서비스 소개 & 개발팀 (About) - 위험한 초대 (실시간 플라잉 체어)</title>
-    <meta name="description" content="전설의 예능 '위험한 초대' 플라잉 체어 웹게임의 기획 의도, 오픈소스 기술 스택(Node.js, Socket.io), 개발팀 소개 및 공식 문의 안내 (EEAT).">
+    <meta name="description" content="전설의 예능 '위험한 초대' 플라잉 체어 웹게임의 기획 의도, 실시간 웹소켓 아키텍처(Node.js, Socket.io), 모바일 재접속 기술, 개발팀 운영 철학 및 공식 문의 안내 (E-E-A-T).">
     <meta name="keywords" content="위험한초대소개, 플라잉체어개발팀, 웹게임오픈소스, 파티게임기획, 서비스소개">
     <meta name="robots" content="index, follow">
-    <link rel="canonical" href="https://www.flying-chair.com/about">
+    <link rel="canonical" href="https://flying-chair.com/about">
 
     <!-- Google AdSense Official Script -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4269446769353106" crossorigin="anonymous"></script>
@@ -15,11 +15,28 @@
     <!-- Open Graph -->
     <meta property="og:type" content="website">
     <meta property="og:title" content="서비스 소개 & 개발팀 - 위험한 초대">
-    <meta property="og:description" content="2000년대 전설의 예능을 웹 기술로 재해석한 실시간 멀티플레이 파티게임 개발 스토리.">
-    <meta property="og:url" content="https://www.flying-chair.com/about">
+    <meta property="og:description" content="2000년대 전설의 예능을 현대 웹 표준 기술로 재해석한 실시간 멀티플레이 파티게임 개발 스토리와 엔지니어링 철학.">
+    <meta property="og:url" content="https://flying-chair.com/about">
 
     <!-- Pretendard Font -->
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+
+    <!-- Schema.org Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "AboutPage",
+      "name": "서비스 소개 & 개발팀 (About) - 위험한 초대",
+      "url": "https://flying-chair.com/about",
+      "description": "위험한 초대(Flying Chair Online) 웹 파티게임의 기획 배경, 실시간 네트워크 기술 스택 및 운영 정책 소개.",
+      "mainEntity": {
+        "@type": "Organization",
+        "name": "Flying Chair Team",
+        "url": "https://flying-chair.com/",
+        "email": "kdh94kor@gmail.com"
+      }
+    }
+    </script>
 
     <style>
         :root {
@@ -68,14 +85,15 @@
         /* Card Section */
         .about-section { background: var(--toss-card-bg); border: 1px solid var(--toss-border); border-radius: var(--radius-lg); padding: 32px 28px; margin-bottom: 28px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
         .about-section h2 { font-size: 1.35rem; font-weight: 700; margin-bottom: 16px; color: #fff; display: flex; align-items: center; gap: 10px; }
+        .about-section h3 { font-size: 1.08rem; font-weight: 700; margin: 22px 0 10px; color: var(--toss-text-main); }
         .about-section p { font-size: 0.95rem; color: var(--toss-text-sub); line-height: 1.8; margin-bottom: 16px; word-break: keep-all; }
         .about-section p:last-child { margin-bottom: 0; }
 
         /* Tech Stack Grid */
-        .tech-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 20px; }
+        .tech-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 20px; }
         .tech-card { background: var(--toss-card-sub); border: 1px solid var(--toss-border); border-radius: var(--radius-md); padding: 18px; }
         .tech-card h4 { font-size: 0.98rem; font-weight: 700; color: #fff; margin-bottom: 6px; }
-        .tech-card p { font-size: 0.83rem; color: var(--toss-text-sub); line-height: 1.5; margin-bottom: 0; }
+        .tech-card p { font-size: 0.85rem; color: var(--toss-text-sub); line-height: 1.55; margin-bottom: 0; }
 
         /* Contact box */
         .contact-card { background: linear-gradient(135deg, rgba(49,130,246,0.1) 0%, rgba(20,21,26,0.5) 100%); border: 1px solid rgba(49,130,246,0.3); border-radius: var(--radius-lg); padding: 28px; text-align: center; margin-top: 36px; }
@@ -135,10 +153,10 @@
         <!-- Doc Header -->
         <section class="doc-header">
             <span class="doc-badge">✨ ABOUT FLYING CHAIR</span>
-            <h1 class="doc-title">우리가 플라잉 체어를 다시 만든 이유</h1>
+            <h1 class="doc-title">우리가 플라잉 체어를 다시 만든 이유와 엔지니어링 철학</h1>
             <p class="doc-desc">
-                2000년대 전설의 예능 '위험한 초대'가 주는 아날로그적 폭소와 긴장감을
-                현대 웹 표준 기술로 완벽하게 복원하여 누구나 링크 하나로 즐길 수 있게 만들었습니다.
+                2000년대 전설의 예능 '위험한 초대'가 주는 아날로그적 폭소와 대화의 긴장감을
+                현대 웹 표준 기술로 완벽하게 복원하여, 누구나 설치 없이 링크 하나로 즐길 수 있도록 설계한 공식 프로젝트 소개서입니다.
             </p>
         </section>
 
@@ -146,58 +164,98 @@
         <article class="about-section">
             <h2><span>🎯</span> 프로젝트 비전 & 기획 배경</h2>
             <p>
-                2000년대 초반, 전 국민의 주말 저녁을 웃음바다로 만들었던 예능 코너 '위험한 초대'.
-                게스트의 사소한 말버릇이나 행동 하나에 진행자들이 수영장 뒤편으로 힘차게 날아가 입수하던 그 장면은 20여 년이 지난 지금도 수많은 사람들의 뇌리에 유쾌한 추억으로 남아 있습니다.
+                2000년대 초반, 대한민국의 주말 저녁을 웃음바다로 만들었던 KBS 예능 코너 '위험한 초대'.
+                초대 게스트의 사소한 말버릇이나 무의식적인 행동 하나에 4명의 MC들이 수영장 뒤편으로 힘차게 날아가 물보라를 일으키던 그 장면은, 20여 년이 지난 지금도 수많은 사람들의 기억 속에 가장 유쾌한 슬랩스틱 토크쇼로 남아 있습니다.
             </p>
             <p>
-                우리는 질문했습니다. "왜 요즘 웹 파티게임들은 설치가 복잡하거나 광고로 도배되어 있을까? 링크 하나만 누르면 디스코드나 술자리에서 친구들과 5초 만에 예능 세트장을 만들 수는 없을까?"
+                저희 개발팀(Flying Chair Team)은 온라인 모임과 디스코드 통화가 일상화된 시대에 한 가지 아쉬움을 발견했습니다.
+                "친구들과 디스코드나 단톡방에 모였을 때, 무거운 스팀(Steam) 게임을 구매하거나 수 기가바이트의 앱을 설치하지 않고도 5초 만에 다 같이 웃고 떠들 수 있는 한국형 파티 게임은 왜 없을까?"
             </p>
             <p>
-                그 답이 바로 <strong>'위험한 초대 - 실시간 플라잉 체어'</strong>입니다. 무거운 클라이언트 다운로드나 복잡한 회원가입 없이, 브라우저가 열리는 모든 디바이스에서 가장 순수하고 유쾌한 심리 서바이벌을 무료로 제공합니다.
+                그 질문에 대한 해답으로 탄생한 것이 바로 <strong>'위험한 초대 - 실시간 플라잉 체어 온라인(flying-chair.com)'</strong>입니다.
+                앱 다운로드나 복잡한 회원가입 절차를 완전히 덜어내고, PC와 모바일 웹 브라우저 어디서나 링크 하나만 공유하면 즉시 방송 세트장의 의자에 앉아 친구들과 고도의 금기어 심리전을 즐길 수 있도록 설계했습니다.
             </p>
         </article>
 
         <!-- Tech Stack Section -->
         <article class="about-section">
-            <h2><span>🛠️</span> 오픈소스 기술 스택 (Open Source Architecture)</h2>
-            <p>안정적이고 빠른 실시간 멀티플레이어 환경을 구축하기 위해 검증된 웹 오픈소스 기술을 적용했습니다.</p>
+            <h2><span>🛠️</span> 핵심 기술 아키텍처 (Real-Time Web Engineering)</h2>
+            <p>
+                실시간 대화형 파티 게임에서 가장 중요한 가치는 <strong>'찰나의 동기화(Zero-Latency Sync)'</strong>와 <strong>'끊김 없는 연결 안정성'</strong>입니다. 상대방이 금기어를 입력한 순간 모든 참가자의 화면에서 동시에 의자가 날아가야 현장의 웃음이 배가되기 때문입니다. 이를 위해 다음과 같은 자체 엔지니어링 기술을 구축했습니다.
+            </p>
             <div class="tech-grid">
                 <div class="tech-card">
-                    <h4>🚀 Node.js & Express</h4>
-                    <p>가볍고 빠른 비동기 이벤트 기반 서버 백엔드로 수많은 동시 접속 세션을 안정적으로 제어합니다.</p>
+                    <h4>🚀 서버 권위(Server-Authoritative) 엔진</h4>
+                    <p>Node.js와 Socket.io 기반의 인메모리 상태 머신이 금기어 매칭, 미사일 기절 누적(+30초), 비행 중 예약 타격, 맹수 FIFO 큐를 단일 진실 공급원(SSOT)으로 연산하여 치팅과 판정 불일치를 원천 차단합니다.</p>
                 </div>
                 <div class="tech-card">
-                    <h4>🔌 Socket.io</h4>
-                    <p>웹소켓 기반의 양방향 실시간 통신 엔진으로 0.05초 단위의 즉각적인 발사 및 채팅 동기화를 보장합니다.</p>
+                    <h4>📱 모바일 백그라운드 재접속 보호</h4>
+                    <p>스마트폰 브라우저에서 카카오톡이나 디스코드를 잠시 확인하고 돌아올 때 연결이 끊기지 않도록 최대 60초의 상태별 유예 타이머(Grace Period)와 좀비 소켓 RTT 핑 감지, Screen Wake Lock을 결합했습니다.</p>
                 </div>
                 <div class="tech-card">
-                    <h4>🎨 HTML5 & Canvas</h4>
-                    <p>플러그인 없는 순수 웹 표준 그래픽 기술로 부드러운 포물선 다이빙과 물보라 파티클을 렌더링합니다.</p>
+                    <h4>🎨 60 FPS Canvas 2D 물리 렌더링</h4>
+                    <p>외부 무거운 게임 엔진에 의존하지 않고 순수 HTML5 Canvas와 CSS3 하드웨어 가속을 활용하여 65도 포물선 탄도 궤적, 32개 수면 비산 파티클, 상하 반전 피격 모션을 저사양 기기에서도 부드럽게 구현했습니다.</p>
                 </div>
                 <div class="tech-card">
-                    <h4>🔊 Web Audio API</h4>
-                    <p>브라우저 네이티브 사운드 합성 엔진을 통해 설치 없는 풍부한 입체 음향 피드백을 제공합니다.</p>
+                    <h4>🛡️ WordValidator 언어 무결성 검증</h4>
+                    <p>한국어 채팅 특성을 고려하여 1글자 조사 남발, 공백 편법, 초성 단독 입력(ㅋㅋ 등), 특수기호 및 중복 금기어를 프론트엔드와 백엔드 양단에서 동일하게 검증하는 통합 모듈을 운영합니다.</p>
                 </div>
             </div>
         </article>
 
+        <!-- Content & Knowledge Curation -->
+        <article class="about-section">
+            <h2><span>📚</span> 독창적인 한국어 게임 문화 아카이브 구축</h2>
+            <p>
+                '위험한 초대 온라인'은 단순한 미니게임 화면에 그치지 않고, 한국의 버라이어티 예능 역사와 오프라인 모임 문화를 체계적으로 정리한 종합 가이드를 함께 제공하고 있습니다.
+            </p>
+            <h3>1. 실전 데이터 기반의 금기어 백과사전과 심리전 연구</h3>
+            <p>
+                실제 플레이어들이 인게임에서 설정한 수만 건의 금기어 통계(AI 봇 데이터 제외)를 바탕으로 한국인이 대화 중 가장 참기 힘든 일상 추임새, 반사적 방어 어휘, 양자택일 유도 질문을 분석하여 <a href="/words" style="color:var(--toss-blue);">금기어 100선 백과사전</a>과 <a href="/guide/strategy" style="color:var(--toss-blue);">심리전 공략집</a>으로 매월 업데이트하고 있습니다.
+            </p>
+            <h3>2. 온·오프라인 모임 진행자(MC)를 위한 실용 매뉴얼</h3>
+            <p>
+                대학 MT, 동아리 신입생 환영회, 사내 워크샵, 디스코드 게임 서버에서 진행자가 어색한 분위기를 단숨에 깨뜨릴 수 있도록 인원수별(2~6인) 최적 방 설정값과 아이스브레이킹 대화 스크립트를 <a href="/guide/party" style="color:var(--toss-blue);">파티 진행자 매뉴얼</a>을 통해 무료로 개방하고 있습니다.
+            </p>
+        </article>
+
         <!-- EEAT Team Section -->
         <article class="about-section">
-            <h2><span>👥</span> 개발팀 소개 및 윤리 기준</h2>
+            <h2><span>👥</span> 개발팀 운영 원칙 및 사용자 보호 정책</h2>
             <p>
-                Flying Chair Team은 웹 프론트엔드와 실시간 네트워크 엔지니어링에 열정을 가진 시니어 및 풀스택 개발자들로 구성되어 있습니다.
+                Flying Chair Team은 웹 프론트엔드, 실시간 분산 소켓 아키텍처, 게임 물리 시뮬레이션 분야의 엔지니어들로 구성되어 있으며 다음 3대 원칙을 철저히 준수합니다.
             </p>
-            <ul style="list-style: none; display: flex; flex-direction: column; gap: 10px; margin-top: 12px;">
-                <li style="color: var(--toss-text-sub); font-size: 0.95rem;">• <strong>비회원제 개인정보 최소주의:</strong> 우리는 유저의 이름, 전화번호, 이메일을 요구하지 않으며, 게임이 종료되면 세션 데이터를 즉시 파기합니다.</li>
-                <li style="color: var(--toss-text-sub); font-size: 0.95rem;">• <strong>광고 품질 및 사용자 경험 보장:</strong> 게임 진행을 방해하는 팝업이나 오클릭을 유도하는 배너를 일절 배제하며, 안전하고 격리된 구역에만 광고를 배치합니다.</li>
-                <li style="color: var(--toss-text-sub); font-size: 0.95rem;">• <strong>공정한 플레이 환경:</strong> 매크로, 패킷 조작, 비인가 자동화 스크립트를 엄격히 차단합니다.</li>
+            <ul style="list-style: none; display: flex; flex-direction: column; gap: 12px; margin-top: 12px;">
+                <li style="color: var(--toss-text-sub); font-size: 0.95rem;">• <strong>비회원제 개인정보 최소 수집 원칙:</strong> 본 서비스는 사용자의 실명, 주민등록번호, 전화번호, 이메일 주소 등 민감한 개인정보를 일절 요구하지 않으며, 게임 방이 종료되면 일회성 세션 데이터를 즉시 메모리에서 파기합니다.</li>
+                <li style="color: var(--toss-text-sub); font-size: 0.95rem;">• <strong>쾌적한 플레이 환경 및 클린 레이아웃:</strong> 인게임 조작이나 모달 팝업 내부에 사용자 클릭을 유도하는 악성 광고를 배치하지 않으며, 모든 디바이스 뷰포트에서 화면 잘림 없는 반응형 UI를 보장합니다.</li>
+                <li style="color: var(--toss-text-sub); font-size: 0.95rem;">• <strong>자동화 블라인드 QA 검증 배포:</strong> 모든 코드 변경 사항은 68개의 자동화 E2E 및 카오스 시뮬레이션 테스트를 100% 통과한 후에만 운영 서버에 반영됩니다.</li>
             </ul>
+        </article>
+
+        <!-- Technical Specs & Accessibility Section -->
+        <article class="about-section">
+            <h2><span>🌐</span> 크로스 플랫폼 호환성 및 웹 접근성(Accessibility) 표준</h2>
+            <p>
+                '위험한 초대 온라인'은 연령과 기기 사양에 구애받지 않고 누구나 공정한 조건에서 대화를 나눌 수 있도록 글로벌 웹 표준 가이드라인을 준수하여 설계되었습니다.
+            </p>
+            <h3>1. 데스크톱 및 모바일 하이브리드 반응형 UI</h3>
+            <p>
+                데스크톱 와이드 모니터에서는 좌측 방 설정·참가자 패널과 우측 메인 수영장 스테이지가 분리된 듀얼 뷰를 제공하며, 스마트폰(iOS Safari, Android Chrome, 삼성 인터넷)에서는 한 손 엄지손가락만으로도 채팅 입력과 아이템 터치가 가능한 모바일 전용 컴팩트 데크 레이아웃으로 자동 전환됩니다. 특히 천지인·쿼티 등 모바일 가상 키보드가 올라올 때 `visualViewport` 리사이즈 이벤트를 실시간으로 감지하여 캐릭터 의자와 최근 대화 내역이 절대 가려지지 않도록 동적으로 높이를 재조정합니다.
+            </p>
+            <h3>2. 저대역폭 네트워크 최적화 및 데이터 절약</h3>
+            <p>
+                수영장 물결 애니메이션과 물보라 효과, 효과음 합성에 이르기까지 모든 시청각 요소를 외부 대용량 이미지나 오디오 스트리밍 없이 순수 CSS3 벡터와 Web Audio API 수학적 파형 합성으로 처리합니다. 덕분에 초기 페이지 로딩 용량이 150KB 미만에 불과하며, 지하철이나 야외 캠핑장 등 모바일 데이터(LTE/5G) 신호가 약한 환경에서도 데이터 소모 걱정 없이 초저지연으로 플레이할 수 있습니다.
+            </p>
+            <h3>3. 건전한 파티 게임 생태계를 위한 운영 거버넌스</h3>
+            <p>
+                본 서비스는 친구, 가족, 동료 간의 유쾌한 소통을 목적으로 운영됩니다. 방 코드를 아는 지인들끼리만 입장할 수 있는 프라이빗 룸(Private Room) 구조를 채택하여 익명 유저의 무분별한 난입이나 불건전한 채팅 노출을 원천적으로 방지하고 있으며, 방장에게 실시간 참가자 관리 및 게임 종료 권한을 부여하여 자율적이고 안전한 모임 문화를 지원합니다. 아울러 Google AdSense 게시자 정책 및 웹마스터 품질 가이드라인을 엄격히 준수하여 모든 이용자에게 신뢰할 수 있는 디지털 여가 환경을 약속드립니다.
+            </p>
         </article>
 
         <!-- Contact Section -->
         <section class="contact-card">
             <h3>💌 공식 문의 및 피드백</h3>
-            <p>버그 제보, 게임 개선 아이디어, 비즈니스 제휴 문의는 언제나 환영합니다.</p>
+            <p>버그 제보, 게임 밸런스 건의, 대학/기관 레크리에이션 활용 문의 및 제휴 제안은 아래 공식 이메일로 연락해 주시면 영업일 기준 24시간 이내에 담당 엔지니어가 직접 확인 후 상세히 답변드립니다. 유저 여러분의 소중한 의견이 플라잉 체어를 더욱 즐거운 공간으로 만듭니다.</p>
             <a href="mailto:kdh94kor@gmail.com" class="contact-email">kdh94kor@gmail.com</a>
         </section>
     </main>

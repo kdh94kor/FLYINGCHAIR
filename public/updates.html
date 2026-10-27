@@ -7,13 +7,13 @@
     <meta name="description" content="'위험한 초대 - 실시간 플라잉 체어'의 버전별 공식 업데이트 기록, 밸런스 패치 내역, 시스템 개선 일지 및 향후 개발 로드맵. 지속적 서비스 큐레이션 및 품질 유지관리.">
     <meta name="keywords" content="플라잉체어패치노트, 위험한초대업데이트, 웹게임개발일지, 게임패치노트, 실시간게임로드맵, 개발자노트">
     <meta name="robots" content="index, follow">
-    <link rel="canonical" href="https://www.flying-chair.com/updates">
+    <link rel="canonical" href="https://flying-chair.com/updates">
 
     <!-- Open Graph -->
     <meta property="og:type" content="article">
     <meta property="og:title" content="개발자 노트 & 정기 패치노트 아카이브 - 위험한 초대">
     <meta property="og:description" content="위험한 초대의 지속적인 발전과 안정적인 서비스를 위한 버전별 패치 내역과 개발 로드맵.">
-    <meta property="og:url" content="https://www.flying-chair.com/updates">
+    <meta property="og:url" content="https://flying-chair.com/updates">
 
     <!-- Google AdSense Official Script -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4269446769353106" crossorigin="anonymous"></script>
@@ -37,10 +37,10 @@
         "name": "Flying Chair Online",
         "logo": {
           "@type": "ImageObject",
-          "url": "https://www.flying-chair.com/favicon.ico"
+          "url": "https://flying-chair.com/favicon.ico"
         }
       },
-      "mainEntityOfPage": "https://www.flying-chair.com/updates"
+      "mainEntityOfPage": "https://flying-chair.com/updates"
     }
     </script>
 
@@ -166,12 +166,31 @@
             </p>
         </header>
 
-        <!-- Latest Patch: v1.3.5 -->
+        <!-- Latest Patch: v1.4.0 -->
         <article class="patch-card latest">
             <div class="patch-top">
                 <div class="patch-ver">
-                    <span>v1.3.5</span>
+                    <span>v1.4.0</span>
                     <span class="patch-badge-latest">LATEST RELEASE</span>
+                </div>
+                <div class="patch-date">2026. 10. 27</div>
+            </div>
+            <div class="patch-highlight">📱 모바일 앱 전환(백그라운드) 재접속 안정화 & 서버 권위 전투 동기화 엔진</div>
+            <ul class="patch-list">
+                <li><strong>모바일 백그라운드 앱 전환 유예 타이머(Grace Period) 대폭 확장:</strong> 스마트폰 브라우저(iOS Safari, Android Chrome)에서 카카오톡, 디스코드 등 다른 앱을 잠시 확인하고 돌아올 때 OS의 백그라운드 타이머 동결로 인해 방에서 강제 퇴장되던 현상을 해결했습니다. 대기실에서는 <strong>30~45초</strong>, 금기어 설정 및 본게임 진행 중에는 <strong>45~60초</strong> 동안 플레이어의 좌석과 아이템, 금기어, 방장 권한이 안전하게 보존됩니다.</li>
+                <li><strong>좀비 소켓(Half-Open TCP) 능동 감지 및 0.5초 고속 재합류:</strong> 화면 복귀(<code>visibilitychange</code>, <code>pageshow</code>, <code>focus</code>, <code>online</code>) 즉시 서버로 <code>CLIENT_PING</code> 프로브를 전송하여 1.5초 내 응답이 없을 경우 죽은 소켓을 즉시 폐기하고 <code>rejoinRoom</code>으로 자동 재합류하는 엔진을 구축했습니다.</li>
+                <li><strong>실시간 재연결 상태 배지(📡 재연결 중) & Screen Wake Lock 도입:</strong> 일시적 연결 끊김 상태의 유저를 참가자 목록 및 전광판에 실시간으로 표시하며, 인게임 진입 시 스마트폰 화면 자동 꺼짐 방지(Wake Lock API)가 자동 활성화됩니다.</li>
+                <li><strong>서버 권위(Server-Authoritative) 전투 판정 및 미사일 기절 누적:</strong> 유도 미사일 연속 피격 시 기절 시간이 초기화되지 않고 기존 남은 시간에 <strong>+30초씩 정확히 누적(Stacking)</strong>되며, 미사일 비행 중 타깃이 금기어를 말해 날아간 경우 착석 복귀 즉시 기절이 발동되는 <strong>예약 기절(Pending Missile Stun)</strong> 로직과 모든 클라이언트 간 상하 반전 피격 모션(<code>dead-missile</code>) 동기화를 완성했습니다.</li>
+                <li><strong>금기어 검증 단일 진실 공급원(WordValidator SSOT) 통합:</strong> 2~25자 길이 제한, 공백 금지, 단독 자모음 초성 금지, 특수기호 금지, 동일 대상 중복 단어 금지 규칙을 초기 설정·단어 추가·단어 변경 전 과정에 100% 동일하게 적용했습니다.</li>
+                <li><strong>Node.js 런타임 보안 업데이트 검증 및 패치:</strong> 2026년 10월 보안 권고안에 따른 런타임 보안 점검 및 의존성 무결성 검증을 완료했습니다.</li>
+            </ul>
+        </article>
+
+        <!-- Patch: v1.3.5 -->
+        <article class="patch-card">
+            <div class="patch-top">
+                <div class="patch-ver">
+                    <span>v1.3.5</span>
                 </div>
                 <div class="patch-date">2026. 10. 08</div>
             </div>
@@ -273,6 +292,20 @@
                     <p>겨울철 김이 모락모락 피어나는 '노천 온천탕' 세트장, 레트로 감성의 '80년대 야외 풀장' 등 다양한 비주얼 테마 추가.</p>
                 </div>
             </div>
+        </section>
+
+        <!-- Engineering Deep Dive Section -->
+        <section class="patch-card" style="margin-top: 28px;">
+            <h2 style="font-size: 1.35rem; font-weight: 700; color: #fff; margin-bottom: 16px; display: flex; align-items: center; gap: 10px;">
+                <span>🛠️</span> 엔지니어링 노트: 실시간 웹 파티 게임의 품질 보증(QA) 프로토콜
+            </h2>
+            <p style="font-size: 0.95rem; color: var(--toss-text-sub); line-height: 1.8; margin-bottom: 14px;">
+                '위험한 초대' 개발팀은 단순한 기능 구현을 넘어, 6인의 플레이어가 모바일과 데스크톱 이기종 네트워크 환경에서 동시에 채팅과 아이템을 쏟아낼 때도 단 한 건의 상태 불일치(Desync)가 발생하지 않도록 엄격한 엔지니어링 검증 절차를 운영하고 있습니다.
+            </p>
+            <ul class="patch-list">
+                <li><strong>68개 시나리오 자동화 E2E & 카오스 시뮬레이션 검증:</strong> 방 생성부터 금기어 설정, 0ms 동시 다발 미사일 타격, 3종 동물 FIFO 큐 소진, 방장 강제 종료 및 권한 승계, 모바일 백그라운드 복귀까지 총 68개의 자동화된 멀티 소켓 통합 테스트 스위트를 통과해야만 프로덕션 서버에 배포됩니다.</li>
+                <li><strong>단일 상태 머신(PlayerState SSOT) 아키텍처:</strong> 플레이어의 8가지 물리·전투 상태(<code>idle</code>, <code>flying</code>, <code>swimming</code>, <code>walking</code>, <code>dead</code>, <code>dead-gator</code>, <code>snatched</code>, <code>dead-missile</code>)를 단일 상태 머신으로 관리하여, 기절 중 아이템 오작동이나 중복 비행 버그를 원천 차단합니다.</li>
+            </ul>
         </section>
 
     </main>

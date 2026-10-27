@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>아이템 도감 & 밸런스 분석 - 위험한 초대 (플라잉 체어)</title>
-    <meta name="description" content="'위험한 초대 - 실시간 플라잉 체어'의 8종 전략 특수 아이템(유도 미사일, 방패, 단어 변경/추가/삭제, 상어/악어/부산갈매기 소환)의 스펙, 발동 메커니즘, 쿨다운 및 카운터 상성 전략 완벽 가이드.">
+    <meta name="description" content="'위험한 초대 - 실시간 플라잉 체어'의 8종 전략 특수 아이템(유도 미사일, 방패, 단어 변경/추가/삭제, 상어/악어/부산갈매기 소환)의 스펙, 기절 시간 누적, 예약 타격 및 카운터 상성 전략 완벽 가이드.">
     <meta name="keywords" content="플라잉체어아이템, 위험한초대아이템, 웹게임아이템, 게임도감, 유도미사일, 방패, 금기어변경, 상어부르기, 악어부르기, 부산갈매기부르기, 게임공략">
     <meta name="robots" content="index, follow">
-    <link rel="canonical" href="https://www.flying-chair.com/guide/items">
+    <link rel="canonical" href="https://flying-chair.com/guide/items">
 
     <!-- Google AdSense Official Script -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4269446769353106" crossorigin="anonymous"></script>
@@ -16,10 +16,33 @@
     <meta property="og:type" content="article">
     <meta property="og:title" content="아이템 도감 & 밸런스 분석 - 위험한 초대">
     <meta property="og:description" content="전세를 단숨에 뒤집는 8가지 특수 아이템의 상세 스펙과 카운터 전략 완벽 분석.">
-    <meta property="og:url" content="https://www.flying-chair.com/guide/items">
+    <meta property="og:url" content="https://flying-chair.com/guide/items">
 
     <!-- Pretendard Font -->
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+
+    <!-- Schema.org Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": "전략 특수 아이템 8종 도감 & 밸런스 분석 - 위험한 초대",
+      "description": "유도 미사일, 이지스 방패, 금기어 조작권 및 3종 동물 소환 트랩의 상세 메커니즘과 상성 분석.",
+      "author": {
+        "@type": "Organization",
+        "name": "Flying Chair Team"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Flying Chair Online",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://flying-chair.com/favicon.ico"
+        }
+      },
+      "mainEntityOfPage": "https://flying-chair.com/guide/items"
+    }
+    </script>
 
     <style>
         :root {
@@ -106,9 +129,6 @@
         .matrix-section { background: var(--toss-card-bg); border: 1px solid var(--toss-border); border-radius: var(--radius-lg); padding: 32px 28px; margin-bottom: 28px; }
         .matrix-section h3 { font-size: 1.25rem; font-weight: 700; margin-bottom: 14px; color: #fff; }
 
-        /* Safe Ad Slot */
-        .adsense-slot { margin: 40px auto; max-width: 728px; min-height: 90px; background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.08); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; color: var(--toss-text-muted); font-size: 0.8rem; }
-
         /* Footer */
         .toss-footer { border-top: 1px solid var(--toss-border); padding: 40px 24px; background: #0f1013; text-align: center; }
         .footer-nav { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
@@ -168,7 +188,7 @@
             <h1 class="doc-title">전략 특수 아이템 8종 도감 & 밸런스 분석</h1>
             <p class="doc-desc">
                 아이템 모드 활성화 시 주기적으로 인벤토리에 보급되는 8가지 특수 아이템의 상세 스펙과 발동 조건,
-                그리고 상대를 카운터치기 위한 실전 밸런스 분석을 제공합니다.
+                기절 시간 누적 메커니즘, 그리고 상대를 카운터치기 위한 실전 밸런스 분석을 제공합니다.
             </p>
         </section>
 
@@ -185,17 +205,18 @@
                 </div>
             </div>
             <p style="color: var(--toss-text-sub); font-size: 0.95rem;">
-                원거리에서 특정 플레이어 1명을 직접 타깃팅하여 미사일을 투하합니다. 피격된 플레이어는 화면이 상하로 반전되며 30초 동안 완벽한 기절 상태에 빠져 모든 대화와 행동이 봉쇄됩니다.
+                원거리에서 특정 플레이어 1명을 직접 타깃팅하여 미사일을 투하합니다. 피격된 플레이어는 캐릭터가 의자 위에서 상하로 반전(180도 뒤집힘)되고 죽은 표정(`X_X`)이 되며 30초 동안 완벽한 기절 상태에 빠져 모든 대화와 행동이 봉쇄됩니다.
             </p>
             <table class="specs-table">
-                <tr><th>발동 방식</th><td>타깃 플레이어 선택 후 즉시 조준 발사 (자리에 착석 중인 대상만 조준 가능)</td></tr>
-                <tr><th>피격 효과</th><td>피격 대상 30초 확정 기절(Stun) 및 화면 반전 디버프</td></tr>
-                <tr><th>예약 메커니즘</th><td>발사 후 비행 중 대상이 의자에서 튕겨나간 경우, 착석 복귀 즉시 기절 예약 발동</td></tr>
-                <tr><th>카운터 아이템</th><td>이지스 방패(Shield)를 보유한 대상 공격 시 무효화</td></tr>
+                <tr><th>발동 방식</th><td>타깃 플레이어 선택 후 즉시 조준 발사 (의자에 착석 중이거나 이미 미사일 기절 중인 대상 조준 가능)</td></tr>
+                <tr><th>피격 효과</th><td>피격 대상 30초 확정 기절(`dead-missile`) 및 캐릭터 상하 반전 모션 전체 동기화</td></tr>
+                <tr><th>중첩 메커니즘</th><td>이미 미사일에 맞아 기절 중인 대상에게 연속 명중 시 기존 남은 기절 시간에 <strong>+30초 누적 연장</strong></td></tr>
+                <tr><th>예약 메커니즘</th><td>발사 후 미사일 비행 중 대상이 금기어를 말해 의자에서 날아간 경우, 수영 후 의자 착석 복귀 즉시 30초 기절 예약 발동</td></tr>
+                <tr><th>카운터 아이템</th><td>이지스 방패(Shield)를 보유한 대상 공격 시 방패 1개가 차감되며 기절 완전 무효화</td></tr>
             </table>
             <div class="strategy-block">
                 <h4>🎯 실전 운용 전략</h4>
-                <p>절대 금기어를 말하지 않고 노련하게 대화를 리드하는 1위 플레이어를 제압하거나, 침묵 타이머가 촉박한 플레이어를 기절시켜 AFK 자동 발사를 강제할 때 극상의 시너지를 발휘합니다.</p>
+                <p>절대 금기어를 말하지 않고 노련하게 대화를 리드하는 1위 플레이어를 제압하거나, 아군과 호흡을 맞춰 한 명에게 미사일 2발을 연속 명중시켜 60초 동안 완전히 대화를 봉쇄하는 집중 포화 전술에 핵심적으로 활용됩니다.</p>
             </div>
         </article>
 
@@ -212,16 +233,16 @@
                 </div>
             </div>
             <p style="color: var(--toss-text-sub); font-size: 0.95rem;">
-                인벤토리에 보유하는 것만으로 적의 유도 미사일 공격을 감지하여 100% 자동 요격하는 절대 방어구입니다. 1회 방어 성공 시 소모됩니다.
+                인벤토리에 보유하는 것만으로 적의 유도 미사일 공격이나 수중/상공 맹수(상어, 악어, 부산갈매기)의 습격을 감지하여 100% 자동 요격하는 절대 방어구입니다. 1회 방어 성공 시 즉시 인벤토리에서 1개가 자동 차감되며 모든 참가자 화면에 방패 방어 이펙트가 동기화됩니다.
             </p>
             <table class="specs-table">
-                <tr><th>발동 방식</th><td>미사일 공격 감지 시 자동 반응 (별도 조작 불필요)</td></tr>
-                <tr><th>방어 범위</th><td>적 유도 미사일 공격 1회 완전 요격 및 무효화</td></tr>
-                <tr><th>지속 시간</th><td>미사일에 피격되어 소모될 때까지 인벤토리에 영구 보존</td></tr>
+                <tr><th>발동 방식</th><td>미사일 피격 또는 상어·악어·갈매기 조우 시 서버 권위 판정으로 자동 발동 (별도 클릭 불필요)</td></tr>
+                <tr><th>방어 범위</th><td>유도 미사일 직격, 예약 기절, 상어 습격, 악어 기습, 부산갈매기 납치 1회 완전 무효화</td></tr>
+                <tr><th>지속 시간</th><td>위협을 방어하여 소모될 때까지 인벤토리에 영구 보존 (다중 보유 시 중첩 방어 가능)</td></tr>
             </table>
             <div class="strategy-block">
                 <h4>🛡️ 실전 운용 전략</h4>
-                <p>내가 상대방의 집중 타깃이 되었거나 공격적으로 질문을 유도하여 어그로를 끌 때 든든한 보험이 됩니다. 상대의 미사일 자원을 낭비시키는 심리적 압박 효과가 뛰어납니다.</p>
+                <p>내가 상대방의 집중 타깃이 되었거나 바다에 상어·악어가 득실거리는 위험 상황에서 과감하게 채팅 심리전을 주도할 수 있게 해주는 든든한 생명줄입니다.</p>
             </div>
         </article>
 
@@ -238,12 +259,12 @@
                 </div>
             </div>
             <p style="color: var(--toss-text-sub); font-size: 0.95rem;">
-                내가 특정 참가자에게 걸어두었던 기존 금기어를 완전히 새로운 단어로 실시간 교체합니다. 플레이어가 수영 중이거나 기절 중일 때도 전략적으로 교체할 수 있습니다.
+                내가 특정 참가자에게 걸어두었던 기존 금기어 1개를 완전히 새로운 단어로 실시간 교체합니다. 플레이어가 수영 중이거나 기절 중일 때도 전략적으로 교체할 수 있습니다.
             </p>
             <table class="specs-table">
-                <tr><th>발동 방식</th><td>타깃 지정 후 기존 단어 1개를 새 단어로 수정하여 제출</td></tr>
-                <tr><th>소모 조건</th><td>수정 성공 시 즉각 소모되며 타깃에게 실시간 적용</td></tr>
-                <tr><th>유효 상태</th><td>본인이 기절, 수영, 생존 상태 불문 상시 사용 가능</td></tr>
+                <tr><th>발동 방식</th><td>기존 부여 단어 목록 중 정확히 1개만 지우고 새 단어로 수정하여 제출</td></tr>
+                <tr><th>입력 제약 조건</th><td>WordValidator 적용: <strong>2~25자 이내, 띄어쓰기(공백)·초성(ㅋㅋ 등)·특수기호 금지, 동일 대상 중복 단어 금지</strong></td></tr>
+                <tr><th>유효 상태</th><td>본인이 기절, 수영, 착석 상태 불문 상시 사용 가능 (단어 슬롯당 15초 변경 쿨다운 적용)</td></tr>
             </table>
             <div class="strategy-block">
                 <h4>🔄 실전 운용 전략</h4>
@@ -268,11 +289,12 @@
             </p>
             <table class="specs-table">
                 <tr><th>발동 방식</th><td>본인을 제외한 모든 참가자에게 추가할 금기어를 각각 입력하여 일괄 제출</td></tr>
-                <tr><th>중첩 한도</th><td>플레이어당 최대 4개 이상의 금기어 중첩 누적 가능</td></tr>
+                <tr><th>입력 제약 조건</th><td>WordValidator 적용: <strong>2~25자 이내 완성형 문자, 공백·단독 자모음·특수기호·중복 단어 엄격 차단</strong></td></tr>
+                <tr><th>중첩 한도</th><td>플레이어당 제한 없이 금기어 중첩 누적 가능</td></tr>
             </table>
             <div class="strategy-block">
                 <h4>⚠️ 실전 운용 전략</h4>
-                <p>생존력이 극도로 뛰어난 유저에게 일상적인 감탄사나 조사('그리고', '근데', '나')를 추가로 걸어버리면 대화 자체가 봉쇄되어 자멸을 유도할 수 있습니다.</p>
+                <p>생존력이 뛰어난 유저에게 2글자 일상 접속사나 대명사('근데', '내가', '진짜', '오늘')를 추가로 걸어버리면 대화 선택지가 급격히 좁아져 자멸을 유도할 수 있습니다.</p>
             </div>
         </article>
 
@@ -292,12 +314,12 @@
                 나에게 걸려있는 다른 참가자들의 무수한 금기어 지뢰 중 무작위 1개를 즉시 영구 삭제합니다.
             </p>
             <table class="specs-table">
-                <tr><th>발동 방식</th><td>사용 즉시 자신에게 부여된 금기어 중 무작위 1개 정화 (남은 금기어가 없을 때는 소모되지 않음)</td></tr>
+                <tr><th>발동 방식</th><td>사용 즉시 자신에게 부여된 금기어 중 무작위 1개 정화 (남은 금기어가 0개일 때는 아이템이 소모되지 않음)</td></tr>
                 <tr><th>알림 여부</th><td>삭제권 사용 사실은 전체 시스템 메시지로 공지되나, 어떤 출제자의 어떤 단어가 삭제되었는지는 비공개 유지</td></tr>
             </table>
             <div class="strategy-block">
                 <h4>✨ 실전 운용 전략</h4>
-                <p>의심되는 금기어가 너무 많아 말을 꺼내기 두려운 후반전에서 생존율을 획기적으로 올려주는 최고의 역전 카드입니다.</p>
+                <p>상대방들이 금기어 추가권을 연달아 사용해 내 머리 위에 단어가 4~5개씩 쌓인 후반전에서 생존율을 획기적으로 올려주는 최고의 정화 카드입니다.</p>
             </div>
         </article>
 
@@ -314,14 +336,14 @@
                 </div>
             </div>
             <p style="color: var(--toss-text-sub); font-size: 0.95rem;">
-                바다에 굶주린 거대 상어를 소환하여 수면을 배회하게 합니다. 누군가가 금기어를 말하거나 침묵 페널티로 입수하는 순간 즉시 덮쳐 30초 동안 지속되는 치명적인 기절 상태(사망 디버프)에 빠뜨립니다.
+                바다에 굶주린 거대 상어를 소환하여 수면을 배회하게 합니다. 누군가가 금기어를 말하거나 침묵 페널티로 입수하는 순간 즉시 덮쳐 30초 동안 지속되는 치명적인 심해 기절 상태에 빠뜨립니다.
             </p>
             <table class="specs-table">
-                <tr><th>발동 방식</th><td>아이템 사용 즉시 바다 수면에 상어 지느러미 순찰 엔티티 소환</td></tr>
+                <tr><th>발동 방식</th><td>정상 착석(`idle`) 상태에서 사용 시 바다 수면에 상어 지느러미 순찰 엔티티 즉시 소환</td></tr>
                 <tr><th>매복 대기</th><td>누군가 입수할 때까지 수면에 영구 대기 (FIFO 선착순 1회성 소진)</td></tr>
-                <tr><th>적중 효과</th><td>다음 입수자 30초 기절(침수 디버프) 및 피 이펙트 발생</td></tr>
-                <tr><th>중복 방지</th><td>이미 상어가 수면에 대기 중일 때는 중복 소환 불가 (아이템 보존)</td></tr>
-                <tr><th>카운터 아이템</th><td>이지스 방패(Shield)를 보유한 대상 입수 시 방패가 깨지며 공격 무효화</td></tr>
+                <tr><th>적중 효과</th><td>다음 입수자 30초 심해 기절(`dead`) 및 붉은 물보라 이펙트 발생</td></tr>
+                <tr><th>중복 방지</th><td>이미 상어가 수면에 대기 중일 때는 중복 소환 불가 (아이템 소모 방지)</td></tr>
+                <tr><th>카운터 아이템</th><td>이지스 방패(Shield)를 보유한 대상 입수 시 방패가 차감되며 기절 무효화</td></tr>
             </table>
             <div class="strategy-block">
                 <h4>🦈 실전 운용 전략</h4>
@@ -342,12 +364,12 @@
                 </div>
             </div>
             <p style="color: var(--toss-text-sub); font-size: 0.95rem;">
-                수영장에 사나운 악어 떼를 소환하여 잠복 순찰하게 합니다. 다음 입수 후 수영 복귀 중인 플레이어를 악어가 기습하여 15초간 기절 상태로 만듭니다.
+                수영장에 사나운 악어 떼를 소환하여 잠복 순찰하게 합니다. 다음 입수 플레이어를 악어가 기습하여 15초간 기절 상태로 만듭니다.
             </p>
             <table class="specs-table">
-                <tr><th>발동 방식</th><td>아이템 사용 즉시 수영장 수면에 악어 머리 잠복 순찰 엔티티 소환</td></tr>
-                <tr><th>매복 대기</th><td>다음 입수 발생 시까지 대기 (FIFO 큐 방식으로 다중 동물 중복 공격 방지)</td></tr>
-                <tr><th>적중 효과</th><td>수영 복귀 중인 대상 15초 기절(부활 대기 및 채팅 불가) 및 격렬한 물보라 디버프</td></tr>
+                <tr><th>발동 방식</th><td>정상 착석(`idle`) 상태에서 사용 시 수영장 수면에 악어 잠복 엔티티 소환</td></tr>
+                <tr><th>매복 대기</th><td>다음 입수 발생 시까지 대기 (상어와 동시에 대기 중일 경우 먼저 소환된 동물부터 순차 발동)</td></tr>
+                <tr><th>적중 효과</th><td>입수 대상 15초 기절(`dead-gator`, 채팅 및 행동 불가)</td></tr>
                 <tr><th>중복 방지</th><td>이미 악어가 대기 중일 때는 추가 소환 차단 (자원 낭비 방지)</td></tr>
                 <tr><th>카운터 아이템</th><td>이지스 방패(Shield)로 1회 완전 방어 가능</td></tr>
             </table>
@@ -373,15 +395,15 @@
                 하늘 상공에 거대한 부산갈매기를 소환하여 선회 비행하게 합니다. 누군가가 날아오르는 순간 공중에서 낚아채어 1분(60초)간 공중 납치 및 채팅 금지 페널티를 안깁니다.
             </p>
             <table class="specs-table">
-                <tr><th>발동 방식</th><td>아이템 사용 즉시 하늘 상공에 날갯짓하며 선회하는 부산갈매기 소환</td></tr>
-                <tr><th>매복 대기</th><td>다음 발사(플라잉 체어) 이벤트 발생 시까지 대기</td></tr>
-                <tr><th>적중 효과</th><td>발사된 대상 공중 낚아채기(납치) 및 1분(60초)간 채팅 금지 & 행동 불능 디버프</td></tr>
+                <tr><th>발동 방식</th><td>정상 착석(`idle`) 상태에서 사용 시 하늘 상공에 선회하는 부산갈매기 소환</td></tr>
+                <tr><th>매복 대기</th><td>다음 발사(플라잉 체어) 이벤트 발생 시까지 상공 대기 (수중 동물보다 우선하여 공중에서 먼저 낚아챔)</td></tr>
+                <tr><th>적중 효과</th><td>발사된 대상 공중 납치(`snatched`) 및 60초간 채팅 금지 & 행동 불능 디버프</td></tr>
                 <tr><th>중복 방지</th><td>이미 부산갈매기가 비행 중일 때 중복 소환 차단</td></tr>
-                <tr><th>카운터 아이템</th><td>이지스 방패(Shield) 소지 시 방패 1회 차감으로 방어 성공</td></tr>
+                <tr><th>카운터 아이템</th><td>이지스 방패(Shield) 소지 시 방패 1개 차감으로 납치 방어 성공</td></tr>
             </table>
             <div class="strategy-block">
                 <h4>🦅 실전 운용 전략</h4>
-                <p>상어/악어가 바다에서 기다린다면 부산갈매기는 공중에서 즉시 낚아채 1분 동안 긴 시간 동안 채팅을 완전히 침묵시키므로, 상대방의 발언 기회를 극도로 제약하여 결정적인 승기를 잡을 수 있습니다.</p>
+                <p>상어/악어가 바다에서 기다린다면 부산갈매기는 공중에서 최우선으로 낚아채 60초라는 가장 긴 시간 동안 채팅을 완전히 침묵시키므로, 상대방의 발언 기회를 극도로 제약할 수 있습니다.</p>
             </div>
         </article>
 
@@ -393,22 +415,17 @@
                     <tr><th>아이템</th><th>유리한 상황</th><th>불리한/카운터 상황</th></tr>
                 </thead>
                 <tbody>
-                    <tr><td>🚀 유도 미사일</td><td>침묵 직전 유저, 입담 좋은 1위 독주자 제압</td><td>이지스 방패 보유자에게 차단당함</td></tr>
-                    <tr><td>🛡️ 이지스 방패</td><td>적의 표적 저격 방어 및 어그로 핑퐁, 맹수 공격 방어</td><td>금기어 추가/변경 등 간접 공격에는 무력</td></tr>
-                    <tr><td>🔀 금기어 변경권</td><td>상대가 내 단어 패턴을 완전히 읽었을 때</td><td>대상의 새로운 말버릇을 모르면 낭비됨</td></tr>
-                    <tr><td>➕ 금기어 추가권</td><td>생존자가 적은 후반부 1:1 진흙탕 싸움</td><td>단어 삭제권에 의해 허무하게 지워질 수 있음</td></tr>
-                    <tr><td>➖ 금기어 삭제권</td><td>다수의 참가자가 나에게 집중 포화를 퍼부을 때</td><td>남은 금기어가 1개뿐일 때의 타이밍 계산 필요</td></tr>
-                    <tr><td>🦈 상어부르기</td><td>침묵 임박자·금기어 노출자 입수 제압 (30초 기절)</td><td>이지스 방패로 방어 가능, 타깃 미지정(누구든 첫 입수자 대상)</td></tr>
-                    <tr><td>🐊 악어부르기</td><td>난전 상황 속 수영 복귀 지연 및 15초 기절 디버프</td><td>이지스 방패로 방어 가능, 본인이 실수로 입수할 위험</td></tr>
-                    <tr><td>🦅 부산갈매기부르기</td><td>의자 발사 순간 공중 낚아채기 및 1분간 채팅 전면 금지</td><td>이지스 방패로 방어 가능, 동물 중복 소환 차단</td></tr>
+                    <tr><td>🚀 유도 미사일</td><td>독주자 제압, 연속 발사로 기절 시간(+30초) 중첩 누적</td><td>이지스 방패 보유자에게 차단당함</td></tr>
+                    <tr><td>🛡️ 이지스 방패</td><td>적의 미사일 직격/예약 타격 및 3종 맹수 습격 자동 방어</td><td>금기어 추가/변경 등 간접 공격에는 반응하지 않음</td></tr>
+                    <tr><td>🔀 금기어 변경권</td><td>상대가 내 단어 패턴을 완전히 읽었을 때 기습 교체</td><td>동일 슬롯 15초 쿨다운 및 WordValidator 제약 준수 필요</td></tr>
+                    <tr><td>➕ 금기어 추가권</td><td>생존자들의 어휘 선택지를 좁히는 광역 지뢰 매설</td><td>금기어 삭제권에 의해 정화될 수 있음</td></tr>
+                    <tr><td>➖ 금기어 삭제권</td><td>다수의 참가자가 나에게 금기어를 중첩시켰을 때 즉시 정화</td><td>나에게 남은 금기어가 0개일 때는 사용 불가</td></tr>
+                    <tr><td>🦈 상어부르기</td><td>침묵 임박자·금기어 노출자 입수 제압 (30초 심해 기절)</td><td>이지스 방패로 방어 가능, 본인이 입수해도 물릴 수 있음</td></tr>
+                    <tr><td>🐊 악어부르기</td><td>난전 상황 속 입수자 15초 수영장 기절 디버프</td><td>이지스 방패로 방어 가능, 피아 구분 없는 무차별 트랩</td></tr>
+                    <tr><td>🦅 부산갈매기부르기</td><td>의자 발사 순간 공중 최우선 낚아채기 및 60초간 채팅 봉쇄</td><td>이지스 방패로 방어 가능, 중복 소환 불가</td></tr>
                 </tbody>
             </table>
         </article>
-
-        <!-- Safe Ad Slot -->
-        <div class="adsense-slot">
-            <span>광고 안전 영역 (AdSense Safe Zone)</span>
-        </div>
     </main>
 
     <!-- Footer -->

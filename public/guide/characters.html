@@ -7,13 +7,13 @@
     <meta name="description" content="플라잉 체어 온라인 캐릭터 4종(스탠다드, 개구리, 로봇, 닌자) 도감과 HTML5 Canvas 2D 물리 엔진의 포물선 발사 궤적, 수면 충돌 파티클, 60fps 렌더링 최적화 기술 가이드.">
     <meta name="keywords" content="플라잉체어캐릭터, 웹게임물리엔진, 캔버스물리시뮬레이션, 위험한초대캐릭터, 포물선운동웹게임, 파티클이펙트, 2D게임엔진">
     <meta name="robots" content="index, follow">
-    <link rel="canonical" href="https://www.flying-chair.com/guide/characters">
+    <link rel="canonical" href="https://flying-chair.com/guide/characters">
 
     <!-- Open Graph -->
     <meta property="og:type" content="article">
     <meta property="og:title" content="캐릭터 도감 & 수영장 입수 물리 엔진 시뮬레이션 - 위험한 초대">
-    <meta property="og:description" content="개성 만점 4인 캐릭터 프로필과 브라우저 위에서 구현된 실시간 물리 엔진의 놀라운 원리.">
-    <meta property="og:url" content="https://www.flying-chair.com/guide/characters">
+    <meta property="og:description" content="개성 만점 캐릭터 프로필과 브라우저 위에서 구현된 실시간 물리 엔진의 놀라운 원리.">
+    <meta property="og:url" content="https://flying-chair.com/guide/characters">
 
     <!-- Google AdSense Official Script -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4269446769353106" crossorigin="anonymous"></script>
@@ -37,10 +37,10 @@
         "name": "Flying Chair Online",
         "logo": {
           "@type": "ImageObject",
-          "url": "https://www.flying-chair.com/favicon.ico"
+          "url": "https://flying-chair.com/favicon.ico"
         }
       },
-      "mainEntityOfPage": "https://www.flying-chair.com/guide/characters"
+      "mainEntityOfPage": "https://flying-chair.com/guide/characters"
     }
     </script>
 
@@ -253,6 +253,34 @@
                 <strong>1. RequestAnimationFrame 동기화:</strong> 타이머(setInterval) 기반의 불규칙한 호출을 배제하고 디스플레이 주사율과 1:1로 일치하는 네이티브 렌더 루프를 사용합니다.<br>
                 <strong>2. 파티클 풀링(Object Pooling):</strong> 가비지 컬렉터(GC) 부하를 방지하기 위해 입수 때마다 새 객체를 메모리에 할당하지 않고 사전 생성된 파티클 배열을 재사용합니다.<br>
                 <strong>3. 뷰포트 상대 해상도(DPR) 보정:</strong> 레티나 디스플레이에서도 글자와 캐릭터가 선명하게 보이도록 디바이스 픽셀 비율(Device Pixel Ratio)을 동적으로 감지하여 캔버스 크기를 스케일링합니다.
+            </p>
+        </section>
+
+        <!-- Section 5: 8-State Character Animation State Machine -->
+        <section class="doc-section">
+            <h2><span>🔄</span> 캐릭터 8단계 상태 머신(PlayerState SSOT)과 피격 연출</h2>
+            <p>
+                각 캐릭터는 단순한 정지 이미지가 아니라, 게임 내 물리·전투 이벤트에 따라 실시간으로 표정과 자세가 변화하는 <strong>8단계 유한 상태 머신(Finite State Machine)</strong>으로 구동됩니다:
+            </p>
+            <ul style="list-style: none; display: flex; flex-direction: column; gap: 12px; margin-top: 12px;">
+                <li style="color: var(--toss-text-sub); font-size: 0.95rem;">• <strong>정상 착석 (<code>idle</code>):</strong> 데크 위 플라잉 체어에 단정하게 앉아 눈을 깜빡이며 말풍선을 띄우는 기본 상태입니다. 인벤토리의 모든 액티브 아이템을 사용할 수 있습니다.</li>
+                <li style="color: var(--toss-text-sub); font-size: 0.95rem;">• <strong>포물선 비행 (<code>flying</code>):</strong> 금기어 발화 또는 침묵 페널티 발동 시 의자 등받이가 뒤로 젖혀지며 캐릭터가 놀란 표정(<code>O_O</code>)으로 공중 궤적을 그리며 날아갑니다.</li>
+                <li style="color: var(--toss-text-sub); font-size: 0.95rem;">• <strong>수영 및 복귀 보행 (<code>swimming</code> / <code>walking</code>):</strong> 수면에 착수해 물장구를 치며 헤엄친 뒤, 데크 계단을 올라와 본인의 의자로 걸어 복귀합니다. 이 동안에는 금기어 판정으로부터 보호받습니다.</li>
+                <li style="color: var(--toss-text-sub); font-size: 0.95rem;">• <strong>유도 미사일 피격 반전 (<code>dead-missile</code>):</strong> 적의 유도 미사일에 명중당하면 폭발 이펙트와 함께 캐릭터가 의자 위에서 <strong>180도 상하 반전(거꾸로 매달림)</strong>되며 두 눈이 <code>X_X</code>(죽은 표정)로 변합니다. 이 모습은 방 안의 모든 플레이어 화면에 100% 동일하게 동기화되며, 연속 피격 시 기절 시간이 30초씩 누적됩니다.</li>
+                <li style="color: var(--toss-text-sub); font-size: 0.95rem;">• <strong>맹수 포획 기절 (<code>dead</code> / <code>dead-gator</code> / <code>snatched</code>):</strong> 상어에게 물려 심해로 가라앉거나(30초), 악어에게 물려 수면에서 허우적대거나(15초), 부산갈매기 발톱에 붙잡혀 하늘 밖으로 납치되는(60초) 특수 애니메이션이 재생됩니다.</li>
+            </ul>
+        </section>
+
+        <!-- Section 6: Web Audio Synthesis -->
+        <section class="doc-section">
+            <h2><span>🔊</span> 무설치 Web Audio API 절차적 사운드 합성 엔진</h2>
+            <p>
+                외부 MP3 파일 로딩으로 인한 네트워크 지연을 없애기 위해, 플라잉 체어 온라인은 브라우저 내장 <strong>Web Audio API 오실레이터(Oscillator)와 노이즈 버퍼</strong>를 실시간으로 합성하여 효과음을 생성합니다.
+                의자가 튕겨 나가는 경쾌한 스프링 음, 수면에 부딪히는 화이트 노이즈 물보라 소리, 유도 미사일의 낙하 휘슬음, 침묵 타이머 5초 전의 긴박한 비프음까지 모두 코드로 실시간 합성되어 0ms의 즉각적인 타격감을 전달합니다.
+            </p>
+            <h3>사운드 파형별 물리적 주파수 설계 명세</h3>
+            <p>
+                각 이벤트 사운드는 직관적인 청각 피드백을 위해 서로 다른 주파수 대역과 파형(Waveform)으로 조율되어 있습니다. 플라잉 체어 발사음은 180Hz에서 880Hz로 급격히 상승하는 톱니파(Sawtooth) 주파수 스윕을 통해 공압 실린더의 폭발적인 도약감을 표현하며, 수면 입수음은 밴드패스 필터(Bandpass Filter)를 통과한 화이트 노이즈 버스트로 시원한 물보라 질감을 재현합니다. 반면 유도 미사일 피격음은 저음역 삼각파(Triangle)와 디스토션 엔벨로프를 결합해 묵직한 타격감을 주며, 이지스 방패 요격 시에는 맑은 고음역 사인파(Sine) 화음이 울려 퍼져 시각을 보지 않고 소리만으로도 전황을 즉각 파악할 수 있습니다. 모바일 브라우저의 오디오 자동 재생 정책(Autoplay Policy)에 대응하기 위해 사용자의 첫 터치 이벤트 시점에 AudioContext를 자동으로 잠금 해제하여 모든 기기에서 끊김 없는 사운드를 보장합니다.
             </p>
         </section>
 

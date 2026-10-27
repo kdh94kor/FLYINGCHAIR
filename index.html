@@ -10,11 +10,11 @@
     <meta name="robots" content="index, follow">
 
     <!-- Open Graph / SNS -->
-    <link rel="canonical" href="https://www.flying-chair.com/">
+    <link rel="canonical" href="https://flying-chair.com/">
     <meta property="og:type" content="website">
     <meta property="og:title" content="위험한 초대 - 실시간 플라잉 체어 웹 파티게임">
     <meta property="og:description" content="말하는 순간 수영장으로 날아간다! 친구들을 물속으로 날려버리고 골탕먹이는 실시간 플라잉 체어 배틀.">
-    <meta property="og:url" content="https://www.flying-chair.com/">
+    <meta property="og:url" content="https://flying-chair.com/">
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:title" content="위험한 초대 - 실시간 플라잉 체어">
     <meta property="twitter:description" content="친구들을 수영장으로 날려버리고 마음껏 골탕먹이는 실시간 웹 파티 게임. 지금 무료로 즐겨보세요!">
@@ -30,14 +30,14 @@
         {
           "@type": "WebSite",
           "name": "위험한 초대 - 실시간 플라잉 체어",
-          "url": "https://www.flying-chair.com/",
+          "url": "https://flying-chair.com/",
           "description": "2000년대 전설의 예능 플라잉 체어를 웹 브라우저에서 즐기는 실시간 멀티플레이 파티 게임",
           "inLanguage": "ko-KR"
         },
         {
           "@type": "VideoGame",
           "name": "위험한 초대 (Flying Chair Online)",
-          "url": "https://www.flying-chair.com/",
+          "url": "https://flying-chair.com/",
           "description": "상대방의 금기어를 유도해 수영장으로 날려버리고 친구들을 골탕먹이는 실시간 멀티플레이 웹 파티 게임",
           "genre": ["Party Game", "Psychological Survival", "Multiplayer", "Casual"],
           "gamePlatform": ["Web Browser", "Mobile Browser", "PC", "Tablet"],
@@ -804,34 +804,64 @@
             color: #589bff;
         }
 
-        /* AdSense Safe Slot Styles */
-        .adsense-slot {
-            width: 100%;
-            margin: 16px 0 24px;
-            background: rgba(20, 21, 26, 0.6);
-            border: 1px dashed rgba(255, 255, 255, 0.12);
-            border-radius: var(--toss-radius-md);
-            overflow: hidden;
+        /* Lobby Global Navigation Bar (visible only in state-lobby) */
+        .toss-gnb {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 64px;
+            z-index: 1000;
+            background: rgba(20, 21, 26, 0.92);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-bottom: 1px solid var(--toss-card-border);
+            padding: 0 24px;
             display: flex;
-            flex-direction: column;
             align-items: center;
-            justify-content: center;
-            min-height: 100px;
-            padding: 12px;
-            box-sizing: border-box;
-            transition: border-color 0.2s;
+            justify-content: space-between;
+            gap: 16px;
         }
-        .adsense-slot .ad-notice {
-            font-size: 0.75rem;
-            color: var(--toss-text-muted);
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
+        .gnb-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 800;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
-        .adsense-modal-slot {
-            margin: 16px 0;
-            min-height: 90px;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px dashed rgba(255, 255, 255, 0.15);
+        .gnb-nav {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            list-style: none;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+        .gnb-nav::-webkit-scrollbar { display: none; }
+        .gnb-link {
+            color: var(--toss-text-sub);
+            text-decoration: none;
+            font-size: 0.86rem;
+            font-weight: 600;
+            padding: 6px 10px;
+            border-radius: var(--toss-radius-sm);
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+        .gnb-link:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.06);
+        }
+        body:not(.state-lobby) .toss-gnb {
+            display: none !important;
+        }
+        body:not(.state-lobby) {
+            padding-top: 0;
         }
 
         /* Policy Footer */
@@ -872,6 +902,7 @@
         /* Mobile Responsive Styles */
         @media (max-width: 768px) {
             body { flex-direction: column; padding-top: env(safe-area-inset-top); }
+            .toss-gnb { padding: 0 14px; height: 56px; }
             .sidebar { width: 100% !important; min-width: 100% !important; }
             
             body.state-lobby {
@@ -880,6 +911,7 @@
                 min-height: 100% !important;
                 min-height: 100dvh !important;
                 display: block !important;
+                padding-top: 56px !important;
             }
             body.state-lobby .sidebar {
                 height: auto !important;
@@ -1104,6 +1136,27 @@
 </head>
 <body class="state-lobby">
 
+    <!-- Top Global Navigation Bar (Lobby Only) -->
+    <header class="toss-gnb" aria-label="사이트 주요 메뉴">
+        <a href="/" class="gnb-brand">
+            <span>🪑</span>
+            <span>위험한 초대</span>
+        </a>
+        <nav aria-label="가이드 및 정보 탐색">
+            <ul class="gnb-nav">
+                <li><a href="/guide/rules" class="gnb-link">규칙 매뉴얼</a></li>
+                <li><a href="/guide/items" class="gnb-link">아이템 도감</a></li>
+                <li><a href="/guide/strategy" class="gnb-link">심리전 공략</a></li>
+                <li><a href="/words" class="gnb-link">금기어 100선</a></li>
+                <li><a href="/history" class="gnb-link">예능 역사</a></li>
+                <li><a href="/guide/party" class="gnb-link">파티 매뉴얼</a></li>
+                <li><a href="/guide/characters" class="gnb-link">캐릭터/물리</a></li>
+                <li><a href="/updates" class="gnb-link">패치노트</a></li>
+                <li><a href="/faq" class="gnb-link">FAQ</a></li>
+                <li><a href="/about" class="gnb-link">서비스 소개</a></li>
+            </ul>
+        </nav>
+    </header>
 
     <!-- Sidebar -->
     <aside class="sidebar">
@@ -1331,7 +1384,7 @@
                         <span class="card-tag">정기 업데이트</span>
                     </div>
                     <h4>개발자 노트 & 패치노트 아카이브</h4>
-                    <p>v1.0.0부터 최신 v1.3.5까지의 정기 업데이트 내역, 밸런스 패치 일지 및 향후 로드맵</p>
+                    <p>v1.0.0부터 최신 v1.4.0까지의 정기 업데이트 내역, 모바일 백그라운드 재접속 및 전투 동기화 패치 일지</p>
                     <span class="card-action">자세히 보기 &rarr;</span>
                 </a>
 
@@ -1341,7 +1394,7 @@
                         <span class="card-tag">FAQ</span>
                     </div>
                     <h4>자주 묻는 질문 (FAQ)</h4>
-                    <p>디스코드 연동, 모바일 지원 환경, 봇 시뮬레이션, 세션 복구 등 8가지 핵심 Q&A</p>
+                    <p>디스코드 연동, 모바일 앱 전환 재접속, 금기어 설정 제약, 아이템 중첩 판정 등 15가지 핵심 Q&A</p>
                     <span class="card-action">자세히 보기 &rarr;</span>
                 </a>
 
@@ -1357,12 +1410,12 @@
             </div>
 
             <!-- SEO & Crawler Content Section -->
-            <article class="lobby-seo-content" style="margin-top:40px; background:var(--toss-card-bg); border:1px solid var(--toss-border); border-radius:var(--radius-lg); padding:32px 26px; color:var(--toss-text-sub); font-size:0.94rem; line-height:1.8;">
+            <article class="lobby-seo-content" style="margin-top:40px; background:var(--toss-card-bg); border:1px solid var(--toss-card-border); border-radius:var(--toss-radius-lg); padding:32px 26px; color:var(--toss-text-sub); font-size:0.94rem; line-height:1.8;">
                 <h2 style="font-size:1.35rem; font-weight:800; color:var(--toss-text-main); margin-bottom:14px; display:flex; align-items:center; gap:10px;">
-                    <span>🌊</span> 위험한 초대 (Flying Chair Online) 공식 서비스 가이드
+                    <span>🌊</span> 위험한 초대 (Flying Chair Online) 공식 서비스 종합 가이드
                 </h2>
                 <p style="margin-bottom:18px;">
-                    <strong>'위험한 초대 - 실시간 플라잉 체어'</strong>는 2000년대 대한민국 방송가를 뜨겁게 달구었던 전설의 예능 코너 '위험한 초대'를 웹 브라우저 환경에서 별도의 설치나 회원가입 없이 누구나 무료로 즐길 수 있도록 제작된 <strong>실시간 멀티플레이어 심리 서바이벌 웹 파티 게임</strong>입니다. 친구들과의 모임, 디스코드 음성 채팅, 대학 MT, 동아리 활동, 사내 워크샵 및 아이스브레이킹 자리에서 링크 하나로 즉시 방송 세트장의 주인공이 되어보세요.
+                    <strong>'위험한 초대 - 실시간 플라잉 체어'</strong>는 2000년대 대한민국 방송가를 뜨겁게 달구었던 전설의 예능 코너 '위험한 초대'를 웹 브라우저 환경에서 별도의 설치나 회원가입 없이 누구나 무료로 즐길 수 있도록 제작된 <strong>실시간 멀티플레이어 심리 서바이벌 웹 파티 게임</strong>입니다. 친구들과의 온라인 모임, 디스코드(Discord) 음성 채널, 대학 MT, 동아리 레크리에이션, 사내 워크샵 및 아이스브레이킹 자리에서 초대 링크 하나로 즉시 방송 세트장의 주인공이 되어보세요.
                 </p>
 
                 <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:16px; margin:24px 0;">
@@ -1372,11 +1425,11 @@
                     </div>
                     <div style="background:rgba(255,255,255,0.03); padding:18px; border-radius:14px; border:1px solid rgba(255,255,255,0.06);">
                         <h3 style="font-size:1.05rem; font-weight:700; color:var(--toss-blue); margin-bottom:8px;">⚡ 8종 전략 특수 아이템</h3>
-                        <p style="font-size:0.88rem; line-height:1.6;">유도 미사일, 이지스 방패, 금기어 변경/추가/삭제, 죠스 상어/늪지대 악어/부산갈매기 소환 등 전세를 단숨에 뒤집는 다채로운 전략 아이템으로 짜릿한 역전승을 거두세요.</p>
+                        <p style="font-size:0.88rem; line-height:1.6;">유도 미사일(30초 기절 및 시간 중첩), 이지스 방패, 금기어 변경/추가/삭제, 죠스 상어/늪지대 악어/부산갈매기 소환 등 전세를 단숨에 뒤집는 전략 아이템으로 짜릿한 역전승을 거두세요.</p>
                     </div>
                     <div style="background:rgba(255,255,255,0.03); padding:18px; border-radius:14px; border:1px solid rgba(255,255,255,0.06);">
-                        <h3 style="font-size:1.05rem; font-weight:700; color:var(--toss-blue); margin-bottom:8px;">🤖 스마트 AI 봇 & 커스텀 옵션</h3>
-                        <p style="font-size:0.88rem; line-height:1.6;">혼자서도 룰을 완벽히 연습할 수 있는 AI 봇 시뮬레이션 모드를 지원하며, 방장은 침묵 방지(AFK) 타이머, 단어 개수, 아이템 활성화 여부를 자유롭게 커스텀할 수 있습니다.</p>
+                        <h3 style="font-size:1.05rem; font-weight:700; color:var(--toss-blue); margin-bottom:8px;">📱 모바일 앱 전환 완벽 복구</h3>
+                        <p style="font-size:0.88rem; line-height:1.6;">스마트폰으로 플레이 중 카카오톡이나 디스코드를 잠시 확인하고 돌아와도 최대 60초의 재접속 유예 시간과 좀비 소켓 자동 감지 엔진으로 끊김 없이 즉시 게임에 복귀합니다.</p>
                     </div>
                     <div style="background:rgba(255,255,255,0.03); padding:18px; border-radius:14px; border:1px solid rgba(255,255,255,0.06);">
                         <h3 style="font-size:1.05rem; font-weight:700; color:var(--toss-blue); margin-bottom:8px;">📐 Canvas 2D 뉴턴 물리 엔진</h3>
@@ -1384,21 +1437,33 @@
                     </div>
                 </div>
 
-                <h3 style="font-size:1.15rem; font-weight:700; color:#fff; margin:24px 0 10px;">🌟 승리를 위한 고수들의 3대 심리 대화 팁</h3>
+                <h3 style="font-size:1.15rem; font-weight:700; color:#fff; margin:24px 0 10px;">📋 게임 진행 4단계 및 공정한 판정 시스템</h3>
                 <p style="margin-bottom:12px;">
-                    플라잉 체어의 진정한 묘미는 심리전입니다. 무작정 질문을 퍼붓기보다 상대방의 성향과 말버릇을 공략해야 합니다:
+                    플라잉 체어 온라인은 처음 접속한 유저도 30초 만에 규칙을 이해하고 바로 심리전에 몰입할 수 있도록 직관적인 4단계 진행 구조를 갖추고 있습니다:
                 </p>
-                <ul style="list-style:none; display:flex; flex-direction:column; gap:8px; margin-bottom:20px; padding-left:4px;">
-                    <li>• <strong>앵무새 유도법:</strong> 내가 먼저 의심 단어를 자연스럽게 던져 상대방이 반사적으로 따라 말하게 유도하세요.</li>
-                    <li>• <strong>억울함 자극하기:</strong> 상대방을 장난스럽게 오해하거나 억울한 상황으로 몰아가면 "아니!"라는 한국인 대표 습관어가 1초 만에 튀어나옵니다.</li>
-                    <li>• <strong>침묵 타이머 압박:</strong> 카운트다운 경고음이 울릴 때 쉬운 질문을 툭 던지면 패닉에 빠진 상대는 방어를 포기하고 자폭하게 됩니다.</li>
+                <ul style="list-style:none; display:flex; flex-direction:column; gap:10px; margin-bottom:20px; padding-left:4px;">
+                    <li>• <strong>1단계 (대기실 & 맞춤 룰셋 구성):</strong> 방장은 참가자당 금기어 개수(1~3개), 침묵 방지(AFK) 자동 발사 타이머(최소 30초 이상), 특수 아이템 보급 주기를 모임 성격에 맞게 자유롭게 설정할 수 있습니다. 4자리 숫자 방 코드 또는 초대 링크 복사로 친구들을 간편하게 초대하세요.</li>
+                    <li>• <strong>2단계 (비밀 금기어 교차 등록):</strong> 게임이 시작되면 본인을 제외한 다른 참가자들에게 부여할 금기어를 직접 입력합니다. 공정한 게임 밸런스를 위해 <strong>2글자 이상 25글자 이하의 완성형 단어</strong>만 허용되며, 띄어쓰기(공백), 단독 자음/모음 초성(예: ㅋㅋ, ㅎㅎ), 특수기호 및 동일 대상 중복 단어는 단일 검증 엔진(WordValidator)에 의해 자동으로 차단됩니다.</li>
+                    <li>• <strong>3단계 (실시간 채팅 & 부분 문자열 격발 판정):</strong> 상단 전광판에는 다른 모든 참가자의 금기어가 투명하게 공개되지만, 정작 <strong>내 머리 위에 걸린 금기어는 나에게만 `?`로 가려져 보이지 않습니다.</strong> 채팅 메시지에 내 금기어가 부분 문자열(Substring)로 포함되는 순간(예: 금기어가 '치킨'일 때 '양념치킨 먹고 싶다' 입력), 서버가 0.05초 내에 감지하여 의자를 수영장으로 발사합니다.</li>
+                    <li>• <strong>4단계 (특수 아이템 공방 & 결과 리포트):</strong> 보급 주기에 따라 지급되는 8종의 아이템으로 상대를 기절시키거나 내 금기어를 정화할 수 있습니다. 라운드 종료 시 총 비행 횟수, 상어/악어/갈매기 조우 횟수, 미사일 피격 횟수 및 금기어별 발동 통계를 한눈에 확인할 수 있습니다.</li>
                 </ul>
 
-                <p style="font-size:0.9rem; color:var(--toss-text-muted); border-top:1px solid var(--toss-border); padding-top:16px;">
-                    더 깊이 있는 정보가 필요하신가요?
+                <h3 style="font-size:1.15rem; font-weight:700; color:#fff; margin:24px 0 10px;">🌟 승리를 위한 고수들의 4대 심리 대화 & 아이템 전술</h3>
+                <p style="margin-bottom:12px;">
+                    플라잉 체어의 진정한 묘미는 고도의 대화 심리전과 아이템 타이밍의 결합입니다. 무작정 질문을 퍼붓기보다 상대방의 성향과 말버릇을 정밀하게 공략해 보세요:
+                </p>
+                <ul style="list-style:none; display:flex; flex-direction:column; gap:10px; margin-bottom:20px; padding-left:4px;">
+                    <li>• <strong>앵무새 미러링 유도법:</strong> 사람은 대화 중 상대방이 사용한 어휘를 무의식적으로 따라 쓰는 경향이 있습니다. 타깃의 금기어를 내 문장에 자연스럽게 섞어 질문하면 상대방이 반사적으로 같은 단어를 입력하며 입수하게 됩니다.</li>
+                    <li>• <strong>억울함 자극과 리액션 함정:</strong> 상대방을 장난스럽게 오해하거나 황당한 누명을 씌우면 한국인이 가장 참기 힘든 방어 기제 단어인 "아니", "진짜", "왜", "내가 언제"가 1초 만에 튀어나옵니다.</li>
+                    <li>• <strong>침묵 타이머 카운트다운 압박:</strong> 침묵(AFK) 발사 타이머 종료 5초 전 경고음이 울릴 때 대답하기 쉬운 이지선다 질문을 던지세요. 시간 압박에 몰린 상대는 단어 검열을 포기하고 급하게 답하다가 함정에 걸려듭니다.</li>
+                    <li>• <strong>유도 미사일 중첩과 공중 예약 타격:</strong> 유도 미사일은 이미 미사일에 맞아 기절 중인 상대에게 연속 발사하여 기절 시간을 누적(+30초)시킬 수 있으며, 금기어 발동으로 날아가는 상대에게 명중할 경우 의자로 복귀하는 즉시 30초 기절이 발동되는 정교한 전투 판정을 지원합니다.</li>
+                </ul>
+
+                <p style="font-size:0.9rem; color:var(--toss-text-muted); border-top:1px solid var(--toss-card-border); padding-top:16px;">
+                    더 깊이 있는 전략과 기술 아카이브가 궁금하신가요?
                     <a href="/guide/rules" style="color:var(--toss-blue); font-weight:600;">게임 규칙 매뉴얼</a>,
-                    <a href="/guide/items" style="color:var(--toss-blue); font-weight:600;">아이템 도감</a>,
-                    <a href="/guide/strategy" style="color:var(--toss-blue); font-weight:600;">심리전 공략</a>,
+                    <a href="/guide/items" style="color:var(--toss-blue); font-weight:600;">8종 아이템 도감</a>,
+                    <a href="/guide/strategy" style="color:var(--toss-blue); font-weight:600;">심리전 공략집</a>,
                     <a href="/words" style="color:var(--toss-blue); font-weight:600;">금기어 백과 100선</a>,
                     <a href="/history" style="color:var(--toss-blue); font-weight:600;">예능의 역사</a>,
                     <a href="/guide/party" style="color:var(--toss-blue); font-weight:600;">파티 진행 가이드</a>,
@@ -1406,11 +1471,6 @@
                     <a href="/updates" style="color:var(--toss-blue); font-weight:600;">패치노트</a>에서 확인하실 수 있습니다.
                 </p>
             </article>
-
-            <!-- 4. Google AdSense Safe Slot (Lobby Bottom) -->
-            <div class="adsense-slot" id="lobby-ad-slot">
-                <span class="ad-notice">광고 영역 (AdSense Safe Zone)</span>
-            </div>
 
             <!-- 5. Unified Toss Footer -->
             <footer class="toss-policy-footer">
@@ -1544,11 +1604,6 @@
                     <h4 style="margin-bottom:5px; color:#aaa;">발동된 금기어 횟수</h4>
                     <div id="stats-word-counts" style="font-size:0.9rem; color:#bbb;"></div>
                 </div>
-            </div>
-            
-            <!-- Game Over AdSense Safe Slot -->
-            <div class="adsense-slot adsense-modal-slot" id="gameover-ad-slot">
-                <span class="ad-notice">광고 영역 (AdSense Safe Zone)</span>
             </div>
 
             <button class="btn btn-secondary" onclick="leaveRoom()" style="width:100%;">방 나가기</button>
