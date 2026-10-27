@@ -169,6 +169,16 @@ async function initDbSync() {
 initDbSync();
 
 // ── 6. 단어 등록 및 집계 API ──────────────────────────────────────────────────
+function isValidTabooWord(raw) {
+  if (typeof raw !== 'string') return false;
+  const w = raw.trim();
+  if (w.length < 2 || w.length > 25) return false;
+  if (/\s/.test(w)) return false;
+  if (/[ㄱ-ㅎㅏ-ㅣ]/.test(w)) return false;
+  if (/[?~!@#$%^&*()+=\[\]{};:'",.<>\/\\|]/.test(w)) return false;
+  return true;
+}
+
 function recordWords(wordList) {
   if (!Array.isArray(wordList) || wordList.length === 0) return;
   let updated = false;
@@ -176,7 +186,7 @@ function recordWords(wordList) {
   for (const item of wordList) {
     if (typeof item !== 'string') continue;
     const clean = item.trim();
-    if (clean.length >= 1 && clean.length <= 30) {
+    if (isValidTabooWord(clean)) {
       wordCounts[clean] = (wordCounts[clean] || 0) + 1;
       pendingDeltas[clean] = (pendingDeltas[clean] || 0) + 1;
       updated = true;

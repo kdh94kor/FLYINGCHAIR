@@ -497,7 +497,8 @@
         /* Modals */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(3px); }
         .modal { background: var(--bg-panel); padding: 30px; border-radius: 12px; width: 400px; max-width: 90%; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #444; }
-        .modal h2 { text-align: center; border-bottom: 2px solid #444; padding-bottom: 15px; margin-bottom: 20px; color: var(--accent); flex-shrink: 0; }
+        .modal-content { background: var(--bg-panel); padding: 30px; border-radius: 12px; width: 400px; max-width: 90%; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #444; }
+        .modal h2, .modal-content h2 { text-align: center; border-bottom: 2px solid #444; padding-bottom: 15px; margin-bottom: 20px; color: var(--accent); flex-shrink: 0; }
         .modal > p, .modal > hr { flex-shrink: 0; }
         .modal > div[id$="-list"] { overflow-y: auto; overflow-x: hidden; flex: 1; max-height: 52vh; padding-right: 5px; margin-bottom: 10px; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
         .modal-buttons { display: flex; gap: 10px; margin-top: 10px; flex-shrink: 0; }
@@ -1782,7 +1783,31 @@
                 .filter(c => c.startsWith('state-'))
                 .forEach(c => document.body.classList.remove(c));
             document.body.classList.add(`state-${state.room.status}`);
+            if (currentMode === MODE_HOST) {
+                document.body.classList.add('mode-host');
+            } else {
+                document.body.classList.remove('mode-host');
+            }
         }
+
+        function findPlayerById(id) {
+            if (!id) return null;
+            return state.players.find(p => p.id === id || (p.previousIds && p.previousIds.includes(id))) || null;
+        }
+
+        // ── SSOT: 금기어 입력 유효성 검증기 (WordValidator) ──────────────────
+        const WordValidator = {
+            isValidWord(raw) {
+                if (typeof raw !== 'string') return false;
+                const w = raw.trim();
+                if (w.length < 2 || w.length > 25) return false;
+                if (/\s/.test(w)) return false; // 내부 공백 금지
+                if (/[ㄱ-ㅎㅏ-ㅣ]/.test(w)) return false; // 단순 초성/자모(ㅋㅋ, ㄱㄴ 등) 금지
+                if (/[?~!@#$%^&*()+=\[\]{};:'",.<>\/\\|]/.test(w)) return false; // 예약 마스킹(???) 및 특수기호 금지
+                return true;
+            }
+        };
+        window.WordValidator = WordValidator;
         
         // --- DOM Elements ---
         const els = {
@@ -2021,23 +2046,49 @@
             }
         }
 
+        function stopGameLoopIntervals() {
+            if (botInterval) { clearInterval(botInterval); botInterval = null; }
+            if (botChatTimeout) { clearTimeout(botChatTimeout); botChatTimeout = null; }
+            if (afkInterval) { clearInterval(afkInterval); afkInterval = null; }
+            if (itemInterval) { clearInterval(itemInterval); itemInterval = null; }
+            if (chatUiInterval) { clearInterval(chatUiInterval); chatUiInterval = null; }
+        }
+
+        function closeActiveGameModals() {
+            document.getElementById('end-game-btn').classList.add('hidden');
+            document.getElementById('modal-word-setting').classList.add('hidden');
+            document.getElementById('modal-target-selection').classList.add('hidden');
+            document.getElementById('modal-word-add').classList.add('hidden');
+            document.getElementById('modal-word-change').classList.add('hidden');
+            pendingItemUse = null;
+        }
+
         function removeGuestPlayer(guestId) {
-            const departed = state.players.find(p => p.id === guestId);
+            const departed = findPlayerById(guestId);
             if (!departed) return;
+            const actualId = departed.id;
             const deptName = departed.name;
+            if (departed.flyTimeouts) { departed.flyTimeouts.forEach(clearTimeout); departed.flyTimeouts = []; }
+            if (departed.reviveTimeout) { clearTimeout(departed.reviveTimeout); departed.reviveTimeout = null; }
             if (state.disconnectTimeouts[guestId]) {
                 clearTimeout(state.disconnectTimeouts[guestId]);
                 delete state.disconnectTimeouts[guestId];
             }
+            if (state.disconnectTimeouts[actualId]) {
+                clearTimeout(state.disconnectTimeouts[actualId]);
+                delete state.disconnectTimeouts[actualId];
+            }
             delete state.disconnectAnnounced[guestId];
-            state.players = state.players.filter(p => p.id !== guestId);
+            delete state.disconnectAnnounced[actualId];
+            state.players = state.players.filter(p => p !== departed);
 
-            // 대기실 상태에서 나간 경우에만 단어 맵 정리.
-            // 게임 진행 중이거나 종료된 후에는 상대방의 금기어가 유실되지 않도록 보존합니다.
-            if (state.room && state.room.status === 'waiting') {
+            // 대기실 또는 금기어 설정 단계에서 나간 경우 단어 맵 정리.
+            // 본 게임 진행 중이거나 종료된 후에는 상대방의 금기어가 유실되지 않도록 보존합니다.
+            if (state.room && (state.room.status === 'waiting' || state.room.status === 'word_setting')) {
                 state.players.forEach(p => {
-                    if (p.words && p.words[guestId]) {
+                    if (p.words) {
                         delete p.words[guestId];
+                        delete p.words[actualId];
                     }
                 });
             }
@@ -2045,15 +2096,22 @@
             renderStage();
             sysChat(`[시스템] ${deptName}님이 퇴장했습니다.`);
 
-            // 게임 진행 중 남은 실제 플레이어가 1명 이하가 된 경우 게임 자동 종료 및 최종 통계 출력
-            if (state.room && state.room.status === 'playing') {
+            // 게임 설정 중 또는 본 게임 진행 중 남은 실제 플레이어가 1명 이하가 된 경우 게임 자동 종료 및 최종 통계 출력
+            if (state.room && (state.room.status === 'playing' || state.room.status === 'word_setting')) {
                 const remainingHumans = state.players.filter(p => !p.isBot);
                 if (remainingHumans.length < 2) {
                     sysChat(`[시스템] 다른 참가자가 퇴장하여 게임이 종료되었습니다.`);
                     state.room.status = 'finished';
+                    updateBodyState();
+                    stopGameLoopIntervals();
+                    closeActiveGameModals();
                     clearAllWaitingAnimals();
                     broadcastState();
                     showStatsModal();
+                    return;
+                }
+                if (state.room.status === 'word_setting') {
+                    checkAllWordsSubmitted();
                     return;
                 }
             }
@@ -2122,6 +2180,7 @@
                         
                         document.getElementById('room-code-display').classList.remove('hidden');
                         document.getElementById('room-code-text').textContent = roomCode;
+                        document.getElementById('guest-controls').classList.add('hidden');
                         document.getElementById('host-controls').classList.remove('hidden');
                         
                         sysChat(`방이 생성되었습니다! 친구들에게 방 코드 [${roomCode}] 를 알려주세요.`);
@@ -2141,25 +2200,27 @@
 
             socket.on('GUEST_DISCONNECTED', (data) => {
                 const pId = data.guestId;
-                const departed = state.players.find(p => p.id === pId);
+                const departed = findPlayerById(pId);
                 if (!departed) return;
                 
                 const deptName = departed.name;
 
                 // In waiting room, or if intentionally left: REMOVE INSTANTLY!
                 if (state.room.status === 'waiting' || data.isWaiting || data.intentional || departed.intentionallyLeft) {
-                    removeGuestPlayer(pId);
+                    removeGuestPlayer(departed.id);
                     return;
                 }
 
                 // In playing game: 12 seconds grace period for temporary network/app switch
-                if (state.disconnectTimeouts[pId]) clearTimeout(state.disconnectTimeouts[pId]);
+                if (state.disconnectTimeouts[departed.id]) clearTimeout(state.disconnectTimeouts[departed.id]);
+                state.disconnectAnnounced[departed.id] = true;
+                state.disconnectAnnounced[pId] = true;
                 sysChat(`[시스템] ${deptName}님의 연결이 끊겼습니다. (12초 내 재연결 대기)`);
                 broadcast({ type: 'EVENT_SYS', payload: { text: `[시스템] ${deptName}님의 연결이 끊겼습니다. (12초 내 재연결 대기)` } });
                 
-                state.disconnectTimeouts[pId] = setTimeout(() => {
-                    delete state.disconnectTimeouts[pId];
-                    removeGuestPlayer(pId);
+                state.disconnectTimeouts[departed.id] = setTimeout(() => {
+                    delete state.disconnectTimeouts[departed.id];
+                    removeGuestPlayer(departed.id);
                 }, 12000);
             });
 
@@ -2193,11 +2254,13 @@
                 socket.emit('JOIN_ROOM', { roomCode: code, payload: { name: myName, gender: myGender, oldId, playerId } }, (response) => {
                     clearTimeout(joinTimeout);
                     setJoinRoomLoading(false);
+                    if (!socket || !socket.connected) return;
                     if (response.success) {
                         roomCode = code;
                         currentMode = MODE_GUEST;
                         state.myId = socket.id; // Server uses new socket.id
                         disconnectedAt = 0;
+                        updateBodyState();
                         document.getElementById('room-code-display').classList.remove('hidden');
                         document.getElementById('room-code-text').textContent = roomCode;
                         
@@ -2229,6 +2292,9 @@
                 if (state.room && state.room.status === 'playing') {
                     sysChat(`[시스템] ${msg} 게임이 종료되어 최종 통계를 표시합니다.`);
                     state.room.status = 'finished';
+                    updateBodyState();
+                    stopGameLoopIntervals();
+                    closeActiveGameModals();
                     clearAllWaitingAnimals();
                     showStatsModal();
                 } else {
@@ -2265,12 +2331,18 @@
 
         function handleDataFromGuest(guestId, data) {
             if (data.type === 'JOIN') {
-                if (data.payload.oldId || data.payload.playerId) {
-                    const existingPlayer = state.players.find(p => p.id === data.payload.oldId || (data.payload.playerId && p.playerId === data.payload.playerId));
+                if (data.payload && (data.payload.oldId || data.payload.playerId)) {
+                    const existingPlayer = state.players.find(p =>
+                        p.id === data.payload.oldId ||
+                        (p.previousIds && p.previousIds.includes(data.payload.oldId)) ||
+                        (data.payload.playerId && p.playerId === data.payload.playerId)
+                    );
                     if (existingPlayer) {
-                        // Reconnect! Update ID
+                        // Reconnect! Update ID and preserve oldId history for any active timer closures
                         const oldId = existingPlayer.id;
                         if (oldId !== guestId) {
+                            if (!existingPlayer.previousIds) existingPlayer.previousIds = [];
+                            if (!existingPlayer.previousIds.includes(oldId)) existingPlayer.previousIds.push(oldId);
                             existingPlayer.id = guestId;
                             // Update references in word maps
                             state.players.forEach(p => {
@@ -2285,9 +2357,14 @@
                             clearTimeout(state.disconnectTimeouts[oldId]);
                             delete state.disconnectTimeouts[oldId];
                         }
+                        if (data.payload.oldId && state.disconnectTimeouts[data.payload.oldId]) {
+                            clearTimeout(state.disconnectTimeouts[data.payload.oldId]);
+                            delete state.disconnectTimeouts[data.payload.oldId];
+                        }
                         // Announce recovery only if the disconnect was actually announced
-                        if (state.disconnectAnnounced[oldId]) {
+                        if (state.disconnectAnnounced[oldId] || (data.payload.oldId && state.disconnectAnnounced[data.payload.oldId])) {
                             delete state.disconnectAnnounced[oldId];
+                            if (data.payload.oldId) delete state.disconnectAnnounced[data.payload.oldId];
                             sysChat(`[시스템] ${existingPlayer.name}님이 재연결되었습니다.`);
                             broadcast({ type: 'EVENT_SYS', payload: { text: `[시스템] ${existingPlayer.name}님이 재연결되었습니다.` } });
                         }
@@ -2299,9 +2376,9 @@
                     }
                 }
                 
-                if (state.room.status !== 'waiting') return socket.emit('SEND_TO_GUEST', { guestId, type: 'REJECT_JOIN', payload: { reason: '이미 게임이 시작되어 입장할 수 없습니다.' } });
-                if (state.players.length >= 6) return socket.emit('SEND_TO_GUEST', { guestId, type: 'REJECT_JOIN', payload: { reason: '방이 꽉 찼습니다.' } });
-                state.players.push({ ...data.payload, id: guestId, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0 } });
+                if (state.room.status !== 'waiting') return socket.emit('SEND_TO_GUEST', { roomCode, guestId, type: 'REJECT_JOIN', payload: { reason: '이미 게임이 시작되어 입장할 수 없습니다.' } });
+                if (state.players.length >= 6) return socket.emit('SEND_TO_GUEST', { roomCode, guestId, type: 'REJECT_JOIN', payload: { reason: '방이 꽉 찼습니다.' } });
+                state.players.push({ ...data.payload, id: guestId, previousIds: [], isBot: false, isReady: false, hasSubmittedWords: false, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0 } });
                 broadcastState();
                 updateRoomUI();
                 renderStage();
@@ -2312,7 +2389,7 @@
             } else if (data.type === 'SUBMIT_WORDS') {
                 if (typeof applySubmittedWords === 'function') applySubmittedWords(guestId, data.payload.targetWords);
             } else if (data.type === 'TOGGLE_READY') {
-                const p = state.players.find(x => x.id === guestId);
+                const p = findPlayerById(guestId);
                 if (p) p.isReady = data.payload.isReady;
                 broadcastState();
                 updateRoomUI();
@@ -2325,6 +2402,18 @@
         }
 
         function handleDataFromHost(data) {
+            if (data.type === 'REJECT_JOIN') {
+                const reason = (data.payload && data.payload.reason) || '방에 입장할 수 없습니다.';
+                alert(reason);
+                if (socket) {
+                    socket.disconnect();
+                    socket = null;
+                }
+                currentMode = null;
+                roomCode = null;
+                leaveRoom();
+                return;
+            }
             if (data.type === 'SYNC_STATE') {
                 if (!document.getElementById('lobby-view').classList.contains('hidden')) {
                     switchView('room-view');
@@ -2367,13 +2456,15 @@
                     renderInventory();
                     syncWaitingAnimalsVisuals();
                 } else if (state.room.status === 'finished') {
+                    stopGameLoopIntervals();
+                    closeActiveGameModals();
                     clearAllWaitingAnimals();
                     showStatsModal();
                 } else {
                     clearAllWaitingAnimals();
                 }
             } else if (data.type === 'CHAT_BROADCAST') {
-                const sender = state.players.find(p => p.id === data.payload.senderId);
+                const sender = findPlayerById(data.payload.senderId);
                 appendChatUI(sender, data.payload.text);
             } else if (data.type === 'EVENT_FLY') {
                 triggerFly(data.payload.playerId, data.payload.word, data.payload.specialEvent, data.payload.shieldBlockedAnimal);
@@ -2401,6 +2492,7 @@
             state.players = [{ id: state.myId, name: sanitizeNickname(els.nickname.value.trim(), '게스트'), gender: document.querySelector('input[name="gender"]:checked').value, isBot: false, isReady: true, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0 } }];
             
             switchView('room-view');
+            document.getElementById('guest-controls').classList.add('hidden');
             document.getElementById('host-controls').classList.remove('hidden');
             
             addBotToRoom(); addBotToRoom(); addBotToRoom();
@@ -2441,31 +2533,34 @@
                 socket.emit('SEND_TO_HOST', { roomCode, type: 'LEAVE', payload: { intentionallyLeft: true } });
             }
             if (socket) { socket.disconnect(); socket = null; }
+            if (state.disconnectTimeouts) {
+                Object.keys(state.disconnectTimeouts).forEach(k => {
+                    clearTimeout(state.disconnectTimeouts[k]);
+                    delete state.disconnectTimeouts[k];
+                });
+            }
+            if (state.disconnectAnnounced) {
+                Object.keys(state.disconnectAnnounced).forEach(k => delete state.disconnectAnnounced[k]);
+            }
             setCreateRoomLoading(false);
             setJoinRoomLoading(false);
             currentMode = null;
             roomCode = null;
             state.room.status = 'lobby';
             updateBodyState();
+            stopGameLoopIntervals();
+            closeActiveGameModals();
             clearAllWaitingAnimals();
             state.players = [];
             els.wordsPanel.innerHTML = '';
             clearChatUI();
             els.chairsContainer.innerHTML = '';
             els.chatInput.disabled = true; els.chatSend.disabled = true;
-            if(botInterval) clearInterval(botInterval);
-            if(botChatTimeout) clearTimeout(botChatTimeout);
-            if(afkInterval) clearInterval(afkInterval);
-            if(itemInterval) clearInterval(itemInterval);
-            if(chatUiInterval) clearInterval(chatUiInterval);
-            document.getElementById('end-game-btn').classList.add('hidden');
+            document.getElementById('host-controls').classList.add('hidden');
+            document.getElementById('guest-controls').classList.add('hidden');
             document.getElementById('stats-modal').classList.add('hidden');
             document.getElementById('inventory-bar').classList.add('hidden');
             document.getElementById('item-timer').classList.add('hidden');
-            document.getElementById('modal-word-setting').classList.add('hidden');
-            document.getElementById('modal-target-selection').classList.add('hidden');
-            document.getElementById('modal-word-add').classList.add('hidden');
-            document.getElementById('modal-word-change').classList.add('hidden');
             document.getElementById('inventory-items').innerHTML = '';
             document.getElementById('room-code-display').classList.add('hidden');
             document.getElementById('join-input-area').classList.add('hidden');
@@ -2641,8 +2736,10 @@
         const MISSILE_STUN_POSE = 'translate(0, -80px) rotate(180deg) scale(0.8)';
 
         function applyMissileStunPose(playerId, animate = true, pulse = false) {
-            const wrap = document.getElementById(`char-wrap-${playerId}`);
-            const chair = document.getElementById(`chair-${playerId}`);
+            const p = findPlayerById(playerId);
+            const actualId = p ? p.id : playerId;
+            const wrap = document.getElementById(`char-wrap-${actualId}`);
+            const chair = document.getElementById(`chair-${actualId}`);
             if (chair) chair.classList.remove('tilted');
             if (!wrap) return;
             wrap.className = `character-wrapper status-${PlayerState.STATUS.DEAD_MISSILE}`;
@@ -2658,14 +2755,16 @@
         }
 
         function clearCharacterPose(playerId) {
-            const wrap = document.getElementById(`char-wrap-${playerId}`);
+            const p = findPlayerById(playerId);
+            const actualId = p ? p.id : playerId;
+            const wrap = document.getElementById(`char-wrap-${actualId}`);
             if (wrap) {
                 wrap.style.animation = 'none';
                 wrap.style.transition = 'none';
                 wrap.style.transform = 'none';
                 wrap.style.opacity = '1';
             }
-            const chair = document.getElementById(`chair-${playerId}`);
+            const chair = document.getElementById(`chair-${actualId}`);
             if (chair) chair.classList.remove('tilted');
         }
 
@@ -2795,10 +2894,14 @@
                     socket.emit('GAME_STARTED', {
                         roomCode: roomCode,
                         options: {
-                            theme: state.room.theme,
+                            theme: state.room.theme || 'default',
                             wordsPerPlayer: state.room.wordsPerPlayer,
-                            itemMode: state.room.itemMode,
-                            itemInterval: state.room.itemInterval
+                            afkEnabled: state.room.afkEnabled,
+                            afkSeconds: state.room.afkSeconds,
+                            itemEnabled: state.room.itemEnabled,
+                            itemSeconds: state.room.itemSeconds,
+                            itemMode: state.room.itemEnabled,
+                            itemInterval: state.room.itemSeconds
                         },
                         playerCount: state.players.length
                     });
@@ -2978,8 +3081,13 @@
         }
 
         function submitWords() {
+            if (!state.room || state.room.status !== 'word_setting' || state.players.length < 2) {
+                return alert('참가자 수가 부족하여 게임을 진행할 수 없습니다.');
+            }
             const myTargetWords = {};
             let allFilled = true;
+            let invalidFormat = false;
+            let duplicateWord = false;
             const wordsPerPlayer = state.room.wordsPerPlayer || 1;
             
             state.players.forEach(p => {
@@ -2987,23 +3095,30 @@
                     myTargetWords[p.id] = [];
                     for (let i = 0; i < wordsPerPlayer; i++) {
                         const input = document.getElementById(`word-for-${p.id}-${i}`);
-                        if (input && input.value.trim().length >= 2) {
-                            myTargetWords[p.id].push(input.value.trim());
-                        } else {
+                        const val = input ? input.value.trim() : '';
+                        if (!val || val.length < 2) {
                             allFilled = false;
+                        } else if (!WordValidator.isValidWord(val)) {
+                            invalidFormat = true;
+                        } else if (myTargetWords[p.id].includes(val)) {
+                            duplicateWord = true;
+                        } else {
+                            myTargetWords[p.id].push(val);
                         }
                     }
                 }
             });
             
             if (!allFilled) return alert('모든 플레이어의 금기어를 각각 2글자 이상으로 입력해주세요!');
+            if (invalidFormat) return alert('금기어에 공백, 초성(ㅋㅋ 등), 특수문자(???)는 사용할 수 없습니다!');
+            if (duplicateWord) return alert('동일한 플레이어에게 중복된 금기어를 설정할 수 없습니다!');
             
             document.getElementById('modal-title').textContent = '대기 중...';
             document.getElementById('modal-desc').style.display = 'none';
             document.getElementById('word-setting-list').style.display = 'none';
             document.getElementById('submit-words-btn').style.display = 'none';
             
-            const me = state.players.find(p => p.id === state.myId);
+            const me = findPlayerById(state.myId);
             if (me) me.hasSubmittedWords = true;
             updateMissingPlayersUI();
             
@@ -3026,29 +3141,35 @@
         }
 
         function applySubmittedWords(submitterId, targetWords) {
-            const submitter = state.players.find(p => p.id === submitterId);
+            const submitter = findPlayerById(submitterId);
             if (submitter) submitter.hasSubmittedWords = true;
             
             for (const targetId in targetWords) {
-                const targetPlayer = state.players.find(p => p.id === targetId);
+                const targetPlayer = findPlayerById(targetId);
                 if (targetPlayer) {
                     if (!targetPlayer.words) targetPlayer.words = {};
-                    targetPlayer.words[submitterId] = targetWords[targetId];
+                    const rawList = Array.isArray(targetWords[targetId]) ? targetWords[targetId] : [];
+                    const validList = [];
+                    rawList.forEach(w => {
+                        if (WordValidator.isValidWord(w) && !validList.includes(w.trim())) {
+                            validList.push(w.trim());
+                        }
+                    });
+                    targetPlayer.words[submitter ? submitter.id : submitterId] = validList;
                     if (!targetPlayer.assignedWords) targetPlayer.assignedWords = [];
-                    const wList = targetWords[targetId];
-                    if (Array.isArray(wList)) {
-                        wList.forEach(w => {
-                            if (w && typeof w === 'string' && w.trim().length > 0 && !targetPlayer.assignedWords.includes(w.trim())) {
-                                targetPlayer.assignedWords.push(w.trim());
-                            }
-                        });
-                    }
+                    validList.forEach(w => {
+                        if (!targetPlayer.assignedWords.includes(w)) {
+                            targetPlayer.assignedWords.push(w);
+                        }
+                    });
                 }
             }
             checkAllWordsSubmitted();
         }
 
         function checkAllWordsSubmitted() {
+            if (!state.room || state.room.status !== 'word_setting') return;
+            if (state.players.length < 2) return;
             const realPlayers = state.players.filter(p => !p.isBot);
             const allSubmitted = realPlayers.every(p => p.hasSubmittedWords);
             
@@ -3090,7 +3211,7 @@
         
         function updateMissingPlayersUI() {
             if (state.room.status !== 'word_setting') return;
-            const me = state.players.find(p => p.id === state.myId);
+            const me = findPlayerById(state.myId);
             const listEl = document.getElementById('missing-players-list');
             if (!listEl) return;
             
@@ -3127,7 +3248,7 @@
             chatUiInterval = setInterval(updateChatUI, 1000);
             
             state.players.forEach(p => p.lastChatTime = Date.now());
-            if (currentMode === MODE_HOST) {
+            if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
                 if (afkInterval) clearInterval(afkInterval);
                 afkInterval = setInterval(checkAFK, 1000);
             }
@@ -3145,6 +3266,7 @@
         }
         
         function distributeItems() {
+            if (!state.room || state.room.status !== 'playing') return;
             const dropInterval = (state.room.itemSeconds * 1000) || 300000;
             state.room.nextItemDropTime = Date.now() + dropInterval;
             
@@ -3220,7 +3342,7 @@
             }
             
             bar.classList.remove('hidden');
-            const me = state.players.find(p => p.id === state.myId);
+            const me = findPlayerById(state.myId);
             
             if (!me || !me.items || me.items.length === 0) {
                 const emptyMsg = document.createElement('span');
@@ -3257,7 +3379,8 @@
         
         let pendingItemUse = null;
         function handleItemClick(item) {
-            const me = state.players.find(p => p.id === state.myId);
+            const me = findPlayerById(state.myId);
+            if (!me || !me.items) return;
             const index = me.items.indexOf(item);
             if (index === -1) return;
             
@@ -3287,6 +3410,11 @@
                 pendingItemUse = { item, index };
                 openWordAddModal();
             } else if (item === 'word_delete') {
+                const myWords = me.words ? Object.values(me.words).flat() : [];
+                if (myWords.length === 0) {
+                    alert('현재 지울 수 있는 금기어가 없습니다.');
+                    return;
+                }
                 if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
                     executeItem(state.myId, item, index, null, null);
                 } else {
@@ -3350,15 +3478,21 @@
             const inputs = list.querySelectorAll('input');
             const wordMap = {};
             
-            let allValid = true;
+            let allFilled = true;
+            let invalidFormat = false;
             inputs.forEach(input => {
                 const val = input.value.trim();
-                if (val.length < 2) allValid = false;
+                if (val.length < 2) allFilled = false;
+                else if (!WordValidator.isValidWord(val)) invalidFormat = true;
                 wordMap[input.dataset.targetId] = val;
             });
             
-            if (!allValid) {
+            if (!allFilled) {
                 alert('모든 참가자의 금기어를 각각 2글자 이상으로 입력해주세요!');
+                return;
+            }
+            if (invalidFormat) {
+                alert('금기어에 공백, 초성(ㅋㅋ 등), 특수문자(???)는 사용할 수 없습니다!');
                 return;
             }
             
@@ -3385,6 +3519,9 @@
             if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
                 if (!confirm('정말 게임을 종료하시겠습니까? (통계가 표시됩니다)')) return;
                 state.room.status = 'finished';
+                updateBodyState();
+                stopGameLoopIntervals();
+                closeActiveGameModals();
                 clearAllWaitingAnimals();
                 broadcastState();
                 showStatsModal();
@@ -3680,6 +3817,10 @@
                 alert('변경할 단어를 2글자 이상으로 입력해주세요!');
                 return;
             }
+            if (!WordValidator.isValidWord(newWord)) {
+                alert('금기어에 공백, 초성(ㅋㅋ 등), 특수문자(???)는 사용할 수 없습니다!');
+                return;
+            }
             
             closeWordChangeModal();
             
@@ -3698,24 +3839,36 @@
 
         function executeItem(senderId, item, clientIndex, targetId, extraData = null) {
             // Host logic to process item use
-            const sender = state.players.find(p => p.id === senderId);
+            const sender = findPlayerById(senderId);
             if (!sender || !sender.items) return; 
+            const actualSenderId = sender.id;
             
             // Find the item dynamically instead of relying on client index (prevents race conditions if inventory shifted while modal was open)
             const realIndex = sender.items.indexOf(item);
             if (realIndex === -1) return; // Validation failed: they don't have this item
+
+            // Authoritative Host check: action/summon items cannot be used while incapacitated or away
+            if (!PlayerState.canUseActionItems(sender) && item !== 'word_change' && item !== 'word_add' && item !== 'word_delete') {
+                if (actualSenderId === state.myId) {
+                    sysChat('행동 불능 상태에서는 공격 및 소환 아이템을 사용할 수 없습니다.');
+                } else if (currentMode === MODE_HOST) {
+                    socket.emit('SEND_TO_GUEST', { guestId: actualSenderId, type: 'EVENT_SYS', payload: { text: '행동 불능 상태에서는 공격 및 소환 아이템을 사용할 수 없습니다.' } });
+                }
+                return;
+            }
             
             // Validation for missile: target must be currently sitting in their chair
             if (item === 'missile') {
-                const target = state.players.find(p => p.id === targetId);
+                const target = findPlayerById(targetId);
                 if (!target || !PlayerState.canBeTargetedByMissile(target)) {
-                    if (senderId === state.myId) {
+                    if (actualSenderId === state.myId) {
                         sysChat('해당 플레이어가 자리에 없어 미사일을 발사할 수 없습니다.');
                     } else if (currentMode === MODE_HOST) {
-                        socket.emit('SEND_TO_GUEST', { guestId: senderId, type: 'EVENT_SYS', payload: { text: '해당 플레이어가 자리에 없어 미사일을 발사할 수 없습니다.' } });
+                        socket.emit('SEND_TO_GUEST', { guestId: actualSenderId, type: 'EVENT_SYS', payload: { text: '해당 플레이어가 자리에 없어 미사일을 발사할 수 없습니다.' } });
                     }
                     return; // Abort without consuming item!
                 }
+                targetId = target.id;
                 // Authoritatively check and consume shield at launch time so all clients see identical outcome
                 const blockedByShield = !!(target.items && target.items.includes('shield'));
                 if (blockedByShield) {
@@ -3723,12 +3876,36 @@
                     if (targetId === state.myId) renderInventory();
                 }
                 extraData = { ...(extraData || {}), blockedByShield };
+            } else if (item === 'call_shark' || item === 'call_gator' || item === 'call_gull') {
+                const animal = item.replace('call_', '');
+                if (!state.room.waitingAnimals) state.room.waitingAnimals = [];
+                if (state.room.waitingAnimals.includes(animal)) {
+                    const nameMap = { shark: '상어', gator: '악어', gull: '부산갈매기' };
+                    const msg = `이미 ${nameMap[animal] || '동물'}가 대기 중입니다!`;
+                    if (actualSenderId === state.myId) {
+                        sysChat(msg);
+                    } else if (currentMode === MODE_HOST) {
+                        socket.emit('SEND_TO_GUEST', { guestId: actualSenderId, type: 'EVENT_SYS', payload: { text: msg } });
+                    }
+                    return; // Abort without consuming item!
+                }
+            } else if (item === 'word_delete' && !extraData) {
+                const allWords = sender.words ? Object.values(sender.words).flat() : [];
+                if (allWords.length === 0) {
+                    const msg = '현재 지울 수 있는 금기어가 없습니다.';
+                    if (actualSenderId === state.myId) {
+                        sysChat(msg);
+                    } else if (currentMode === MODE_HOST) {
+                        socket.emit('SEND_TO_GUEST', { guestId: actualSenderId, type: 'EVENT_SYS', payload: { text: msg } });
+                    }
+                    return; // Abort without consuming item!
+                }
             }
             
             // Consume item
             sender.items.splice(realIndex, 1);
             if (currentMode === MODE_HOST) broadcastState(); // Sync removed item
-            if (senderId === state.myId) renderInventory(); // Update local UI for Host/Bot
+            if (actualSenderId === state.myId) renderInventory(); // Update local UI for Host/Bot
             
             if (item === 'word_delete' && !extraData) {
                 const allWords = Object.values(sender.words).flat();
@@ -3752,12 +3929,12 @@
             
             // Broadcast event to trigger animation
             if (currentMode === MODE_HOST) {
-                broadcast({ type: 'EVENT_ITEM', payload: { senderId, senderIsBot: sender.isBot || false, item, targetId, extraData } });
+                broadcast({ type: 'EVENT_ITEM', payload: { senderId: actualSenderId, senderIsBot: sender.isBot || false, item, targetId, extraData } });
             }
             
             // Local fallback for Host/Bot
             if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
-                playItemEvent(senderId, item, targetId, extraData);
+                playItemEvent(actualSenderId, item, targetId, extraData);
             }
         }
         
@@ -3766,7 +3943,7 @@
         // existing penalty. Cancels ALL competing timers (fly + revive) to
         // prevent timer wars. Host/Bot only.
         function applyMissileStun(targetId, stunMs = 30000) {
-            const target = state.players.find(p => p.id === targetId);
+            const target = findPlayerById(targetId);
             if (!target) return;
             
             // Invalidate any in-progress fly sequence callbacks (shark/gator/gull animations
@@ -3793,40 +3970,41 @@
             target.penaltyEndTime = now + totalStunMs;
             
             // Visual: stun pose (flipped 180° + X_X dead face) — pulse if stacking on already stunned player
-            applyMissileStunPose(targetId, true, wasAlreadyStunned);
+            applyMissileStunPose(target.id, true, wasAlreadyStunned);
             
-            updateStatus(targetId, PlayerState.STATUS.DEAD_MISSILE); // internally calls broadcastState
+            updateStatus(target.id, PlayerState.STATUS.DEAD_MISSILE); // internally calls broadcastState
             
             if ((currentMode === MODE_HOST || currentMode === MODE_BOT) && typeof handleBotFlyReaction === 'function') {
-                handleBotFlyReaction(targetId, null, 'missile');
+                handleBotFlyReaction(target.id, null, 'missile');
             }
             
             target.reviveTimeout = setTimeout(() => {
                 if (state.room.status !== 'playing') return;
-                clearCharacterPose(targetId);
+                clearCharacterPose(target.id);
                 target.penaltyEndTime = null;
                 target.reviveTimeout = null;
                 if (currentMode === MODE_HOST) {
                     broadcast({ type: 'EVENT_SYS', payload: { text: `✨ ${target.name}님이 미사일 기절에서 회복했습니다!` } });
                 }
                 sysChat(`✨ ${target.name}님이 미사일 기절에서 회복했습니다!`);
-                updateStatus(targetId, PlayerState.STATUS.IDLE); // internally calls broadcastState
+                updateStatus(target.id, PlayerState.STATUS.IDLE); // internally calls broadcastState
             }, totalStunMs);
         }
         
         // Called at the end of any fly sequence instead of updateStatus(playerId, 'idle').
         // If a missile hit during flight (pendingMissileStunMs set), applies stun on landing.
         function finalizeIdle(playerId) {
-            const player = state.players.find(p => p.id === playerId);
+            const player = findPlayerById(playerId);
             if (!player) return;
+            const liveId = player.id;
             if (currentMode !== MODE_HOST && currentMode !== MODE_BOT) {
                 // Guests: if Host already transitioned player to DEAD_MISSILE or player has
                 // pendingMissileStunMs, apply DEAD_MISSILE pose instead of overwriting with IDLE!
                 if (player.status === PlayerState.STATUS.DEAD_MISSILE || (player.pendingMissileStunMs && player.pendingMissileStunMs > 0)) {
                     player.pendingMissileStunMs = 0;
-                    updateStatus(playerId, PlayerState.STATUS.DEAD_MISSILE);
+                    updateStatus(liveId, PlayerState.STATUS.DEAD_MISSILE);
                 } else {
-                    updateStatus(playerId, PlayerState.STATUS.IDLE);
+                    updateStatus(liveId, PlayerState.STATUS.IDLE);
                 }
                 return;
             }
@@ -3837,9 +4015,9 @@
                     broadcast({ type: 'EVENT_SYS', payload: { text: `🚀 ${player.name}님이 착지하자마자 미사일 기절 효과가 발동되었습니다! (${Math.ceil(pendingMs / 1000)}초)` } });
                 }
                 sysChat(`🚀 ${player.name}님이 착지하자마자 미사일 기절 효과가 발동되었습니다! (${Math.ceil(pendingMs / 1000)}초)`);
-                applyMissileStun(playerId, pendingMs);
+                applyMissileStun(liveId, pendingMs);
             } else {
-                updateStatus(playerId, PlayerState.STATUS.IDLE);
+                updateStatus(liveId, PlayerState.STATUS.IDLE);
                 if (player.isBot && typeof triggerBotRecoverReaction === 'function') {
                     triggerBotRecoverReaction(player);
                 }
@@ -3848,8 +4026,8 @@
         // ────────────────────────────────────────────────────────────────────────
 
         function playItemEvent(senderId, item, targetId, extraData = null) {
-            const sender = state.players.find(p => p.id === senderId);
-            const target = targetId ? state.players.find(p => p.id === targetId) : null;
+            const sender = findPlayerById(senderId);
+            const target = targetId ? findPlayerById(targetId) : null;
             if (!sender) return;
 
             if (item === 'missile') {
@@ -3865,20 +4043,21 @@
                 if ((currentMode === MODE_HOST || currentMode === MODE_BOT) && !hasAuthoritativeBlockFlag) {
                     if (willBlock) {
                         target.items.splice(target.items.indexOf('shield'), 1);
-                        if (targetId === state.myId) renderInventory();
+                        if (target.id === state.myId) renderInventory();
                     }
                     broadcastState();
                 }
                 
                 target.incomingMissiles = (target.incomingMissiles || 0) + 1;
-                createMissileAnimation(senderId, targetId, () => {
-                    const liveTarget = state.players.find(p => p.id === targetId) || target;
+                createMissileAnimation(sender.id, target.id, () => {
+                    const liveTarget = findPlayerById(targetId) || target;
+                    const liveTargetId = liveTarget.id;
                     liveTarget.incomingMissiles = Math.max(0, (liveTarget.incomingMissiles || 1) - 1);
                     if (state.room.status !== 'playing') return;
 
                     if (willBlock) {
                         sysChat(`🛡️ ${liveTarget.name}님이 방패로 미사일을 막아냈습니다!`);
-                        createShieldEffect(targetId);
+                        createShieldEffect(liveTargetId);
                     } else {
                         // Check if target is currently away from chair using live state
                         const inFlight = PlayerState.isAway(liveTarget);
@@ -3907,7 +4086,7 @@
                                     broadcast({ type: 'EVENT_SYS', payload: { text: `💥 ${liveTarget.name}님이 미사일에 격추되었습니다! (기절 ${accSec}초)` } });
                                 }
                                 sysChat(`💥 ${liveTarget.name}님이 미사일에 격추되었습니다! (기절 ${accSec}초)`);
-                                applyMissileStun(targetId, 30000);
+                                applyMissileStun(liveTargetId, 30000);
                             }
                         } else {
                             // Guest: immediately apply missile stun visual on impact if target is seated,
@@ -3915,8 +4094,8 @@
                             if (!inFlight) {
                                 const wasAlreadyStunned = liveTarget.status === PlayerState.STATUS.DEAD_MISSILE;
                                 liveTarget.status = PlayerState.STATUS.DEAD_MISSILE;
-                                applyMissileStunPose(targetId, true, wasAlreadyStunned);
-                                if (targetId === state.myId) updateChatUI();
+                                applyMissileStunPose(liveTargetId, true, wasAlreadyStunned);
+                                if (liveTargetId === state.myId) updateChatUI();
                             }
                         }
                     }
@@ -3925,7 +4104,7 @@
                 if (!target || !extraData) return;
                 sysChat(`🃏 ${target.name}님의 금기어가 변경되었습니다.`);
                 if (currentMode === MODE_HOST) {
-                    const sender = state.players.find(p => p.id === senderId);
+                    const sender = findPlayerById(senderId);
                     if (sender && !sender.isBot && extraData.newWord && socket) {
                         socket.emit('RECORD_TABOO_WORDS', { words: [extraData.newWord] });
                     }
@@ -3945,7 +4124,7 @@
                 if (!extraData || !extraData.wordMap) return;
                 sysChat(`➕ 참가자들에게 각각 새로운 금기어가 1개씩 추가되었습니다.`);
                 if (currentMode === MODE_HOST) {
-                    const sender = state.players.find(p => p.id === senderId);
+                    const sender = findPlayerById(senderId);
                     if (sender && !sender.isBot) {
                         const newWords = Object.values(extraData.wordMap).filter(w => typeof w === 'string' && w.trim().length > 0);
                         if (newWords.length > 0 && socket) {
@@ -3971,7 +4150,7 @@
                 if (!sender || !extraData) return;
                 
                 if (extraData.deletedWord) {
-                    sysChat(`🗑️ ${sender.name}님이 금기어 삭제권을 사용하여 자신의 금기어 1개(${extraData.deletedWord})를 지웠습니다!`);
+                    sysChat(`🗑️ ${sender.name}님이 금기어 삭제권을 사용하여 자신의 금기어 중 1개를 정화했습니다!`);
                 } else {
                     sysChat(`🗑️ ${sender.name}님이 금기어 삭제권을 사용했으나 지울 금기어가 없었습니다.`);
                 }
@@ -4276,29 +4455,34 @@
         }
 
         function sendChat(senderId, text) {
-            const sender = state.players.find(p => p.id === senderId);
+            const sender = findPlayerById(senderId);
             if (!sender) return;
+            if (state.room && state.room.status === 'playing' && !PlayerState.canChat(sender)) {
+                return;
+            }
+            const cleanText = sanitizeChatText(text);
+            if (!cleanText) return;
             sender.lastChatTime = Date.now();
-            appendChatUI(sender, text);
+            appendChatUI(sender, cleanText);
             
             if (state.room.status === 'playing' && (currentMode === MODE_HOST || currentMode === MODE_BOT)) {
-                checkForbiddenWords(text, senderId);
+                checkForbiddenWords(cleanText, sender.id);
                 if (!sender.isBot && typeof handleBotReplyToUser === 'function') {
-                    handleBotReplyToUser(sender, text);
+                    handleBotReplyToUser(sender, cleanText);
                 }
             }
             if (currentMode === MODE_HOST) {
-                broadcast({ type: 'CHAT_BROADCAST', payload: { senderId, text } });
+                broadcast({ type: 'CHAT_BROADCAST', payload: { senderId: sender.id, text: cleanText } });
             }
         }
 
         function handleChatInput() {
-            const me = state.players.find(p => p.id === state.myId);
-            if (me && PlayerState.isIncapacitated(me)) {
+            const me = findPlayerById(state.myId);
+            if (me && (PlayerState.isIncapacitated(me) || (state.room && state.room.status === 'playing' && !PlayerState.canChat(me)))) {
                 els.chatInput.value = '';
                 return;
             }
-            const val = els.chatInput.value.trim();
+            const val = sanitizeChatText(els.chatInput.value.trim());
             if (!val) {
                 els.chatInput.focus();
                 return;
@@ -5115,7 +5299,7 @@
                 return;
             }
             
-            const me = state.players.find(p => p.id === state.myId);
+            const me = findPlayerById(state.myId);
             if (!me) return;
             
             let remainText = "";
@@ -5136,6 +5320,10 @@
                 } else if (me.status === PlayerState.STATUS.DEAD_MISSILE) {
                     els.chatInput.placeholder = `🚀 미사일에 격추되어 기절 중...${remainText}`;
                 }
+            } else if (PlayerState.isAway(me)) {
+                els.chatInput.disabled = true; els.chatSend.disabled = true;
+                els.chatInput.value = '';
+                els.chatInput.placeholder = "💦 물에 빠져 자리로 복귀 중입니다...";
             } else {
                 els.chatInput.disabled = false; els.chatSend.disabled = false;
                 els.chatInput.placeholder = "메시지 입력...";
@@ -5154,28 +5342,29 @@
         }
 
         function updateStatus(id, newStatus) {
-            const p = state.players.find(x => x.id === id);
+            const p = findPlayerById(id);
+            const actualId = p ? p.id : id;
             if (p) {
                 p.status = newStatus;
                 if (PlayerState.isHealthySeated(newStatus)) p.lastChatTime = Date.now();
-                if (id === state.myId && PlayerState.isIncapacitated(newStatus)) {
+                if (actualId === state.myId && !PlayerState.canChat(newStatus)) {
                     els.chatInput.value = '';
                 }
             }
-            const wrap = document.getElementById(`char-wrap-${id}`);
+            const wrap = document.getElementById(`char-wrap-${actualId}`);
             if (wrap) {
                 wrap.className = `character-wrapper status-${newStatus}`;
                 if (PlayerState.isHealthySeated(newStatus)) {
                     // Force clear any lingering inline styles from interrupted animations
-                    clearCharacterPose(id);
+                    clearCharacterPose(actualId);
                 } else if (newStatus === PlayerState.STATUS.DEAD_MISSILE) {
                     // Atomic guarantee: entering the missile-stun state always applies
                     // the flipped pose together with the X_X face, no matter which
                     // code path (immediate hit, deferred landing, state re-sync) did it.
-                    applyMissileStunPose(id, true);
+                    applyMissileStunPose(actualId, true);
                 }
             }
-            if (id === state.myId) updateChatUI();
+            if (actualId === state.myId) updateChatUI();
             
             if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
                 // Ensure all guests are perfectly synced with status changes (fixes invisible characters)
@@ -5184,8 +5373,9 @@
         }
 
         function triggerFly(playerId, word, specialEvent = null, shieldBlockedAnimal = null) {
-            const player = state.players.find(p => p.id === playerId);
+            const player = findPlayerById(playerId);
             if (!player) return;
+            playerId = player.id;
 
             // --- Guard: never fly a player that is already fully stunned/incapacitated ---
             // Prevents race conditions where a chat message sent just before a missile hit

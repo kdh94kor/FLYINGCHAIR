@@ -338,6 +338,14 @@ io.on('connection', (socket) => {
     if (!cleaned) return;
     if (typeof data.guestId !== 'string' || data.guestId.length > 64) return;
     io.to(data.guestId).emit('DATA_FROM_HOST', { type: cleaned.type, payload: cleaned.payload });
+    if (cleaned.type === 'REJECT_JOIN') {
+      const targetSocket = io.sockets.sockets.get(data.guestId);
+      if (targetSocket) {
+        for (const rCode of targetSocket.rooms) {
+          if (rCode !== targetSocket.id) targetSocket.leave(rCode);
+        }
+      }
+    }
   });
 
   // Host broadcasts data to all Guests in the room
