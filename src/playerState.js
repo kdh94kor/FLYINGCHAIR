@@ -88,9 +88,9 @@ const PlayerState = {
     },
 
     // [5. 룰 & 상호작용 가능 여부 체크]
-    // 미사일의 공격 타깃이 될 수 있는가? (오직 자리에 정상 착석 중인 플레이어만 조준 가능)
+    // 미사일의 공격 타깃이 될 수 있는가? (물리적으로 의자 자리에 착석 중인 플레이어만 조준 가능 — 미사일 기절 중첩 허용)
     canBeTargetedByMissile(p) {
-        return this.isHealthySeated(p);
+        return this.isSeated(p);
     },
 
     // 채팅을 전송할 수 있는 상태인가? (기절하지 않았고 좌석을 이탈하지 않은 상태)

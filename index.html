@@ -1714,9 +1714,9 @@
             },
 
             // [5. 룰 & 상호작용 가능 여부 체크]
-            // 미사일의 공격 타깃이 될 수 있는가? (오직 자리에 정상 착석 중인 플레이어만 조준 가능)
+            // 미사일의 공격 타깃이 될 수 있는가? (물리적으로 의자 자리에 착석 중인 플레이어만 조준 가능 — 미사일 기절 중첩 허용)
             canBeTargetedByMissile(p) {
-                return this.isHealthySeated(p);
+                return this.isSeated(p);
             },
 
             // 채팅을 전송할 수 있는 상태인가? (기절하지 않았고 좌석을 이탈하지 않은 상태)
@@ -1956,12 +1956,16 @@
                     // Deep copy state
                     const sanitized = JSON.parse(JSON.stringify(state));
                     
-                    // Convert penaltyEndTime to relative time for clock sync
+                    // Convert penaltyEndTime to relative time for clock sync & strip host-only timer fields
                     sanitized.players.forEach(sp => {
                         if (sp.penaltyEndTime) {
                             sp.penaltyRemain = Math.max(0, sp.penaltyEndTime - now);
                             delete sp.penaltyEndTime;
                         }
+                        delete sp.flyTimeouts;
+                        delete sp.reviveTimeout;
+                        delete sp.flySequenceId;
+                        delete sp.incomingMissiles;
                     });
                     
                     // Sanitize
@@ -2329,16 +2333,32 @@
                 }
                 
                 const now = Date.now();
-                data.payload.state.players.forEach(p => {
-                    if (p.penaltyRemain !== undefined) {
-                        p.penaltyEndTime = now + p.penaltyRemain;
-                        delete p.penaltyRemain;
-                    }
-                });
+                const incomingPlayers = data.payload.state.players || [];
+                const existingMap = new Map(state.players.map(p => [p.id, p]));
                 
                 state.room = data.payload.state.room;
                 updateBodyState();
-                state.players = data.payload.state.players;
+                state.players = incomingPlayers.map(inc => {
+                    if (inc.penaltyRemain !== undefined) {
+                        inc.penaltyEndTime = now + inc.penaltyRemain;
+                        delete inc.penaltyRemain;
+                    } else {
+                        inc.penaltyEndTime = null;
+                    }
+                    const existing = existingMap.get(inc.id);
+                    if (existing) {
+                        // If Host authoritatively transitioned player to DEAD_MISSILE,
+                        // cancel any lingering Guest fly timers so they cannot overwrite DEAD_MISSILE to IDLE
+                        if (inc.status === PlayerState.STATUS.DEAD_MISSILE && existing.flyTimeouts && existing.flyTimeouts.length > 0) {
+                            existing.flyTimeouts.forEach(clearTimeout);
+                            existing.flyTimeouts = [];
+                            existing.flySequenceId = (existing.flySequenceId || 0) + 1;
+                        }
+                        Object.assign(existing, inc);
+                        return existing;
+                    }
+                    return inc;
+                });
                 updateRoomUI();
                 if (typeof updateMissingPlayersUI === 'function') updateMissingPlayersUI();
                 renderStage(); // always re-render to keep seats in sync after player leaves
@@ -2356,7 +2376,7 @@
                 const sender = state.players.find(p => p.id === data.payload.senderId);
                 appendChatUI(sender, data.payload.text);
             } else if (data.type === 'EVENT_FLY') {
-                triggerFly(data.payload.playerId, data.payload.word, data.payload.specialEvent);
+                triggerFly(data.payload.playerId, data.payload.word, data.payload.specialEvent, data.payload.shieldBlockedAnimal);
             } else if (data.type === 'EVENT_SYS') {
                 sysChat(data.payload.text);
             } else if (data.type === 'EVENT_ITEM') {
@@ -2620,20 +2640,28 @@
         // these helpers, so the "X_X eyes + flipped body" pair can never desync.
         const MISSILE_STUN_POSE = 'translate(0, -80px) rotate(180deg) scale(0.8)';
 
-        function applyMissileStunPose(playerId, animate = true) {
+        function applyMissileStunPose(playerId, animate = true, pulse = false) {
             const wrap = document.getElementById(`char-wrap-${playerId}`);
             const chair = document.getElementById(`chair-${playerId}`);
             if (chair) chair.classList.remove('tilted');
             if (!wrap) return;
+            wrap.className = `character-wrapper status-${PlayerState.STATUS.DEAD_MISSILE}`;
             wrap.style.animation = 'none';
-            wrap.style.transition = animate ? 'transform 0.6s ease-out, opacity 0.3s' : 'none';
             wrap.style.opacity = '1';
+            if (pulse && wrap.style.transform === MISSILE_STUN_POSE) {
+                wrap.style.transition = 'none';
+                wrap.style.transform = 'translate(0, -105px) rotate(180deg) scale(0.92)';
+                void wrap.offsetWidth;
+            }
+            wrap.style.transition = animate ? 'transform 0.6s ease-out, opacity 0.3s' : 'none';
             wrap.style.transform = MISSILE_STUN_POSE;
         }
 
         function clearCharacterPose(playerId) {
             const wrap = document.getElementById(`char-wrap-${playerId}`);
             if (wrap) {
+                wrap.style.animation = 'none';
+                wrap.style.transition = 'none';
                 wrap.style.transform = 'none';
                 wrap.style.opacity = '1';
             }
@@ -2648,9 +2676,14 @@
             if (!p) return;
             const wrap = document.getElementById(`char-wrap-${p.id}`);
             if (!wrap) return;
+            // If a missile animation is currently flying toward a healthy-seated player on this client,
+            // wait for the missile's onHit explosion callback before flipping so the flip happens on impact.
+            if (p.status === PlayerState.STATUS.DEAD_MISSILE && (p.incomingMissiles || 0) > 0 && wrap.classList.contains('status-idle')) {
+                return;
+            }
             wrap.className = `character-wrapper status-${p.status}`;
             if (p.status === PlayerState.STATUS.DEAD_MISSILE) {
-                applyMissileStunPose(p.id, opts.animate !== false);
+                applyMissileStunPose(p.id, opts.animate !== false, false);
             } else if (PlayerState.isHealthySeated(p)) {
                 clearCharacterPose(p.id);
             }
@@ -3683,6 +3716,13 @@
                     }
                     return; // Abort without consuming item!
                 }
+                // Authoritatively check and consume shield at launch time so all clients see identical outcome
+                const blockedByShield = !!(target.items && target.items.includes('shield'));
+                if (blockedByShield) {
+                    target.items.splice(target.items.indexOf('shield'), 1);
+                    if (targetId === state.myId) renderInventory();
+                }
+                extraData = { ...(extraData || {}), blockedByShield };
             }
             
             // Consume item
@@ -3737,31 +3777,33 @@
             if (target.flyTimeouts) { target.flyTimeouts.forEach(clearTimeout); target.flyTimeouts = []; }
             if (target.reviveTimeout) { clearTimeout(target.reviveTimeout); target.reviveTimeout = null; }
             
+            // Consume any pendingMissileStunMs so it is never lost or double-applied
+            const extraPending = target.pendingMissileStunMs || 0;
+            target.pendingMissileStunMs = 0;
+            
             // Accumulate on top of any existing penalty
             const now = Date.now();
+            const wasAlreadyStunned = target.status === PlayerState.STATUS.DEAD_MISSILE;
             let totalStunMs;
             if (target.penaltyEndTime && target.penaltyEndTime > now) {
-                totalStunMs = (target.penaltyEndTime - now) + stunMs;
+                totalStunMs = (target.penaltyEndTime - now) + stunMs + extraPending;
             } else {
-                totalStunMs = stunMs;
+                totalStunMs = stunMs + extraPending;
             }
             target.penaltyEndTime = now + totalStunMs;
             
-            // Visual: stun pose (flipped) — same helper used by renderStage/updateStatus
-            applyMissileStunPose(targetId, true);
+            // Visual: stun pose (flipped 180° + X_X dead face) — pulse if stacking on already stunned player
+            applyMissileStunPose(targetId, true, wasAlreadyStunned);
             
             updateStatus(targetId, PlayerState.STATUS.DEAD_MISSILE); // internally calls broadcastState
             
+            if ((currentMode === MODE_HOST || currentMode === MODE_BOT) && typeof handleBotFlyReaction === 'function') {
+                handleBotFlyReaction(targetId, null, 'missile');
+            }
+            
             target.reviveTimeout = setTimeout(() => {
-                const cWrap = document.getElementById(`char-wrap-${targetId}`);
-                if (cWrap) {
-                    cWrap.style.transition = 'none';
-                    cWrap.style.transform = 'none';
-                    cWrap.style.opacity = '1';
-                    cWrap.style.animation = 'none';
-                }
-                const cChair = document.getElementById(`chair-${targetId}`);
-                if (cChair) cChair.classList.remove('tilted');
+                if (state.room.status !== 'playing') return;
+                clearCharacterPose(targetId);
                 target.penaltyEndTime = null;
                 target.reviveTimeout = null;
                 if (currentMode === MODE_HOST) {
@@ -3775,13 +3817,19 @@
         // Called at the end of any fly sequence instead of updateStatus(playerId, 'idle').
         // If a missile hit during flight (pendingMissileStunMs set), applies stun on landing.
         function finalizeIdle(playerId) {
-            if (currentMode !== MODE_HOST && currentMode !== MODE_BOT) {
-                // Guests: just update local status; host will broadcast authoritative state
-                updateStatus(playerId, PlayerState.STATUS.IDLE);
-                return;
-            }
             const player = state.players.find(p => p.id === playerId);
             if (!player) return;
+            if (currentMode !== MODE_HOST && currentMode !== MODE_BOT) {
+                // Guests: if Host already transitioned player to DEAD_MISSILE or player has
+                // pendingMissileStunMs, apply DEAD_MISSILE pose instead of overwriting with IDLE!
+                if (player.status === PlayerState.STATUS.DEAD_MISSILE || (player.pendingMissileStunMs && player.pendingMissileStunMs > 0)) {
+                    player.pendingMissileStunMs = 0;
+                    updateStatus(playerId, PlayerState.STATUS.DEAD_MISSILE);
+                } else {
+                    updateStatus(playerId, PlayerState.STATUS.IDLE);
+                }
+                return;
+            }
             const pendingMs = player.pendingMissileStunMs || 0;
             if (pendingMs > 0) {
                 player.pendingMissileStunMs = 0;
@@ -3807,12 +3855,14 @@
             if (item === 'missile') {
                 if (!target) return;
                 
-                // Shield is checked & consumed at LAUNCH time (correct game feel:
-                // the shield intercepts as soon as the missile is fired).
-                // This means two rapid missiles will use the shield at most once.
-                const willBlock = target.items && target.items.includes('shield');
+                // Shield is checked & consumed at LAUNCH time (passed via extraData.blockedByShield from executeItem,
+                // with fallback to target.items check if playItemEvent is invoked directly).
+                const hasAuthoritativeBlockFlag = !!(extraData && typeof extraData.blockedByShield === 'boolean');
+                const willBlock = hasAuthoritativeBlockFlag
+                    ? extraData.blockedByShield
+                    : !!(target.items && target.items.includes('shield'));
                 
-                if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
+                if ((currentMode === MODE_HOST || currentMode === MODE_BOT) && !hasAuthoritativeBlockFlag) {
                     if (willBlock) {
                         target.items.splice(target.items.indexOf('shield'), 1);
                         if (targetId === state.myId) renderInventory();
@@ -3820,42 +3870,54 @@
                     broadcastState();
                 }
                 
+                target.incomingMissiles = (target.incomingMissiles || 0) + 1;
                 createMissileAnimation(senderId, targetId, () => {
+                    const liveTarget = state.players.find(p => p.id === targetId) || target;
+                    liveTarget.incomingMissiles = Math.max(0, (liveTarget.incomingMissiles || 1) - 1);
+                    if (state.room.status !== 'playing') return;
+
                     if (willBlock) {
-                        sysChat(`🛡️ ${target.name}님이 방패로 미사일을 막아냈습니다!`);
+                        sysChat(`🛡️ ${liveTarget.name}님이 방패로 미사일을 막아냈습니다!`);
                         createShieldEffect(targetId);
                     } else {
-                        // Check if target is currently away from chair
-                        const inFlight = PlayerState.isAway(target);
+                        // Check if target is currently away from chair using live state
+                        const inFlight = PlayerState.isAway(liveTarget);
                         
                         if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
-                            if (target.stats) target.stats.missile++;
+                            if (liveTarget.stats) liveTarget.stats.missile++;
                             
                             if (inFlight) {
                                 // Option B: target is airborne — defer stun until landing
-                                target.pendingMissileStunMs = (target.pendingMissileStunMs || 0) + 30000;
-                                const pendingSec = Math.ceil(target.pendingMissileStunMs / 1000);
+                                liveTarget.pendingMissileStunMs = (liveTarget.pendingMissileStunMs || 0) + 30000;
+                                const pendingSec = Math.ceil(liveTarget.pendingMissileStunMs / 1000);
                                 if (currentMode === MODE_HOST) {
-                                    broadcast({ type: 'EVENT_SYS', payload: { text: `💥 ${target.name}님에게 미사일이 명중! 비행 중이라 착지 후 ${pendingSec}초 기절이 발동됩니다.` } });
+                                    broadcast({ type: 'EVENT_SYS', payload: { text: `💥 ${liveTarget.name}님에게 미사일이 명중! 비행 중이라 착지 후 ${pendingSec}초 기절이 발동됩니다.` } });
                                 }
-                                sysChat(`💥 ${target.name}님에게 미사일이 명중! 비행 중이라 착지 후 ${pendingSec}초 기절이 발동됩니다.`);
+                                sysChat(`💥 ${liveTarget.name}님에게 미사일이 명중! 비행 중이라 착지 후 ${pendingSec}초 기절이 발동됩니다.`);
                                 broadcastState();
                             } else {
                                 // Immediate stun via single source of truth
                                 const now = Date.now();
-                                let accSec = 30;
-                                if (target.penaltyEndTime && target.penaltyEndTime > now) {
-                                    accSec = Math.ceil((target.penaltyEndTime - now) / 1000) + 30;
+                                const extraPending = liveTarget.pendingMissileStunMs || 0;
+                                let accSec = Math.ceil((30000 + extraPending) / 1000);
+                                if (liveTarget.penaltyEndTime && liveTarget.penaltyEndTime > now) {
+                                    accSec = Math.ceil((liveTarget.penaltyEndTime - now + 30000 + extraPending) / 1000);
                                 }
                                 if (currentMode === MODE_HOST) {
-                                    broadcast({ type: 'EVENT_SYS', payload: { text: `💥 ${target.name}님이 미사일에 격추되었습니다! (기절 ${accSec}초)` } });
+                                    broadcast({ type: 'EVENT_SYS', payload: { text: `💥 ${liveTarget.name}님이 미사일에 격추되었습니다! (기절 ${accSec}초)` } });
                                 }
-                                sysChat(`💥 ${target.name}님이 미사일에 격추되었습니다! (기절 ${accSec}초)`);
-                                applyMissileStun(targetId);
+                                sysChat(`💥 ${liveTarget.name}님이 미사일에 격추되었습니다! (기절 ${accSec}초)`);
+                                applyMissileStun(targetId, 30000);
                             }
                         } else {
-                            // Guest: state will be synced from host; just show message if not in-flight
-                            if (!inFlight) sysChat(`💥 ${target.name}님이 미사일에 격추되었습니다!`);
+                            // Guest: immediately apply missile stun visual on impact if target is seated,
+                            // so explosion, 180° flip, and X_X dead face happen simultaneously for all players!
+                            if (!inFlight) {
+                                const wasAlreadyStunned = liveTarget.status === PlayerState.STATUS.DEAD_MISSILE;
+                                liveTarget.status = PlayerState.STATUS.DEAD_MISSILE;
+                                applyMissileStunPose(targetId, true, wasAlreadyStunned);
+                                if (targetId === state.myId) updateChatUI();
+                            }
                         }
                     }
                 });
@@ -4056,6 +4118,15 @@
 
         function clearAllWaitingAnimals() {
             if (state.room) state.room.waitingAnimals = [];
+            if (Array.isArray(state.players)) {
+                state.players.forEach(p => {
+                    if (p.flyTimeouts) { p.flyTimeouts.forEach(clearTimeout); p.flyTimeouts = []; }
+                    if (p.reviveTimeout) { clearTimeout(p.reviveTimeout); p.reviveTimeout = null; }
+                    p.flySequenceId = (p.flySequenceId || 0) + 1;
+                    p.incomingMissiles = 0;
+                    p.pendingMissileStunMs = 0;
+                });
+            }
             const skyLayer = document.getElementById('waiting-animals-sky-layer');
             if (skyLayer) skyLayer.innerHTML = '';
             const poolLayer = document.getElementById('waiting-animals-pool-layer');
@@ -4738,6 +4809,9 @@
 
         // --- Game Mechanics & Animation ---
         function triggerRandomFly(playerId, triggerReason) {
+            const player = state.players.find(p => p.id === playerId);
+            if (!player || !PlayerState.isHealthySeated(player)) return;
+
             let specialEvent = null;
             if (state.room && state.room.waitingAnimals && state.room.waitingAnimals.length > 0) {
                 specialEvent = state.room.waitingAnimals.shift();
@@ -4749,10 +4823,22 @@
                 else if (r < 0.12) specialEvent = 'shark';
                 else if (r < 0.17) specialEvent = 'gator';
             }
+
+            // Authoritatively resolve shield intercept against animals so Host & Guests stay in 100% sync
+            let shieldBlockedAnimal = null;
+            if (specialEvent === 'shark' || specialEvent === 'gator' || specialEvent === 'gull') {
+                if (player.items && player.items.includes('shield')) {
+                    player.items.splice(player.items.indexOf('shield'), 1);
+                    shieldBlockedAnimal = specialEvent;
+                    specialEvent = null;
+                    if (currentMode === MODE_HOST || currentMode === MODE_BOT) broadcastState();
+                    if (playerId === state.myId) renderInventory();
+                }
+            }
             
-            triggerFly(playerId, triggerReason, specialEvent);
+            triggerFly(playerId, triggerReason, specialEvent, shieldBlockedAnimal);
             if (currentMode === MODE_HOST) {
-                broadcast({ type: 'EVENT_FLY', payload: { playerId, word: triggerReason, specialEvent } });
+                broadcast({ type: 'EVENT_FLY', payload: { playerId, word: triggerReason, specialEvent, shieldBlockedAnimal } });
             }
         }
 
@@ -5097,16 +5183,31 @@
             }
         }
 
-        function triggerFly(playerId, word, specialEvent = null) {
+        function triggerFly(playerId, word, specialEvent = null, shieldBlockedAnimal = null) {
             const player = state.players.find(p => p.id === playerId);
             if (!player) return;
+
+            // --- Guard: never fly a player that is already fully stunned/incapacitated ---
+            // Prevents race conditions where a chat message sent just before a missile hit
+            // arrives at the host after the stun was already applied.
+            if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
+                if (PlayerState.isIncapacitated(player)) return;
+            }
 
             if (specialEvent) {
                 removeWaitingAnimal(specialEvent);
             }
+            if (shieldBlockedAnimal) {
+                removeWaitingAnimal(shieldBlockedAnimal);
+            }
 
             // --- Shield Intercept ---
-            if (specialEvent === 'shark' || specialEvent === 'gator' || specialEvent === 'gull') {
+            if (shieldBlockedAnimal) {
+                const attackName = shieldBlockedAnimal === 'shark' ? '상어' : (shieldBlockedAnimal === 'gator' ? '악어 떼' : '부산갈매기');
+                sysChat(`🛡️ ${player.name}님이 방패로 ${attackName}의 치명적인 공격을 방어했습니다!`);
+                createShieldEffect(playerId);
+                specialEvent = null;
+            } else if (specialEvent === 'shark' || specialEvent === 'gator' || specialEvent === 'gull') {
                 if (player.items && player.items.includes('shield')) {
                     player.items.splice(player.items.indexOf('shield'), 1); // Consume shield
                     const attackName = specialEvent === 'shark' ? '상어' : (specialEvent === 'gator' ? '악어 떼' : '부산갈매기');
@@ -5116,13 +5217,6 @@
                     if (playerId === state.myId) renderInventory();
                     specialEvent = null; // Revert to normal fly (do not return, they still fly)
                 }
-            }
-
-            // --- Guard: never fly a player that is already fully stunned/incapacitated ---
-            // Prevents race conditions where a chat message sent just before a missile hit
-            // arrives at the host after the stun was already applied.
-            if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
-                if (PlayerState.isIncapacitated(player)) return;
             }
 
             // Cancel ALL competing timers before starting a new fly sequence.
@@ -5241,14 +5335,20 @@
                         wrap.style.opacity = '0';
                         
                         addTimer(() => {
+                            if (player.flySequenceId !== mySequenceId) return;
                             sysChat(`✨ ${player.name} 님이 기적적으로 부활했습니다!`);
                             chair.classList.remove('tilted');
                             wrap.style.transition = 'none';
-                            wrap.style.transform = `translate(0px, 0px) scale(1)`;
+                            wrap.style.transform = 'none';
                             wrap.style.opacity = '1';
-                            wrap.style.animation = 'blink-anim 1.5s infinite';
                             player.penaltyEndTime = null;
-                            addTimer(() => { wrap.style.animation = 'none'; finalizeIdle(playerId); }, 3000);
+                            finalizeIdle(playerId);
+                            if (player.status === PlayerState.STATUS.IDLE) {
+                                wrap.style.animation = 'blink-anim 1.5s infinite';
+                                addTimer(() => {
+                                    if (player.status === PlayerState.STATUS.IDLE) wrap.style.animation = 'none';
+                                }, 3000);
+                            }
                         }, 30000);
                     });
                     
@@ -5280,14 +5380,20 @@
                                     wrap.style.opacity = '0';
                                     
                                     addTimer(() => {
+                                        if (player.flySequenceId !== mySequenceId) return;
                                         sysChat(`✨ ${player.name} 님이 악어 떼를 뿌리치고 부활했습니다!`);
                                         chair.classList.remove('tilted');
                                         wrap.style.transition = 'none';
-                                        wrap.style.transform = `translate(0px, 0px) scale(1) rotate(0deg)`;
+                                        wrap.style.transform = 'none';
                                         wrap.style.opacity = '1';
-                                        wrap.style.animation = 'blink-anim 1.5s infinite';
                                         player.penaltyEndTime = null;
-                                        addTimer(() => { wrap.style.animation = 'none'; finalizeIdle(playerId); }, 3000);
+                                        finalizeIdle(playerId);
+                                        if (player.status === PlayerState.STATUS.IDLE) {
+                                            wrap.style.animation = 'blink-anim 1.5s infinite';
+                                            addTimer(() => {
+                                                if (player.status === PlayerState.STATUS.IDLE) wrap.style.animation = 'none';
+                                            }, 3000);
+                                        }
                                     }, 5000);
                                 }, 10000);
                             });
@@ -5395,16 +5501,37 @@
             const centerX = stageRect.width / 2;
             const centerY = 150;
             
-            let startTime = performance.now();
-            let phase = 1; // 1: go to center, 2: infinity loop, 3: strike
-            let phaseTime = 0;
+            const startWallTime = Date.now();
+            let strikeSoundPlayed = false;
             let lastSmokeTime = 0;
-            let p3StartX = 0, p3StartY = 0;
+            let p3StartX = centerX, p3StartY = centerY;
+            let finished = false;
             
             playTone(150, 'sawtooth', 0.5, 0.5); // launch sound
+
+            function finishHit() {
+                if (finished) return;
+                finished = true;
+                clearTimeout(fallbackTimer);
+                if (missile.parentNode) missile.remove();
+                const currentTargetWrap = document.getElementById(`char-wrap-${targetId}`);
+                if (currentTargetWrap && stage) {
+                    const sRect = stage.getBoundingClientRect();
+                    const tRect = currentTargetWrap.getBoundingClientRect();
+                    curX = tRect.left - sRect.left + 35;
+                    curY = tRect.top - sRect.top + 45;
+                }
+                playTone(100, 'square', 0.8, 1); // Boom sound
+                createExplosionEffect(curX, curY);
+                if (onHit) onHit();
+            }
+
+            // Guaranteed wall-clock fallback so background tab throttling never freezes missile hit logic
+            const fallbackTimer = setTimeout(finishHit, 5150);
             
             function animate(time) {
-                const dt = time - startTime;
+                if (finished) return;
+                const dt = Date.now() - startWallTime;
                 
                 // Smoke trail
                 if (time - lastSmokeTime > 40) {
@@ -5419,47 +5546,40 @@
                     setTimeout(() => smoke.remove(), 800);
                 }
 
-                if (phase === 1) {
+                if (dt < 800) {
                     const progress = Math.min(dt / 800, 1);
                     const ease = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
                     curX = sX + (centerX - sX) * ease;
                     curY = sY - 100 * ease; // arch up slightly
                     angle = Math.atan2((centerY - sY - 100), (centerX - sX)) * 180 / Math.PI;
-                    if (progress >= 1) { phase = 2; phaseTime = time; }
-                } else if (phase === 2) {
-                    const t = (time - phaseTime) / 1000 * Math.PI; // speed
-                    if (t > Math.PI * 4) { 
-                        phase = 3; phaseTime = time; p3StartX = curX; p3StartY = curY; 
-                        playTone(400, 'square', 0.8, 0.6); 
-                    } // 2 loops, strike sound
-                    else {
-                        const A = 150, B = 80;
-                        const nextX = centerX + A * Math.sin(t);
-                        const nextY = centerY + B * Math.sin(2 * t) / 2;
-                        angle = Math.atan2(nextY - curY, nextX - curX) * 180 / Math.PI;
-                        curX = nextX; curY = nextY;
+                } else if (dt < 4800) {
+                    const t = ((dt - 800) / 1000) * Math.PI; // 2 loops over 4000ms
+                    const A = 150, B = 80;
+                    const nextX = centerX + A * Math.sin(t);
+                    const nextY = centerY + B * Math.sin(2 * t) / 2;
+                    angle = Math.atan2(nextY - curY, nextX - curX) * 180 / Math.PI;
+                    curX = nextX; curY = nextY;
+                    p3StartX = curX; p3StartY = curY;
+                } else {
+                    if (!strikeSoundPlayed) {
+                        strikeSoundPlayed = true;
+                        playTone(400, 'square', 0.8, 0.6);
                     }
-                } else if (phase === 3) {
                     const currentTargetWrap = document.getElementById(`char-wrap-${targetId}`);
                     if (!currentTargetWrap) {
-                        missile.remove();
-                        createExplosionEffect(curX, curY);
-                        if (onHit) onHit();
+                        finishHit();
                         return;
                     }
-                    const stageRect = document.getElementById('stage').getBoundingClientRect();
+                    const sRect = stage.getBoundingClientRect();
                     const tRect = currentTargetWrap.getBoundingClientRect();
-                    const tX = tRect.left - stageRect.left + 35;
-                    const tY = tRect.top - stageRect.top + 45;
-                    const progress = Math.min((time - phaseTime) / 300, 1); // 0.3s to strike
+                    const tX = tRect.left - sRect.left + 35;
+                    const tY = tRect.top - sRect.top + 45;
+                    const progress = Math.min((dt - 4800) / 300, 1); // 0.3s to strike
                     curX = p3StartX + (tX - p3StartX) * progress;
                     curY = p3StartY + (tY - p3StartY) * progress;
                     angle = Math.atan2(tY - p3StartY, tX - p3StartX) * 180 / Math.PI;
                     if (progress >= 1) {
-                        missile.remove();
-                        playTone(100, 'square', 0.8, 1); // Boom sound
-                        createExplosionEffect(tX, tY);
-                        if (onHit) onHit();
+                        finishHit();
                         return;
                     }
                 }
