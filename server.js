@@ -169,6 +169,8 @@ const io = new Server(server, {
     methods: ['GET', 'POST']
   },
   // 모바일 백그라운드 등 짧은 끊김 후 같은 socket.id 로 세션 복구
+  pingInterval: 20000,
+  pingTimeout: 30000,
   connectionStateRecovery: { maxDisconnectionDuration: 2 * 60 * 1000 }
 });
 
@@ -221,6 +223,25 @@ function sanitizeRoomCode(code) {
 
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
+
+  // Lightweight ping check for mobile foreground zombie-socket detection
+  socket.on('PING_CHECK', (callback) => {
+    if (typeof callback === 'function') {
+      callback({ ok: true, serverTime: Date.now() });
+    }
+  });
+
+  // Host updates room lifecycle status ('waiting' | 'word_setting' | 'playing' | 'finished')
+  socket.on('ROOM_STATUS_CHANGED', (data) => {
+    const roomCode = sanitizeRoomCode(data && data.roomCode);
+    if (!roomCode) return;
+    const room = rooms[roomCode];
+    if (room && room.hostId === socket.id && data && typeof data.status === 'string') {
+      if (['waiting', 'word_setting', 'playing', 'finished'].includes(data.status)) {
+        room.status = data.status;
+      }
+    }
+  });
 
   // Host creates a room
   socket.on('CREATE_ROOM', (callback) => {
@@ -376,7 +397,7 @@ io.on('connection', (socket) => {
         if (rooms[roomCode].hostId === socket.id) {
           clearTimeout(rooms[roomCode].hostTimer);
           const isWaiting = rooms[roomCode].status === 'waiting';
-          const graceMs = isWaiting ? 1500 : 15000;
+          const graceMs = isWaiting ? 45000 : 60000;
           rooms[roomCode].hostTimer = setTimeout(() => {
             if (!rooms[roomCode] || rooms[roomCode].hostId !== socket.id) return;
             io.to(roomCode).emit('HOST_DISCONNECTED', {

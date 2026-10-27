@@ -2182,6 +2182,7 @@
                         document.getElementById('room-code-text').textContent = roomCode;
                         document.getElementById('guest-controls').classList.add('hidden');
                         document.getElementById('host-controls').classList.remove('hidden');
+                        requestWakeLock();
                         
                         sysChat(`방이 생성되었습니다! 친구들에게 방 코드 [${roomCode}] 를 알려주세요.`);
                     } else {
@@ -2205,23 +2206,32 @@
                 
                 const deptName = departed.name;
 
-                // In waiting room, or if intentionally left: REMOVE INSTANTLY!
-                if (state.room.status === 'waiting' || data.isWaiting || data.intentional || departed.intentionallyLeft) {
+                // Only remove immediately if the guest intentionally clicked [방 나가기]
+                if (data.intentional || departed.intentionallyLeft) {
                     removeGuestPlayer(departed.id);
                     return;
                 }
 
-                // In playing game: 12 seconds grace period for temporary network/app switch
+                // Mobile app switch / network blip grace period:
+                // 30s in waiting room, 45s in word_setting / playing
+                const isWaiting = state.room.status === 'waiting';
+                const graceMs = isWaiting ? 30000 : 45000;
+                const graceSec = Math.round(graceMs / 1000);
+
                 if (state.disconnectTimeouts[departed.id]) clearTimeout(state.disconnectTimeouts[departed.id]);
+                departed.isDisconnected = true;
                 state.disconnectAnnounced[departed.id] = true;
                 state.disconnectAnnounced[pId] = true;
-                sysChat(`[시스템] ${deptName}님의 연결이 끊겼습니다. (12초 내 재연결 대기)`);
-                broadcast({ type: 'EVENT_SYS', payload: { text: `[시스템] ${deptName}님의 연결이 끊겼습니다. (12초 내 재연결 대기)` } });
+                sysChat(`[시스템] ${deptName}님의 연결이 끊겼습니다. (${graceSec}초 내 재연결 대기)`);
+                broadcast({ type: 'EVENT_SYS', payload: { text: `[시스템] ${deptName}님의 연결이 끊겼습니다. (${graceSec}초 내 재연결 대기)` } });
+                broadcastState();
+                updateRoomUI();
+                renderStage();
                 
                 state.disconnectTimeouts[departed.id] = setTimeout(() => {
                     delete state.disconnectTimeouts[departed.id];
                     removeGuestPlayer(departed.id);
-                }, 12000);
+                }, graceMs);
             });
 
             socket.on('connect_error', () => {
@@ -2263,6 +2273,7 @@
                         updateBodyState();
                         document.getElementById('room-code-display').classList.remove('hidden');
                         document.getElementById('room-code-text').textContent = roomCode;
+                        requestWakeLock();
                         
                         if (!state.room || state.room.status === 'lobby' || state.room.status === 'waiting') {
                             sysChat(`방에 입장했습니다. (방 코드: ${roomCode})`);
@@ -2340,6 +2351,7 @@
                     if (existingPlayer) {
                         // Reconnect! Update ID and preserve oldId history for any active timer closures
                         const oldId = existingPlayer.id;
+                        existingPlayer.isDisconnected = false;
                         if (oldId !== guestId) {
                             if (!existingPlayer.previousIds) existingPlayer.previousIds = [];
                             if (!existingPlayer.previousIds.includes(oldId)) existingPlayer.previousIds.push(oldId);
@@ -2519,13 +2531,128 @@
             }
         }
 
-        // 모바일에서 앱 전환 후 복귀 시 백오프 대기를 건너뛰고 즉시 재접속
+        let wakeLockSentinel = null;
+        async function requestWakeLock() {
+            try {
+                if (typeof navigator !== 'undefined' && navigator.wakeLock && typeof navigator.wakeLock.request === 'function') {
+                    if (wakeLockSentinel) return wakeLockSentinel;
+                    wakeLockSentinel = await navigator.wakeLock.request('screen');
+                    if (wakeLockSentinel && typeof wakeLockSentinel.addEventListener === 'function') {
+                        wakeLockSentinel.addEventListener('release', () => {
+                            wakeLockSentinel = null;
+                        });
+                    }
+                    return wakeLockSentinel;
+                }
+            } catch (err) {
+                // Ignore WakeLock errors on unsupported browsers / background states
+            }
+            return null;
+        }
+
+        async function releaseWakeLock() {
+            try {
+                if (wakeLockSentinel && typeof wakeLockSentinel.release === 'function') {
+                    await wakeLockSentinel.release();
+                }
+            } catch (err) {
+                // Ignore
+            }
+            wakeLockSentinel = null;
+        }
+
+        // 방장(Host)이 다른 앱 전환 후 복귀했을 때 백그라운드 동결로 밀린 기절/보급 타이머 즉시 보정
+        function catchUpHostTimersOnResume() {
+            if (currentMode !== MODE_HOST && currentMode !== MODE_BOT) return;
+            if (!state.room || state.room.status !== 'playing') return;
+            const now = Date.now();
+            let stateChanged = false;
+
+            state.players.forEach(p => {
+                if (p.penaltyEndTime) {
+                    if (p.penaltyEndTime <= now) {
+                        if (p.reviveTimeout) { clearTimeout(p.reviveTimeout); p.reviveTimeout = null; }
+                        if (p.flyTimeouts) { p.flyTimeouts.forEach(clearTimeout); p.flyTimeouts = []; }
+                        p.flySequenceId = (p.flySequenceId || 0) + 1;
+                        p.penaltyEndTime = null;
+                        clearCharacterPose(p.id);
+                        finalizeIdle(p.id);
+                        stateChanged = true;
+                    } else if (p.status === PlayerState.STATUS.DEAD_MISSILE) {
+                        const remainMs = p.penaltyEndTime - now;
+                        if (p.reviveTimeout) clearTimeout(p.reviveTimeout);
+                        p.reviveTimeout = setTimeout(() => {
+                            if (state.room.status !== 'playing') return;
+                            clearCharacterPose(p.id);
+                            p.penaltyEndTime = null;
+                            p.reviveTimeout = null;
+                            if (currentMode === MODE_HOST) {
+                                broadcast({ type: 'EVENT_SYS', payload: { text: `✨ ${p.name}님이 미사일 기절에서 회복했습니다!` } });
+                            }
+                            sysChat(`✨ ${p.name}님이 미사일 기절에서 회복했습니다!`);
+                            updateStatus(p.id, PlayerState.STATUS.IDLE);
+                        }, remainMs);
+                        stateChanged = true;
+                    }
+                }
+            });
+
+            if (state.room.itemEnabled && state.room.nextItemDropTime && now >= state.room.nextItemDropTime) {
+                distributeItems();
+                stateChanged = true;
+            }
+
+            if (stateChanged && currentMode === MODE_HOST) {
+                broadcastState();
+            }
+        }
+
+        // 모바일에서 앱 전환 후 복귀 시 좀비 소켓(Half-Open) 점검 및 세션 보존형 즉시 재접속
+        let pingCheckPending = false;
+        function handleAppForegroundRestore() {
+            if (typeof document !== 'undefined' && document.visibilityState && document.visibilityState !== 'visible') return;
+            if (!currentMode || currentMode === MODE_BOT || !roomCode) return;
+            requestWakeLock();
+            if (currentMode === MODE_HOST) {
+                catchUpHostTimersOnResume();
+            }
+            if (!socket) return;
+            if (!socket.connected) {
+                if (typeof socket.connect === 'function') socket.connect();
+                return;
+            }
+            if (pingCheckPending) return;
+            pingCheckPending = true;
+            let pongReceived = false;
+            const pingTimer = setTimeout(() => {
+                if (!pongReceived) {
+                    pingCheckPending = false;
+                    if (socket && socket.io && socket.io.engine && typeof socket.io.engine.close === 'function') {
+                        socket.io.engine.close();
+                    } else if (socket) {
+                        socket.disconnect().connect();
+                    }
+                }
+            }, 1500);
+            socket.emit('PING_CHECK', () => {
+                pongReceived = true;
+                pingCheckPending = false;
+                clearTimeout(pingTimer);
+                if (currentMode === MODE_HOST) {
+                    broadcastState();
+                }
+            });
+        }
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState !== 'visible') return;
-            if (socket && !socket.connected && currentMode !== MODE_BOT) socket.disconnect().connect();
+            if (document.visibilityState === 'visible') handleAppForegroundRestore();
         });
+        window.addEventListener('pageshow', handleAppForegroundRestore);
+        window.addEventListener('focus', handleAppForegroundRestore);
+        window.addEventListener('online', handleAppForegroundRestore);
 
         function leaveRoom() {
+            releaseWakeLock();
+            pingCheckPending = false;
             if (currentMode === MODE_HOST && socket && roomCode) {
                 socket.emit('HOST_CLOSE_ROOM', { roomCode });
             } else if (currentMode === MODE_GUEST && socket && roomCode) {
@@ -2574,8 +2701,9 @@
             switchView('lobby-view');
         }
 
-        // 브라우저 탭 닫기 / 새로고침 시 방 나가기 즉시 전송
-        function handlePageUnload() {
+        // 브라우저 탭 닫기 / 새로고침 시 방 나가기 즉시 전송 (모바일 bfcache persisted 전환은 제외)
+        function handlePageUnload(e) {
+            if (e && e.persisted) return;
             if (!socket || !roomCode) return;
             if (currentMode === MODE_HOST) {
                 socket.emit('HOST_CLOSE_ROOM', { roomCode });
@@ -2614,7 +2742,7 @@
             list.innerHTML = '';
             state.players.forEach(p => {
                 const li = document.createElement('li');
-                li.textContent = `${p.name} ${p.id === state.myId ? '(나)' : ''} ${p.isReady ? '✅' : ''}${p.isBot ? ' 🤖' : ''}`;
+                li.textContent = `${p.name} ${p.id === state.myId ? '(나)' : ''} ${p.isReady ? '✅' : ''}${p.isBot ? ' 🤖' : ''}${p.isDisconnected ? ' 📡(재연결 중)' : ''}`;
                 li.style.padding = '5px 0';
                 list.appendChild(li);
             });
@@ -2803,8 +2931,10 @@
                     slot.className = 'chair-slot';
                     slot.dataset.playerId = p.id;
                     const showReady = p.isReady && state.room.status === 'waiting';
+                    const showReconn = !!p.isDisconnected;
                     slot.innerHTML = `
                         <div class="ready-badge ${showReady ? '' : 'hidden'}" id="ready-${p.id}" style="position:absolute; bottom:5px; left:50%; transform:translateX(-50%); background:var(--accent); color:white; font-size:0.75rem; padding:4px 8px; border-radius:12px; font-weight:bold; white-space:nowrap; z-index:25; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">준비 완료!</div>
+                        <div class="reconnect-badge ${showReconn ? '' : 'hidden'}" id="reconn-${p.id}" style="position:absolute; top:-22px; left:50%; transform:translateX(-50%); background:rgba(255,159,67,0.95); color:#fff; font-size:0.7rem; padding:2px 7px; border-radius:10px; font-weight:bold; white-space:nowrap; z-index:30; box-shadow: 0 2px 6px rgba(0,0,0,0.4);">📡 재연결 중...</div>
                         <div class="chair-base" id="chair-${p.id}"><div class="chair-back"></div></div>
                         <div class="character-wrapper status-${p.status}" id="char-wrap-${p.id}">
                             <div class="speech-bubble" id="bubble-${p.id}"></div>
@@ -2826,6 +2956,11 @@
                     if (readyBadge) {
                         if (showReady) readyBadge.classList.remove('hidden');
                         else readyBadge.classList.add('hidden');
+                    }
+                    const reconnBadge = document.getElementById(`reconn-${p.id}`);
+                    if (reconnBadge) {
+                        if (p.isDisconnected) reconnBadge.classList.remove('hidden');
+                        else reconnBadge.classList.add('hidden');
                     }
                     
                     // Single entry point: keeps the class (X_X eyes) and the pose
@@ -2891,6 +3026,7 @@
                 broadcastState();
                 broadcast({ type: 'START_WORD_SETTING' });
                 if (socket) {
+                    socket.emit('ROOM_STATUS_CHANGED', { roomCode, status: 'word_setting' });
                     socket.emit('GAME_STARTED', {
                         roomCode: roomCode,
                         options: {
@@ -3199,6 +3335,9 @@
                 }
 
                 if (currentMode === MODE_HOST) {
+                    if (socket && roomCode) {
+                        socket.emit('ROOM_STATUS_CHANGED', { roomCode, status: 'playing' });
+                    }
                     broadcastState();
                     broadcast({ type: 'START_PLAYING' });
                 }
@@ -3519,6 +3658,9 @@
             if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
                 if (!confirm('정말 게임을 종료하시겠습니까? (통계가 표시됩니다)')) return;
                 state.room.status = 'finished';
+                if (currentMode === MODE_HOST && socket && roomCode) {
+                    socket.emit('ROOM_STATUS_CHANGED', { roomCode, status: 'finished' });
+                }
                 updateBodyState();
                 stopGameLoopIntervals();
                 closeActiveGameModals();
@@ -5827,6 +5969,10 @@
         window.openWordAddModal = openWordAddModal;
         window.openWordChangeModal = openWordChangeModal;
         window.updateCooldownUI = updateCooldownUI;
+        window.handleAppForegroundRestore = handleAppForegroundRestore;
+        window.catchUpHostTimersOnResume = catchUpHostTimersOnResume;
+        window.requestWakeLock = requestWakeLock;
+        window.releaseWakeLock = releaseWakeLock;
 
         // ─── Mobile Virtual Keyboard Responsive Handler ─────────────────────────
         // The compact layout used to be driven by focus/blur only, and the
