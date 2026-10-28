@@ -1443,7 +1443,7 @@
                 </p>
                 <ul style="list-style:none; display:flex; flex-direction:column; gap:10px; margin-bottom:20px; padding-left:4px;">
                     <li>• <strong>1단계 (대기실 & 맞춤 룰셋 구성):</strong> 방장은 참가자당 금기어 개수(1~3개), 침묵 방지(AFK) 자동 발사 타이머(최소 30초 이상), 특수 아이템 보급 주기를 모임 성격에 맞게 자유롭게 설정할 수 있습니다. 4자리 숫자 방 코드 또는 초대 링크 복사로 친구들을 간편하게 초대하세요.</li>
-                    <li>• <strong>2단계 (비밀 금기어 교차 등록):</strong> 게임이 시작되면 본인을 제외한 다른 참가자들에게 부여할 금기어를 직접 입력합니다. 공정한 게임 밸런스를 위해 <strong>2글자 이상 25글자 이하의 완성형 단어</strong>만 허용되며, 띄어쓰기(공백), 단독 자음/모음 초성(예: ㅋㅋ, ㅎㅎ), 특수기호 및 동일 대상 중복 단어는 단일 검증 엔진(WordValidator)에 의해 자동으로 차단됩니다.</li>
+                    <li>• <strong>2단계 (비밀 금기어 교차 등록):</strong> 게임이 시작되면 본인을 제외한 다른 참가자들에게 부여할 금기어를 직접 입력합니다. 공정한 게임 밸런스를 위해 <strong>2글자 이상 25글자 이하의 단어</strong>로 제한되며, 초성(ㅋㅋ, ㅎㅎ 등) 및 특수기호(?!, ^^ 등)도 자유롭게 설정할 수 있습니다. 단, 띄어쓰기(공백)와 시스템 예약어(???) 및 동일 대상 중복 단어는 단일 검증 엔진(WordValidator)에 의해 자동으로 차단됩니다.</li>
                     <li>• <strong>3단계 (실시간 채팅 & 부분 문자열 격발 판정):</strong> 상단 전광판에는 다른 모든 참가자의 금기어가 투명하게 공개되지만, 정작 <strong>내 머리 위에 걸린 금기어는 나에게만 `?`로 가려져 보이지 않습니다.</strong> 채팅 메시지에 내 금기어가 부분 문자열(Substring)로 포함되는 순간(예: 금기어가 '치킨'일 때 '양념치킨 먹고 싶다' 입력), 서버가 0.05초 내에 감지하여 의자를 수영장으로 발사합니다.</li>
                     <li>• <strong>4단계 (특수 아이템 공방 & 결과 리포트):</strong> 보급 주기에 따라 지급되는 8종의 아이템으로 상대를 기절시키거나 내 금기어를 정화할 수 있습니다. 라운드 종료 시 총 비행 횟수, 상어/악어/갈매기 조우 횟수, 미사일 피격 횟수 및 금기어별 발동 통계를 한눈에 확인할 수 있습니다.</li>
                 </ul>
@@ -1851,14 +1851,14 @@
         }
 
         // ── SSOT: 금기어 입력 유효성 검증기 (WordValidator) ──────────────────
+        // 2~25자 이내, 공백 없음, 시스템 비밀 예약어(???) 제외 모든 단어·초성(ㅋㅋ, ㅎㅎ)·특수문자(?!, ^^ 등) 허용
         const WordValidator = {
             isValidWord(raw) {
                 if (typeof raw !== 'string') return false;
                 const w = raw.trim();
                 if (w.length < 2 || w.length > 25) return false;
-                if (/\s/.test(w)) return false; // 내부 공백 금지
-                if (/[ㄱ-ㅎㅏ-ㅣ]/.test(w)) return false; // 단순 초성/자모(ㅋㅋ, ㄱㄴ 등) 금지
-                if (/[?~!@#$%^&*()+=\[\]{};:'",.<>\/\\|]/.test(w)) return false; // 예약 마스킹(???) 및 특수기호 금지
+                if (/\s/.test(w)) return false; // 내부 공백(띄어쓰기) 금지
+                if (w === '???') return false; // 시스템 비밀 마스킹 예약어('???') 금지
                 return true;
             }
         };
@@ -3301,7 +3301,7 @@
             });
             
             if (!allFilled) return alert('모든 플레이어의 금기어를 각각 2글자 이상으로 입력해주세요!');
-            if (invalidFormat) return alert('금기어에 공백, 초성(ㅋㅋ 등), 특수문자(???)는 사용할 수 없습니다!');
+            if (invalidFormat) return alert('금기어에 공백(띄어쓰기) 및 예약어(???)는 사용할 수 없습니다!');
             if (duplicateWord) return alert('동일한 플레이어에게 중복된 금기어를 설정할 수 없습니다!');
             
             document.getElementById('modal-title').textContent = '대기 중...';
@@ -3686,7 +3686,7 @@
                 return;
             }
             if (invalidFormat) {
-                alert('금기어에 공백, 초성(ㅋㅋ 등), 특수문자(???)는 사용할 수 없습니다!');
+                alert('금기어에 공백(띄어쓰기) 및 예약어(???)는 사용할 수 없습니다!');
                 return;
             }
             
@@ -4015,7 +4015,7 @@
                 return;
             }
             if (!WordValidator.isValidWord(newWord)) {
-                alert('금기어에 공백, 초성(ㅋㅋ 등), 특수문자(???)는 사용할 수 없습니다!');
+                alert('금기어에 공백(띄어쓰기) 및 예약어(???)는 사용할 수 없습니다!');
                 return;
             }
             

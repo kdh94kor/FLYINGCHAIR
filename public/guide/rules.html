@@ -214,7 +214,7 @@
         <article class="doc-section">
             <h2><span>🛡️</span> 공정한 승부를 위한 금기어 설정 5대 규칙 (WordValidator)</h2>
             <p>
-                지나치게 짧은 한 글자 조사('은', '는', '이', '가')나 단순 자음 연타('ㅋㅋ')로 인해 정상적인 대화가 불가능해지는 현상을 막기 위해, 서버와 클라이언트는 단일 검증 엔진(<strong>WordValidator</strong>)을 통해 모든 금기어 등록·추가·변경 입력을 엄격히 검증합니다.
+                지나치게 짧은 한 글자 조사('은', '는', '이', '가')로 인해 정상적인 대화가 불가능해지는 현상을 막기 위해, 서버와 클라이언트는 단일 검증 엔진(<strong>WordValidator</strong>)을 통해 모든 금기어 등록·추가·변경 입력을 엄격히 검증합니다. 이제 초성(ㅋㅋ, ㅎㅎ 등) 및 특수문자(?!, ^^ 등)도 2글자 이상이면 자유롭게 금기어로 지정할 수 있습니다.
             </p>
             <table class="rule-table">
                 <thead>
@@ -228,22 +228,22 @@
                     <tr>
                         <td><strong>글자 수 제한</strong></td>
                         <td><strong>2글자 이상 ~ 25글자 이하</strong></td>
-                        <td><code>아</code>, <code>네</code>, <code>응</code> 등 1글자 단어는 일상 문장에 무조건 포함되므로 설정이 불가합니다.</td>
+                        <td><code>아</code>, <code>네</code>, <code>응</code>, <code>ㅋ</code>, <code>!</code> 등 1글자는 일상 문장에 무조건 포함되므로 설정이 불가합니다.</td>
                     </tr>
                     <tr>
                         <td><strong>공백(띄어쓰기) 금지</strong></td>
                         <td><strong>단일 어절(공백 없음)</strong></td>
-                        <td><code>진짜 대박</code>처럼 띄어쓰기가 포함된 구문은 등록할 수 없으며 붙여 쓴 단일 단어만 허용됩니다.</td>
+                        <td><code>진짜 대박</code>처럼 띄어쓰기가 포함된 구문은 등록할 수 없으며 붙여 쓴 단어만 허용됩니다.</td>
                     </tr>
                     <tr>
-                        <td><strong>단독 자음/모음 금지</strong></td>
-                        <td><strong>완성형 한글·영문·숫자</strong></td>
-                        <td><code>ㅋㅋ</code>, <code>ㅎㅎ</code>, <code>ㅠㅠ</code>, <code>ㄱㄱ</code> 등 완성되지 않은 한글 자모(ㄱ~ㅎ, ㅏ~ㅣ)가 포함된 단어는 차단됩니다.</td>
+                        <td><strong>초성 및 자모음 허용</strong></td>
+                        <td><strong>2글자 이상 초성/자모</strong></td>
+                        <td><code>ㅋㅋ</code>, <code>ㅎㅎ</code>, <code>ㅠㅠ</code>, <code>ㅇㅇ</code>, <code>ㄷㄷ</code> 등 2자 이상의 초성 조합은 자유롭게 금기어로 등록할 수 있습니다.</td>
                     </tr>
                     <tr>
-                        <td><strong>특수기호 및 이모지 금지</strong></td>
-                        <td><strong>순수 문자/숫자만 허용</strong></td>
-                        <td><code>?!</code>, <code>~</code>, <code>^^</code>, 이모지 등이 포함된 문자열은 금기어로 지정할 수 없습니다.</td>
+                        <td><strong>특수문자 및 기호 허용</strong></td>
+                        <td><strong>2글자 이상 특수기호</strong></td>
+                        <td><code>?!</code>, <code>^^</code>, <code>@_@</code>, <code>ㅠㅠ</code>, <code>~~</code> 등 특수문자 조합을 금기어로 사용할 수 있습니다. (단, 시스템 비밀 마스킹 예약어인 <code>???</code> 제외)</td>
                     </tr>
                     <tr>
                         <td><strong>동일 대상 중복 금지</strong></td>

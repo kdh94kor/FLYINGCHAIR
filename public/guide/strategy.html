@@ -213,7 +213,7 @@
         <article class="strategy-card">
             <h2><span>🧩</span> 2~25자 규칙(WordValidator)을 활용한 고효율 금기어 설계학</h2>
             <p>
-                플라잉 체어의 금기어 설정은 공정성을 위해 <strong>2글자 이상 25글자 이하의 완성형 단어(공백·초성·특수기호 금지)</strong>만 허용됩니다. 동시에 판정 엔진은 <strong>부분 문자열 일치(Substring Match)</strong> 방식을 사용하므로, 여러 파생 단어의 공통 어근(2글자)을 금기어로 지정하면 적중률이 3배 이상 상승합니다.
+                플라잉 체어의 금기어 설정은 <strong>2글자 이상 25글자 이하의 단어(공백 및 예약어 ??? 금지)</strong>로 제한되며, <strong>초성(ㅋㅋ, ㅎㅎ 등)과 특수문자(?!, ^^ 등)도 자유롭게 설정</strong>할 수 있습니다. 판정 엔진은 <strong>부분 문자열 일치(Substring Match)</strong> 방식을 사용하므로, 2글자 초성이나 일상 특수기호, 공통 어근을 지정하면 적중률이 극대화됩니다.
             </p>
             <table class="strategy-table">
                 <thead>
@@ -224,6 +224,16 @@
                     </tr>
                 </thead>
                 <tbody>
+                    <tr>
+                        <td><strong>초성·리액션 지뢰</strong></td>
+                        <td><code>ㅋㅋ</code>, <code>ㅎㅎ</code>, <code>ㅠㅠ</code></td>
+                        <td>웃긴 상황을 유도해 "ㅋㅋㅋㅋ", "ㅎㅎ 맞아", "ㅠㅠ 안돼" 등 무의식적 리액션 격발</td>
+                    </tr>
+                    <tr>
+                        <td><strong>특수문자 지뢰</strong></td>
+                        <td><code>?!</code>, <code>^^</code>, <code>~~</code></td>
+                        <td>"진짜?!", "안녕하세요^^", "그래요~~" 등 습관적 문장 부호 및 이모티콘 포괄</td>
+                    </tr>
                     <tr>
                         <td><strong>대명사·주어 지뢰</strong></td>
                         <td><code>내가</code>, <code>너는</code>, <code>우리</code></td>

@@ -169,13 +169,13 @@ async function initDbSync() {
 initDbSync();
 
 // ── 6. 단어 등록 및 집계 API ──────────────────────────────────────────────────
+// 2~25자 이내, 공백 없음, 시스템 비밀 예약어(???) 제외 모든 단어·초성(ㅋㅋ, ㅎㅎ)·특수문자(?!, ^^ 등) 허용
 function isValidTabooWord(raw) {
   if (typeof raw !== 'string') return false;
   const w = raw.trim();
   if (w.length < 2 || w.length > 25) return false;
-  if (/\s/.test(w)) return false;
-  if (/[ㄱ-ㅎㅏ-ㅣ]/.test(w)) return false;
-  if (/[?~!@#$%^&*()+=\[\]{};:'",.<>\/\\|]/.test(w)) return false;
+  if (/\s/.test(w)) return false; // 내부 공백(띄어쓰기) 금지
+  if (w === '???') return false; // 시스템 비밀 마스킹 예약어('???') 금지
   return true;
 }
 
