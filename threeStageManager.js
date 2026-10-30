@@ -450,8 +450,8 @@
 
     function createSpeechBubbleSprite(text) {
         const canvas = document.createElement('canvas');
-        canvas.width = 512;
-        canvas.height = 256;
+        canvas.width = 480;
+        canvas.height = 180;
         const info = renderBubbleCanvas(canvas, text);
         const texture = new THREE.CanvasTexture(canvas);
         const mat = new THREE.SpriteMaterial({
@@ -525,21 +525,21 @@
     function renderBubbleCanvas(canvas, text) {
         const ctx = canvas.getContext('2d');
         if (!text) {
-            canvas.width = 512;
-            canvas.height = 128;
-            ctx.clearRect(0, 0, 512, 128);
-            return { scaleW: 2.2, scaleH: 0.8, lineCount: 0 };
+            canvas.width = 480;
+            canvas.height = 160;
+            ctx.clearRect(0, 0, 480, 160);
+            return { scaleW: 3.4, scaleH: 1.4, lineCount: 0 };
         }
 
-        // Measure with bold 32px font
-        ctx.font = 'bold 32px Pretendard, "Apple SD Gothic Neo", sans-serif';
-        const maxTextWidth = 380;
+        // Measure text with bold 42px font for crisp visibility on mobile
+        ctx.font = 'bold 42px Pretendard, "Apple SD Gothic Neo", sans-serif';
+        const maxTextWidth = 440;
         const lines = wrapText(ctx, text, maxTextWidth, 3);
         if (lines.length === 0) {
-            canvas.width = 512;
-            canvas.height = 128;
-            ctx.clearRect(0, 0, 512, 128);
-            return { scaleW: 2.2, scaleH: 0.8, lineCount: 0 };
+            canvas.width = 480;
+            canvas.height = 160;
+            ctx.clearRect(0, 0, 480, 160);
+            return { scaleW: 3.4, scaleH: 1.4, lineCount: 0 };
         }
 
         let maxLineWidth = 0;
@@ -548,38 +548,37 @@
             if (w > maxLineWidth) maxLineWidth = w;
         });
 
-        const padX = 28;
-        const padY = 20;
-        const lineHeight = 42;
-        const tailH = 24;
-        const tailW = 26;
+        const padX = 32;
+        const padY = 26;
+        const lineHeight = 54;
+        const tailH = 28;
+        const tailW = 32;
 
-        const bubbleW = Math.max(200, Math.min(460, maxLineWidth + padX * 2));
+        const bubbleW = Math.max(260, maxLineWidth + padX * 2);
         const bubbleH = padY * 2 + lines.length * lineHeight;
-        const totalW = 512;
-        const totalH = Math.ceil(bubbleH + tailH + 16);
 
-        // Resize canvas dynamically to fit exact bubble content (no wasted transparent margin)
-        canvas.width = totalW;
-        canvas.height = totalH;
+        // Size canvas exactly to bubble content with crisp padding
+        const canvasW = Math.ceil(bubbleW + 20);
+        const canvasH = Math.ceil(bubbleH + tailH + 20);
+        canvas.width = canvasW;
+        canvas.height = canvasH;
 
-        // Re-get context after resize
-        ctx.clearRect(0, 0, totalW, totalH);
+        ctx.clearRect(0, 0, canvasW, canvasH);
 
-        const bx = (totalW - bubbleW) / 2;
-        const by = 8;
-        const r = 22;
+        const bx = 10;
+        const by = 10;
+        const r = 26;
 
         // Drop shadow for 3D depth pop
         ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 14;
         ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 4;
+        ctx.shadowOffsetY = 6;
 
-        // Speech bubble body
+        // Bubble body
         ctx.fillStyle = '#ffffff';
         ctx.strokeStyle = '#ff4757';
-        ctx.lineWidth = 3.5;
+        ctx.lineWidth = 4.5;
 
         ctx.beginPath();
         ctx.moveTo(bx + r, by);
@@ -589,7 +588,7 @@
         ctx.quadraticCurveTo(bx + bubbleW, by + bubbleH, bx + bubbleW - r, by + bubbleH);
 
         // Tail pointing down to character head
-        const tailX = totalW / 2;
+        const tailX = canvasW / 2;
         ctx.lineTo(tailX + tailW / 2, by + bubbleH);
         ctx.lineTo(tailX, by + bubbleH + tailH);
         ctx.lineTo(tailX - tailW / 2, by + bubbleH);
@@ -607,19 +606,19 @@
         ctx.shadowBlur = 0;
 
         // Render multi-line text with large crisp typography
-        ctx.font = 'bold 32px Pretendard, "Apple SD Gothic Neo", sans-serif';
-        ctx.fillStyle = '#1e272e';
+        ctx.font = 'bold 42px Pretendard, "Apple SD Gothic Neo", sans-serif';
+        ctx.fillStyle = '#111111';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
         const textStartY = by + padY + lineHeight / 2;
         lines.forEach((line, idx) => {
-            ctx.fillText(line, totalW / 2, textStartY + idx * lineHeight);
+            ctx.fillText(line, canvasW / 2, textStartY + idx * lineHeight);
         });
 
-        // 3D world scale: max width 2.7m leaves a safe 0.6m gap between adjacent 3.3m chairs
-        const scaleW = Math.max(1.8, Math.min(2.7, (bubbleW / 460) * 2.7));
-        const scaleH = scaleW * (totalH / totalW);
+        // 3D world scale: significantly larger than nickname tag (2.6m), perfectly readable on mobile
+        let scaleW = Math.max(3.2, Math.min(4.3, (canvasW / 400) * 3.5));
+        let scaleH = scaleW * (canvasH / canvasW);
 
         return { scaleW, scaleH, lineCount: lines.length };
     }
@@ -628,61 +627,154 @@
     // 6. Animals: 3D High-Detail Shark, Gator, Seagull
     // ─────────────────────────────────────────────────────────────
     function buildAnimals() {
-        // 6-1. 🦈 High-Detail 3D Shark
+        // 6-1. 🦈 High-Detail 3D Shark with 3D Head, Eyes, Sharp Teeth, Dorsal Fin & Real Caudal Fin
         const sharkGroup = new THREE.Group();
-        const sharkMat = createMat(0x4b6584, 0.4, 0.2);
-        const sharkBellyMat = createMat(0xf1f2f6, 0.5, 0.1);
+        const sharkMat = createMat(0x34495e, 0.35, 0.15); // Predatory slate blue-grey
+        const sharkBellyMat = createMat(0xf8f9fa, 0.4, 0.05); // Clean white underbelly
+        const toothMat = createMat(0xffffff, 0.2, 0.0);
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0x050505 });
+        const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
-        const sharkBody = new THREE.Mesh(new THREE.ConeGeometry(0.95, 3.8, 16), sharkMat);
-        sharkBody.rotateX(Math.PI / 2);
-        sharkGroup.add(sharkBody);
+        // Torso (Streamlined spindle)
+        const torsoGeo = new THREE.CylinderGeometry(0.75, 0.48, 3.2, 16);
+        torsoGeo.rotateX(Math.PI / 2);
+        const torso = new THREE.Mesh(torsoGeo, sharkMat);
+        torso.position.set(0, 0.1, 0);
+        sharkGroup.add(torso);
 
-        const belly = new THREE.Mesh(new THREE.ConeGeometry(0.85, 3.2, 16), sharkBellyMat);
-        belly.rotateX(Math.PI / 2);
-        belly.position.y = -0.15;
+        const bellyGeo = new THREE.CylinderGeometry(0.68, 0.42, 3.0, 16);
+        bellyGeo.rotateX(Math.PI / 2);
+        const belly = new THREE.Mesh(bellyGeo, sharkBellyMat);
+        belly.position.set(0, -0.06, 0);
         sharkGroup.add(belly);
 
+        // Head Group (Facing forward +Z)
         const headGroup = new THREE.Group();
-        headGroup.position.set(0, 0, 1.8);
-        const snout = new THREE.Mesh(new THREE.ConeGeometry(0.65, 1.4, 12), sharkMat);
-        snout.rotateX(-Math.PI / 2);
-        snout.position.set(0, 0.1, 0.5);
+        headGroup.position.set(0, 0.1, 1.6);
+
+        // Upper Snout (Cone pointing forward +Z, flattened predatory wedge)
+        const snoutGeo = new THREE.ConeGeometry(0.72, 1.8, 16);
+        snoutGeo.rotateX(Math.PI / 2);
+        const snout = new THREE.Mesh(snoutGeo, sharkMat);
+        snout.scale.set(1.0, 0.65, 1.0);
+        snout.position.set(0, 0.05, 0.9);
         headGroup.add(snout);
 
-        const lowerJaw = new THREE.Mesh(new THREE.ConeGeometry(0.55, 1.2, 12), sharkBellyMat);
-        lowerJaw.rotateX(-Math.PI / 2);
-        lowerJaw.position.set(0, -0.25, 0.4);
+        // Snout Underbelly
+        const snoutBellyGeo = new THREE.ConeGeometry(0.64, 1.6, 16);
+        snoutBellyGeo.rotateX(Math.PI / 2);
+        const snoutBelly = new THREE.Mesh(snoutBellyGeo, sharkBellyMat);
+        snoutBelly.scale.set(0.95, 0.55, 1.0);
+        snoutBelly.position.set(0, -0.05, 0.8);
+        headGroup.add(snoutBelly);
+
+        // 3D Eyes (Left & Right with white socket and black pupil)
+        [-0.48, 0.48].forEach(eyeX => {
+            const eyeSocket = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), eyeWhiteMat);
+            eyeSocket.position.set(eyeX, 0.22, 0.45);
+            headGroup.add(eyeSocket);
+
+            const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), eyeMat);
+            pupil.position.set(eyeX > 0 ? eyeX + 0.05 : eyeX - 0.05, 0.22, 0.48);
+            headGroup.add(pupil);
+        });
+
+        // Lower Jaw (Hinged for biting motion)
+        const lowerJaw = new THREE.Group();
+        lowerJaw.position.set(0, -0.15, 0.2);
+
+        const jawMeshGeo = new THREE.ConeGeometry(0.55, 1.4, 14);
+        jawMeshGeo.rotateX(Math.PI / 2);
+        const jawMesh = new THREE.Mesh(jawMeshGeo, sharkBellyMat);
+        jawMesh.scale.set(0.9, 0.4, 1.0);
+        jawMesh.position.set(0, 0, 0.7);
+        lowerJaw.add(jawMesh);
+
+        // Sharp Teeth along lower jaw rim
+        const toothGeo = new THREE.ConeGeometry(0.045, 0.12, 5);
+        toothGeo.rotateX(-Math.PI / 2);
+        for (let i = -3; i <= 3; i++) {
+            const tooth = new THREE.Mesh(toothGeo, toothMat);
+            const t = i / 3.5;
+            tooth.position.set(t * 0.35, 0.08, 0.4 + (1 - Math.abs(t)) * 0.75);
+            tooth.rotation.x = -0.3;
+            lowerJaw.add(tooth);
+        }
         headGroup.add(lowerJaw);
+
+        // Upper Teeth lining snout
+        for (let i = -4; i <= 4; i++) {
+            const uTooth = new THREE.Mesh(toothGeo, toothMat);
+            const t = i / 4.5;
+            uTooth.position.set(t * 0.42, -0.12, 0.5 + (1 - Math.abs(t)) * 0.85);
+            uTooth.rotation.x = Math.PI - 0.3;
+            headGroup.add(uTooth);
+        }
+
+        // 3D Gill slits on both flanks
+        const gillMat = createMat(0x1a252f, 0.6);
+        [-0.72, 0.72].forEach(gX => {
+            for (let g = 0; g < 3; g++) {
+                const gill = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.35, 0.05), gillMat);
+                gill.position.set(gX, 0.1, -0.1 - g * 0.18);
+                gill.rotation.z = gX > 0 ? -0.2 : 0.2;
+                headGroup.add(gill);
+            }
+        });
+
         sharkGroup.add(headGroup);
 
+        // Iconic Curved Dorsal Fin (등지느러미)
         const finShape = new THREE.Shape();
         finShape.moveTo(0, 0);
-        finShape.lineTo(0.35, 1.6);
-        finShape.quadraticCurveTo(0.2, 0.9, -0.7, 0);
+        finShape.lineTo(0.3, 1.7);
+        finShape.quadraticCurveTo(0.15, 0.9, -1.1, 0);
         finShape.closePath();
-        const finGeo = new THREE.ExtrudeGeometry(finShape, { depth: 0.12, bevelEnabled: false });
+        const finGeo = new THREE.ExtrudeGeometry(finShape, { depth: 0.12, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03 });
         finGeo.rotateY(Math.PI / 2);
-        finGeo.translate(-0.06, 0.35, 0.1);
-        const finMesh = new THREE.Mesh(finGeo, sharkMat);
-        sharkGroup.add(finMesh);
+        finGeo.translate(-0.06, 0.65, 0.1);
+        const dorsalFin = new THREE.Mesh(finGeo, sharkMat);
+        sharkGroup.add(dorsalFin);
 
-        const lPec = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1.4, 8), sharkMat);
-        lPec.rotation.set(0, 0, Math.PI / 3);
-        lPec.position.set(-0.9, -0.15, 0.4);
+        // Pectoral Fins (가슴지느러미 좌우)
+        const pecShape = new THREE.Shape();
+        pecShape.moveTo(0, 0);
+        pecShape.lineTo(1.4, -0.3);
+        pecShape.quadraticCurveTo(0.7, -0.7, 0, -0.3);
+        pecShape.closePath();
+        const pecGeo = new THREE.ExtrudeGeometry(pecShape, { depth: 0.08, bevelEnabled: false });
+
+        const lPec = new THREE.Mesh(pecGeo, sharkMat);
+        lPec.position.set(-0.65, 0, 0.6);
+        lPec.rotation.set(-0.2, 0.4, 0.3);
         sharkGroup.add(lPec);
-        const rPec = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1.4, 8), sharkMat);
-        rPec.rotation.set(0, 0, -Math.PI / 3);
-        rPec.position.set(0.9, -0.15, 0.4);
+
+        const rPec = new THREE.Mesh(pecGeo, sharkMat);
+        rPec.scale.set(-1, 1, 1);
+        rPec.position.set(0.65, 0, 0.6);
+        rPec.rotation.set(-0.2, -0.4, -0.3);
         sharkGroup.add(rPec);
 
+        // Realistic Crescent Caudal Tail Fin (꼬리지느러미 - NO flat rectangle box!)
         const tailJoint = new THREE.Group();
-        tailJoint.position.set(0, 0, -1.8);
-        const tailFin = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.8, 1.0), sharkMat);
-        tailFin.position.set(0, 0, -0.5);
-        tailJoint.add(tailFin);
+        tailJoint.position.set(0, 0.1, -1.6);
+
+        const tailShape = new THREE.Shape();
+        tailShape.moveTo(0, 0);
+        tailShape.lineTo(-0.8, 1.35);
+        tailShape.quadraticCurveTo(-0.5, 0.6, -0.2, 0.1);
+        tailShape.lineTo(-0.6, -0.75);
+        tailShape.quadraticCurveTo(-0.3, -0.3, 0, 0);
+        tailShape.closePath();
+
+        const tailFinGeo = new THREE.ExtrudeGeometry(tailShape, { depth: 0.09, bevelEnabled: false });
+        tailFinGeo.rotateY(Math.PI / 2);
+        tailFinGeo.translate(-0.045, 0, 0);
+        const tailFinMesh = new THREE.Mesh(tailFinGeo, sharkMat);
+        tailJoint.add(tailFinMesh);
         sharkGroup.add(tailJoint);
 
-        sharkGroup.position.set(0, -0.4, -4);
+        sharkGroup.position.set(0, 0.05, -4);
         sharkGroup.visible = false;
         scene.add(sharkGroup);
         sharkEntity = {
@@ -708,11 +800,11 @@
         gLowerJaw.position.set(0, -0.18, 1.0);
         gatorGroup.add(gLowerJaw);
 
-        const eyeMat = createMat(0xf1c40f, 0.2);
-        const gLeftEye = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), eyeMat);
+        const gatorEyeMat = createMat(0xf1c40f, 0.2);
+        const gLeftEye = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), gatorEyeMat);
         gLeftEye.position.set(-0.38, 0.36, 0.3);
         gatorGroup.add(gLeftEye);
-        const gRightEye = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), eyeMat);
+        const gRightEye = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), gatorEyeMat);
         gRightEye.position.set(0.38, 0.36, 0.3);
         gatorGroup.add(gRightEye);
 
@@ -792,6 +884,18 @@
     // 7. Controls & Dynamic Camera Tracking
     // ─────────────────────────────────────────────────────────────
     function setupControls(canvas) {
+        let touchStartDist = 0;
+        let initialRadius = 28;
+
+        function getTouchDistance(e) {
+            if (e.touches && e.touches.length >= 2) {
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+            return 0;
+        }
+
         function onPointerDown(e) {
             isDragging = true;
             prevMouseX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
@@ -817,17 +921,48 @@
 
         function onWheel(e) {
             targetSpherical.radius += e.deltaY * 0.02;
-            targetSpherical.radius = Math.max(16, Math.min(45, targetSpherical.radius));
+            targetSpherical.radius = Math.max(12, Math.min(48, targetSpherical.radius));
             e.preventDefault();
+        }
+
+        function onTouchStart(e) {
+            if (e.touches.length === 2) {
+                isDragging = false;
+                touchStartDist = getTouchDistance(e);
+                initialRadius = targetSpherical.radius;
+            } else if (e.touches.length === 1) {
+                onPointerDown(e);
+            }
+        }
+
+        function onTouchMove(e) {
+            if (e.touches.length === 2 && touchStartDist > 0) {
+                const curDist = getTouchDistance(e);
+                if (curDist > 0) {
+                    const factor = touchStartDist / curDist;
+                    targetSpherical.radius = Math.max(12, Math.min(48, initialRadius * factor));
+                }
+            } else if (e.touches.length === 1 && !touchStartDist) {
+                onPointerMove(e);
+            }
+        }
+
+        function onTouchEnd(e) {
+            if (e.touches.length < 2) {
+                touchStartDist = 0;
+            }
+            if (e.touches.length === 0) {
+                isDragging = false;
+            }
         }
 
         canvas.addEventListener('mousedown', onPointerDown);
         window.addEventListener('mousemove', onPointerMove);
         window.addEventListener('mouseup', onPointerUp);
 
-        canvas.addEventListener('touchstart', onPointerDown, { passive: true });
-        window.addEventListener('touchmove', onPointerMove, { passive: true });
-        window.addEventListener('touchend', onPointerUp);
+        canvas.addEventListener('touchstart', onTouchStart, { passive: true });
+        window.addEventListener('touchmove', onTouchMove, { passive: true });
+        window.addEventListener('touchend', onTouchEnd);
         canvas.addEventListener('wheel', onWheel, { passive: false });
     }
 
@@ -1018,7 +1153,7 @@
     function triggerSharkAttack(slot, pos) {
         if (!sharkEntity) return;
         sharkEntity.group.visible = true;
-        sharkEntity.group.position.set(pos.x + 6, -0.4, pos.z - 3);
+        sharkEntity.group.position.set(pos.x + 6, 0.05, pos.z - 3);
         const attackStart = clock.getElapsedTime();
 
         sharkEntity.activeAttackAnim = {
@@ -1027,14 +1162,24 @@
                 const el = time - attackStart;
                 if (el < 0.9) {
                     const t = el / 0.9;
-                    sharkEntity.group.position.x = (pos.x + 6) * (1 - t) + pos.x * t;
-                    sharkEntity.group.position.z = (pos.z - 3) * (1 - t) + pos.z * t;
-                    sharkEntity.group.lookAt(pos.x, 0, pos.z);
-                    if (sharkEntity.lowerJaw) sharkEntity.lowerJaw.rotation.x = t * 0.45;
+                    const curX = (pos.x + 6) * (1 - t) + pos.x * t;
+                    const curZ = (pos.z - 3) * (1 - t) + pos.z * t;
+                    sharkEntity.group.position.set(curX, 0.05, curZ);
+
+                    // Face head (+Z) towards target
+                    const dx = pos.x - curX;
+                    const dz = pos.z - curZ;
+                    if (Math.hypot(dx, dz) > 0.01) {
+                        sharkEntity.group.rotation.set(0, Math.atan2(dx, dz), 0);
+                    }
+                    if (sharkEntity.lowerJaw) sharkEntity.lowerJaw.rotation.x = t * 0.55;
                 } else if (el < 2.0) {
                     const breachT = (el - 0.9) / 1.1;
-                    const leapY = Math.sin(breachT * Math.PI) * 2.2;
-                    sharkEntity.group.position.y = -0.4 + leapY;
+                    const leapY = Math.sin(breachT * Math.PI) * 2.6;
+                    sharkEntity.group.position.y = 0.05 + leapY;
+
+                    // Tilt predatory head up when breaching, down when diving
+                    sharkEntity.group.rotation.x = -Math.cos(breachT * Math.PI) * 0.7;
 
                     slot.charGroup.position.set(pos.x, -0.3 - breachT * 1.5, pos.z);
                     slot.charGroup.rotation.z = Math.PI / 2;
@@ -1045,6 +1190,7 @@
                     }
                 } else {
                     sharkEntity.group.visible = false;
+                    sharkEntity.group.rotation.set(0, 0, 0);
                     sharkEntity.splashed = false;
                     sharkEntity.activeAttackAnim = null;
                     targetLookAt.x = 0;
@@ -1067,8 +1213,12 @@
                 const el = time - attackStart;
                 if (el < 0.8) {
                     const t = el / 0.8;
-                    gatorEntity.group.position.x = (pos.x - 6) * (1 - t) + pos.x * t;
-                    gatorEntity.group.lookAt(pos.x, 0, pos.z);
+                    const curX = (pos.x - 6) * (1 - t) + pos.x * t;
+                    gatorEntity.group.position.set(curX, -0.15, pos.z);
+
+                    // Face head (+Z) towards target
+                    const dx = pos.x - curX;
+                    gatorEntity.group.rotation.set(0, Math.atan2(dx, 0), 0);
                     if (gatorEntity.lowerJaw) gatorEntity.lowerJaw.rotation.x = -t * 0.4;
                 } else if (el < 2.4) {
                     // Death Roll: 360-degree spin
@@ -1182,24 +1332,24 @@
         // Dynamic 3D world scale based on content
         slot.bubbleSprite.scale.set(info.scaleW, info.scaleH, 1);
 
-        // Dynamic vertical staggering to prevent neighbor overlap
+        // Dynamic vertical staggering to prevent neighbor overlap (generous Y clearance for large bubbles)
         const leftSlot = chairSlots.find(s => s.index === slot.index - 1);
         const rightSlot = chairSlots.find(s => s.index === slot.index + 1);
         const neighborSpeaking = (leftSlot && leftSlot.bubbleSprite && leftSlot.bubbleSprite.visible) ||
                                  (rightSlot && rightSlot.bubbleSprite && rightSlot.bubbleSprite.visible);
 
-        let targetY = 3.6;
+        let targetY = 4.3;
         if (slot.index % 2 === 1) {
-            targetY = 4.25; // Naturally stagger odd seats higher
+            targetY = 5.2; // Stagger odd seats higher
         }
         if (neighborSpeaking) {
-            targetY += (slot.index % 2 === 1) ? 0.45 : 0.35; // Guarantee unique distinct Y across all combinations
+            targetY += (slot.index % 2 === 1) ? 0.75 : 0.6; // Guarantee clean separation across all combinations
         }
         slot.bubbleSprite.position.set(0, targetY, 0);
         slot.bubbleSprite.visible = true;
 
         if (slot.bubbleTimeout) clearTimeout(slot.bubbleTimeout);
-        const displayDuration = Math.min(5500, Math.max(3400, text.length * 130));
+        const displayDuration = Math.min(6000, Math.max(3600, text.length * 130));
         slot.bubbleTimeout = setTimeout(() => {
             slot.bubbleSprite.visible = false;
         }, displayDuration);
@@ -1294,17 +1444,28 @@
 
         if (sharkEntity && sharkEntity.isRoaming && !sharkEntity.activeAttackAnim) {
             sharkEntity.roamTime += delta;
-            const t = sharkEntity.roamTime * 0.5;
-            sharkEntity.group.position.set(Math.sin(t) * 8.5, -0.38, -4.5 + Math.cos(t * 1.5) * 2.2);
-            sharkEntity.group.rotation.y = Math.cos(t) > 0 ? -Math.PI / 2 : Math.PI / 2;
+            const t = sharkEntity.roamTime * 0.45;
+            const posX = Math.sin(t) * 8.5;
+            const posZ = -4.5 + Math.cos(t * 1.5) * 2.2;
+            sharkEntity.group.position.set(posX, 0.05, posZ);
+
+            // Tangent velocity vector (+Z faces forward heading)
+            const vx = Math.cos(t) * 3.825;
+            const vz = -Math.sin(t * 1.5) * 1.485;
+            sharkEntity.group.rotation.set(0, Math.atan2(vx, vz), 0);
             sharkEntity.tailJoint.rotation.y = Math.sin(time * 6) * 0.45;
         }
 
         if (gatorEntity && gatorEntity.isRoaming && !gatorEntity.activeAttackAnim) {
             gatorEntity.roamTime += delta;
             const gt = gatorEntity.roamTime * 0.35;
-            gatorEntity.group.position.set(Math.sin(gt) * 7.0, -0.15, -3.5 + Math.sin(gt * 2) * 1.2);
-            gatorEntity.group.rotation.y = Math.cos(gt) > 0 ? Math.PI / 2 : -Math.PI / 2;
+            const gX = Math.sin(gt) * 7.0;
+            const gZ = -3.5 + Math.sin(gt * 2) * 1.2;
+            gatorEntity.group.position.set(gX, -0.15, gZ);
+
+            const gvx = Math.cos(gt) * 2.45;
+            const gvz = Math.cos(gt * 2) * 0.84;
+            gatorEntity.group.rotation.set(0, Math.atan2(gvx, gvz), 0);
             gatorEntity.tailJoint.rotation.y = Math.sin(time * 4) * 0.35;
         }
 
