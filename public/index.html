@@ -4754,6 +4754,9 @@
         }
 
         function showSpeechBubble(id, text) {
+            if (window.ThreeStageManager) {
+                window.ThreeStageManager.showSpeechBubble(id, text);
+            }
             const bubble = document.getElementById(`bubble-${id}`);
             if (bubble) {
                 bubble.textContent = text;
@@ -5403,6 +5406,7 @@
         }
 
         function createSplashEffect(x, y) {
+            if (currentViewMode === '3D') return;
             const splash = document.createElement('div');
             splash.className = 'splash';
             splash.style.left = x + 'px'; splash.style.top = y + 'px';
@@ -5412,6 +5416,7 @@
         }
 
         function createBloodEffect(x, y) {
+            if (currentViewMode === '3D') return;
             const blood = document.createElement('div');
             blood.className = 'blood-splash';
             blood.style.left = x + 'px'; blood.style.top = y + 'px';
@@ -5464,6 +5469,10 @@
         }
 
         function createSharkAnimation(x, y, callback) {
+            if (currentViewMode === '3D') {
+                if (callback) callback();
+                return;
+            }
             const container = document.createElement('div');
             container.style.position = 'absolute';
             container.style.width = '200px';
@@ -5509,6 +5518,10 @@
         }
 
         function createGatorAnimation(x, y, callback) {
+            if (currentViewMode === '3D') {
+                if (callback) callback();
+                return;
+            }
             const container = document.createElement('div');
             container.style.position = 'absolute';
             container.style.width = '120px';
@@ -5567,6 +5580,10 @@
         }
 
         function createGullAnimation(playerId, x, y, callback) {
+            if (currentViewMode === '3D') {
+                if (callback) callback();
+                return;
+            }
             const container = document.createElement('div');
             container.style.position = 'absolute';
             container.style.width = '150px';
@@ -6147,6 +6164,8 @@
         window.isChatScrolledToBottom = isChatScrolledToBottom;
         window.scrollToBottom = scrollToBottom;
         window.appendChatUI = appendChatUI;
+        window.sendChat = sendChat;
+        window.showSpeechBubble = showSpeechBubble;
         window.sysChat = sysChat;
         window.handleChatInput = handleChatInput;
 
