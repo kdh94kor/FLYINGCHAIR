@@ -451,8 +451,8 @@
     function createSpeechBubbleSprite(text) {
         const canvas = document.createElement('canvas');
         canvas.width = 512;
-        canvas.height = 160;
-        renderBubbleCanvas(canvas, text);
+        canvas.height = 256;
+        const info = renderBubbleCanvas(canvas, text);
         const texture = new THREE.CanvasTexture(canvas);
         const mat = new THREE.SpriteMaterial({
             map: texture,
@@ -461,44 +461,143 @@
             depthWrite: false
         });
         const sprite = new THREE.Sprite(mat);
-        sprite.scale.set(4.8, 1.5, 1);
+        sprite.scale.set(info.scaleW, info.scaleH, 1);
         sprite.renderOrder = 999; // Always on top of everything
         sprite.userData = { canvas: canvas, texture: texture };
         return sprite;
     }
 
+    function wrapText(ctx, text, maxTextWidth, maxLines = 3) {
+        if (!text) return [];
+        const clean = String(text).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        const paragraphs = clean.split('\n');
+        const lines = [];
+
+        for (const paragraph of paragraphs) {
+            if (!paragraph.trim()) continue;
+            const words = paragraph.split(' ');
+            let currentLine = '';
+
+            for (let i = 0; i < words.length; i++) {
+                const word = words[i];
+                const testLine = currentLine ? `${currentLine} ${word}` : word;
+                const w = ctx.measureText(testLine).width;
+
+                if (w <= maxTextWidth) {
+                    currentLine = testLine;
+                } else {
+                    if (currentLine) {
+                        lines.push(currentLine);
+                        currentLine = '';
+                    }
+                    if (ctx.measureText(word).width <= maxTextWidth) {
+                        currentLine = word;
+                    } else {
+                        // Continuous characters without spaces
+                        for (let c = 0; c < word.length; c++) {
+                            const char = word[c];
+                            const testChar = currentLine + char;
+                            if (ctx.measureText(testChar).width <= maxTextWidth) {
+                                currentLine = testChar;
+                            } else {
+                                if (currentLine) lines.push(currentLine);
+                                currentLine = char;
+                            }
+                        }
+                    }
+                }
+            }
+            if (currentLine) lines.push(currentLine);
+        }
+
+        if (lines.length > maxLines) {
+            lines.length = maxLines;
+            let last = lines[maxLines - 1];
+            while (last.length > 0 && ctx.measureText(last + '..').width > maxTextWidth) {
+                last = last.slice(0, -1);
+            }
+            lines[maxLines - 1] = last + '..';
+        }
+
+        return lines;
+    }
+
     function renderBubbleCanvas(canvas, text) {
         const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        if (!text) return;
+        if (!text) {
+            canvas.width = 512;
+            canvas.height = 128;
+            ctx.clearRect(0, 0, 512, 128);
+            return { scaleW: 2.2, scaleH: 0.8, lineCount: 0 };
+        }
 
-        const x = 16, y = 12, w = 480, h = 105, r = 24;
+        // Measure with bold 32px font
+        ctx.font = 'bold 32px Pretendard, "Apple SD Gothic Neo", sans-serif';
+        const maxTextWidth = 380;
+        const lines = wrapText(ctx, text, maxTextWidth, 3);
+        if (lines.length === 0) {
+            canvas.width = 512;
+            canvas.height = 128;
+            ctx.clearRect(0, 0, 512, 128);
+            return { scaleW: 2.2, scaleH: 0.8, lineCount: 0 };
+        }
 
-        // Drop Shadow
+        let maxLineWidth = 0;
+        lines.forEach(line => {
+            const w = ctx.measureText(line).width;
+            if (w > maxLineWidth) maxLineWidth = w;
+        });
+
+        const padX = 28;
+        const padY = 20;
+        const lineHeight = 42;
+        const tailH = 24;
+        const tailW = 26;
+
+        const bubbleW = Math.max(200, Math.min(460, maxLineWidth + padX * 2));
+        const bubbleH = padY * 2 + lines.length * lineHeight;
+        const totalW = 512;
+        const totalH = Math.ceil(bubbleH + tailH + 16);
+
+        // Resize canvas dynamically to fit exact bubble content (no wasted transparent margin)
+        canvas.width = totalW;
+        canvas.height = totalH;
+
+        // Re-get context after resize
+        ctx.clearRect(0, 0, totalW, totalH);
+
+        const bx = (totalW - bubbleW) / 2;
+        const by = 8;
+        const r = 22;
+
+        // Drop shadow for 3D depth pop
         ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
-        ctx.shadowBlur = 12;
+        ctx.shadowBlur = 10;
         ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 6;
+        ctx.shadowOffsetY = 4;
 
-        // Bubble body
+        // Speech bubble body
         ctx.fillStyle = '#ffffff';
         ctx.strokeStyle = '#ff4757';
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 3.5;
 
         ctx.beginPath();
-        ctx.moveTo(x + r, y);
-        ctx.lineTo(x + w - r, y);
-        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-        ctx.lineTo(x + w, y + h - r);
-        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-        // Tail
-        ctx.lineTo(x + w / 2 + 18, y + h);
-        ctx.lineTo(x + w / 2, y + h + 28);
-        ctx.lineTo(x + w / 2 - 18, y + h);
-        ctx.lineTo(x + r, y + h);
-        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-        ctx.lineTo(x, y + r);
-        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.moveTo(bx + r, by);
+        ctx.lineTo(bx + bubbleW - r, by);
+        ctx.quadraticCurveTo(bx + bubbleW, by, bx + bubbleW, by + r);
+        ctx.lineTo(bx + bubbleW, by + bubbleH - r);
+        ctx.quadraticCurveTo(bx + bubbleW, by + bubbleH, bx + bubbleW - r, by + bubbleH);
+
+        // Tail pointing down to character head
+        const tailX = totalW / 2;
+        ctx.lineTo(tailX + tailW / 2, by + bubbleH);
+        ctx.lineTo(tailX, by + bubbleH + tailH);
+        ctx.lineTo(tailX - tailW / 2, by + bubbleH);
+
+        ctx.lineTo(bx + r, by + bubbleH);
+        ctx.quadraticCurveTo(bx, by + bubbleH, bx, by + bubbleH - r);
+        ctx.lineTo(bx, by + r);
+        ctx.quadraticCurveTo(bx, by, bx + r, by);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
@@ -507,12 +606,22 @@
         ctx.shadowColor = 'transparent';
         ctx.shadowBlur = 0;
 
-        ctx.font = 'bold 30px Pretendard, sans-serif';
+        // Render multi-line text with large crisp typography
+        ctx.font = 'bold 32px Pretendard, "Apple SD Gothic Neo", sans-serif';
         ctx.fillStyle = '#1e272e';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        const display = text.length > 18 ? text.substring(0, 18) + '...' : text;
-        ctx.fillText(display, x + w / 2, y + h / 2 - 2);
+
+        const textStartY = by + padY + lineHeight / 2;
+        lines.forEach((line, idx) => {
+            ctx.fillText(line, totalW / 2, textStartY + idx * lineHeight);
+        });
+
+        // 3D world scale: max width 2.7m leaves a safe 0.6m gap between adjacent 3.3m chairs
+        const scaleW = Math.max(1.8, Math.min(2.7, (bubbleW / 460) * 2.7));
+        const scaleH = scaleW * (totalH / totalW);
+
+        return { scaleW, scaleH, lineCount: lines.length };
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -1059,7 +1168,7 @@
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 10. 3D Speech Bubble System
+    // 10. 3D Speech Bubble System (Multi-line & Anti-Overlap Staggering)
     // ─────────────────────────────────────────────────────────────
     function showSpeechBubble(playerId, text) {
         if (!isInitialized) return;
@@ -1067,14 +1176,33 @@
         if (!slot || !slot.bubbleSprite) return;
 
         const { canvas, texture } = slot.bubbleSprite.userData;
-        renderBubbleCanvas(canvas, text);
+        const info = renderBubbleCanvas(canvas, text);
         texture.needsUpdate = true;
+
+        // Dynamic 3D world scale based on content
+        slot.bubbleSprite.scale.set(info.scaleW, info.scaleH, 1);
+
+        // Dynamic vertical staggering to prevent neighbor overlap
+        const leftSlot = chairSlots.find(s => s.index === slot.index - 1);
+        const rightSlot = chairSlots.find(s => s.index === slot.index + 1);
+        const neighborSpeaking = (leftSlot && leftSlot.bubbleSprite && leftSlot.bubbleSprite.visible) ||
+                                 (rightSlot && rightSlot.bubbleSprite && rightSlot.bubbleSprite.visible);
+
+        let targetY = 3.6;
+        if (slot.index % 2 === 1) {
+            targetY = 4.25; // Naturally stagger odd seats higher
+        }
+        if (neighborSpeaking) {
+            targetY += (slot.index % 2 === 1) ? 0.45 : 0.35; // Guarantee unique distinct Y across all combinations
+        }
+        slot.bubbleSprite.position.set(0, targetY, 0);
         slot.bubbleSprite.visible = true;
 
         if (slot.bubbleTimeout) clearTimeout(slot.bubbleTimeout);
+        const displayDuration = Math.min(5500, Math.max(3400, text.length * 130));
         slot.bubbleTimeout = setTimeout(() => {
             slot.bubbleSprite.visible = false;
-        }, 3400);
+        }, displayDuration);
     }
 
     // ─────────────────────────────────────────────────────────────
