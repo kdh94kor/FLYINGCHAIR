@@ -105,13 +105,15 @@
 
         setupLights();
         buildEnvironment();
-        buildChairs();
         buildAnimals();
         setupControls(canvas);
         window.addEventListener('resize', onResize);
 
         isInitialized = true;
-        console.log('[ThreeStageManager] Initialized v2.1 with Robust State & Bubble Engine.');
+        if (typeof window !== 'undefined' && window.state && window.state.players) {
+            syncPlayers(window.state.players);
+        }
+        console.log('[ThreeStageManager] Initialized v2.2 with Dynamic Player Seating & Robust State.');
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -216,88 +218,127 @@
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 4. Flying Chairs (6 Compact Slots)
+    // 4. Flying Chairs (Dynamic Capacity matching Player Count)
     // ─────────────────────────────────────────────────────────────
-    function buildChairs() {
-        const chairSpacing = 3.3; // Compact 3.3m: All 6 chairs span 16.5m (fits mobile portrait nicely!)
-        const totalChairs = 6;
-        const startX = -((totalChairs - 1) * chairSpacing) / 2;
+    function disposeSlot(slot) {
+        if (!slot) return;
+        if (slot.bubbleTimeout) clearTimeout(slot.bubbleTimeout);
 
-        for (let i = 0; i < totalChairs; i++) {
-            const slotX = startX + i * chairSpacing;
-            const slotZ = 6.6;
-
-            const chairGroup = new THREE.Group();
-            chairGroup.position.set(slotX, 1.2, slotZ);
-
-            // Metal Pedestal
-            const base = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.9, 0.35, 16), createMat(0x2d3436, 0.4, 0.7));
-            base.position.y = 0.18;
-            base.castShadow = true;
-            chairGroup.add(base);
-
-            // Hydraulic Piston
-            const piston = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.85, 16), createMat(0x636e72, 0.2, 0.9));
-            piston.position.y = 0.65;
-            chairGroup.add(piston);
-
-            // Hinge Pivot
-            const hinge = new THREE.Group();
-            hinge.position.set(0, 1.05, -0.35);
-            chairGroup.add(hinge);
-
-            // Red Seat Cushion
-            const seat = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.32, 1.35), createMat(0xd63031, 0.65));
-            seat.position.set(0, 0.16, 0.35);
-            seat.castShadow = true;
-            hinge.add(seat);
-
-            // Backrest
-            const back = new THREE.Mesh(new THREE.BoxGeometry(1.35, 1.95, 0.28), createMat(0xd63031, 0.65));
-            back.position.set(0, 1.15, -0.28);
-            back.castShadow = true;
-            hinge.add(back);
-
-            // Armrests
-            const armMat = createMat(0x2d3436, 0.5, 0.5);
-            const lArm = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.7, 1.0), armMat);
-            lArm.position.set(-0.72, 0.55, 0.35);
-            hinge.add(lArm);
-            const rArm = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.7, 1.0), armMat);
-            rArm.position.set(0.72, 0.55, 0.35);
-            hinge.add(rArm);
-
-            scene.add(chairGroup);
-
-            // Character Group
-            const charGroup = new THREE.Group();
-            charGroup.position.set(slotX, 2.4, slotZ + 0.1);
-            charGroup.visible = false;
-            scene.add(charGroup);
-
-            // 3D Speech Bubble Sprite attached above head (depthTest: false for 100% visibility)
-            const bubbleSprite = createSpeechBubbleSprite('');
-            bubbleSprite.position.set(0, 3.8, 0);
-            bubbleSprite.visible = false;
-            charGroup.add(bubbleSprite);
-
-            chairSlots.push({
-                index: i,
-                x: slotX,
-                z: slotZ,
-                chairGroup: chairGroup,
-                hinge: hinge,
-                seat: seat,
-                back: back,
-                charGroup: charGroup,
-                bubbleSprite: bubbleSprite,
-                bubbleTimeout: null,
-                player: null,
-                isTilted: false,
-                currentAnim: null,
-                avatarMeshes: null
+        if (slot.chairGroup) {
+            scene.remove(slot.chairGroup);
+            slot.chairGroup.traverse(child => {
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) {
+                    if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+                    else child.material.dispose();
+                }
             });
         }
+        if (slot.charGroup) {
+            scene.remove(slot.charGroup);
+            slot.charGroup.traverse(child => {
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) {
+                    if (child.material.map) child.material.map.dispose();
+                    if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+                    else child.material.dispose();
+                }
+            });
+        }
+    }
+
+    function createChairSlot(index, slotX, slotZ) {
+        const chairGroup = new THREE.Group();
+        chairGroup.position.set(slotX, 1.2, slotZ);
+
+        // Metal Pedestal
+        const base = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.9, 0.35, 16), createMat(0x2d3436, 0.4, 0.7));
+        base.position.y = 0.18;
+        base.castShadow = true;
+        chairGroup.add(base);
+
+        // Hydraulic Piston
+        const piston = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.85, 16), createMat(0x636e72, 0.2, 0.9));
+        piston.position.y = 0.65;
+        chairGroup.add(piston);
+
+        // Hinge Pivot
+        const hinge = new THREE.Group();
+        hinge.position.set(0, 1.05, -0.35);
+        chairGroup.add(hinge);
+
+        // Red Seat Cushion
+        const seat = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.32, 1.35), createMat(0xd63031, 0.65));
+        seat.position.set(0, 0.16, 0.35);
+        seat.castShadow = true;
+        hinge.add(seat);
+
+        // Backrest
+        const back = new THREE.Mesh(new THREE.BoxGeometry(1.35, 1.95, 0.28), createMat(0xd63031, 0.65));
+        back.position.set(0, 1.15, -0.28);
+        back.castShadow = true;
+        hinge.add(back);
+
+        // Armrests
+        const armMat = createMat(0x2d3436, 0.5, 0.5);
+        const lArm = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.7, 1.0), armMat);
+        lArm.position.set(-0.72, 0.55, 0.35);
+        hinge.add(lArm);
+        const rArm = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.7, 1.0), armMat);
+        rArm.position.set(0.72, 0.55, 0.35);
+        hinge.add(rArm);
+
+        scene.add(chairGroup);
+
+        // Character Group
+        const charGroup = new THREE.Group();
+        charGroup.position.set(slotX, 2.4, slotZ + 0.1);
+        charGroup.visible = false;
+        scene.add(charGroup);
+
+        // 3D Speech Bubble Sprite attached above head (depthTest: false for 100% visibility)
+        const bubbleSprite = createSpeechBubbleSprite('');
+        bubbleSprite.position.set(0, 3.8, 0);
+        bubbleSprite.visible = false;
+        charGroup.add(bubbleSprite);
+
+        return {
+            index: index,
+            x: slotX,
+            z: slotZ,
+            chairGroup: chairGroup,
+            hinge: hinge,
+            seat: seat,
+            back: back,
+            charGroup: charGroup,
+            bubbleSprite: bubbleSprite,
+            bubbleTimeout: null,
+            player: null,
+            isTilted: false,
+            currentAnim: null,
+            avatarMeshes: null
+        };
+    }
+
+    function buildChairs(count) {
+        while (chairSlots.length > 0) {
+            const oldSlot = chairSlots.pop();
+            disposeSlot(oldSlot);
+        }
+
+        if (!count || count <= 0) return;
+
+        const chairSpacing = 3.3;
+        const startX = -((count - 1) * chairSpacing) / 2;
+        const slotZ = 6.6;
+
+        for (let i = 0; i < count; i++) {
+            const slotX = startX + i * chairSpacing;
+            const slot = createChairSlot(i, slotX, slotZ);
+            chairSlots.push(slot);
+        }
+
+        onResize();
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -708,21 +749,36 @@
         camera.updateProjectionMatrix();
         renderer.setSize(w, h);
 
+        const count = chairSlots.length || 6;
+        let baseRadius = 26;
+        if (count <= 2) baseRadius = 22;
+        else if (count <= 4) baseRadius = 24;
+        else baseRadius = 26;
+
         if (aspect < 0.85) {
-            targetSpherical.radius = 35;
+            targetSpherical.radius = baseRadius + 8;
         } else if (aspect < 1.2) {
-            targetSpherical.radius = 30;
+            targetSpherical.radius = baseRadius + 4;
         } else {
-            targetSpherical.radius = 26;
+            targetSpherical.radius = baseRadius;
         }
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 8. Player Sync & Immediate Clean Seating Recovery
+    // 8. Player Sync & Dynamic Seating Adaptation
     // ─────────────────────────────────────────────────────────────
     function syncPlayers(players) {
         if (!isInitialized) return;
         const list = players || [];
+
+        // Check if player count or IDs changed
+        const currentIds = chairSlots.map(s => s.player ? s.player.id : null);
+        const newIds = list.map(p => p.id);
+        const needsRebuild = chairSlots.length !== list.length || currentIds.join(',') !== newIds.join(',');
+
+        if (needsRebuild) {
+            buildChairs(list.length);
+        }
 
         chairSlots.forEach((slot, index) => {
             const player = list[index];
