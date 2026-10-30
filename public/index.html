@@ -60,6 +60,9 @@
     </script>
     <!-- Socket.io for Multiplayer -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <!-- Three.js & 3D Stage Engine -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="/threeStageManager.js"></script>
     <!-- Google AdSense -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4269446769353106" crossorigin="anonymous"></script>
     <style>
@@ -135,6 +138,50 @@
 
         /* Stage */
         .stage { flex: 1; position: relative; background: linear-gradient(to bottom, #87CEEB, #e0f6ff); overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+        
+        /* 2D / 3D Mode Toggle */
+        .view-mode-toggle {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.72);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 20px;
+            padding: 2px 4px;
+            gap: 2px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+            user-select: none;
+            backdrop-filter: blur(4px);
+        }
+        .toggle-mode-btn {
+            border: none;
+            background: transparent;
+            color: #bbb;
+            padding: 3px 9px;
+            border-radius: 14px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            line-height: 1.2;
+        }
+        .toggle-mode-btn:hover {
+            color: #fff;
+        }
+        .toggle-mode-btn.active {
+            background: linear-gradient(135deg, #0984e3, #00cec9);
+            color: #fff;
+            box-shadow: 0 2px 6px rgba(0, 168, 255, 0.4);
+        }
+        .stage.mode-3d #pool,
+        .stage.mode-3d .deck,
+        .stage.mode-3d #waiting-animals-sky-layer,
+        .stage.mode-3d #waiting-animals-pool-layer {
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+        .stage.mode-3d #three-stage-container {
+            display: block !important;
+        }
         .pool { flex: 1; background: linear-gradient(180deg, #1cb5e0 0%, #006eb3 100%); position: relative; z-index: 1; overflow: hidden; }
         .pool::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noise)" opacity="0.2"/></svg>'); pointer-events: none; mix-blend-mode: overlay; }
         
@@ -1515,10 +1562,15 @@
 
 
         <div class="stage" id="stage">
+            <div id="three-stage-container" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: auto;"></div>
             <div id="waiting-animals-sky-layer"></div>
-            <div style="position: absolute; top: 10px; left: 10px; z-index: 100; display:flex; gap:10px;">
+            <div style="position: absolute; top: 10px; left: 10px; z-index: 100; display:flex; gap:8px; align-items: center;">
                 <button id="mobile-leave-btn" class="btn btn-danger" style="width: auto; padding: 5px 10px; font-size: 0.8rem; display: none;" onclick="leaveRoom()">나가기</button>
                 <button id="end-game-btn" class="btn btn-warning hidden" style="width: auto; padding: 5px 10px; font-size: 0.8rem; color: #000;" onclick="endGame()">게임 종료</button>
+                <div id="view-mode-toggle" class="view-mode-toggle">
+                    <button type="button" id="btn-mode-2d" class="toggle-mode-btn active" onclick="setViewMode('2D')" aria-label="2D 모드로 전환">2D</button>
+                    <button type="button" id="btn-mode-3d" class="toggle-mode-btn" onclick="setViewMode('3D')" aria-label="3D 모드로 전환">3D</button>
+                </div>
             </div>
             <div id="item-timer" class="hidden" style="position: absolute; top: 15px; right: 20px; background: rgba(0,0,0,0.6); padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; border: 1px solid #f39c12; color: #f39c12; z-index: 100;"></div>
             <div class="pool" id="pool">
@@ -2874,7 +2926,10 @@
             
             els.chairsContainer.style.gap = `${Math.floor(gap)}px`;
         }
-        window.addEventListener('resize', updateStageGap);
+        window.addEventListener('resize', () => {
+            updateStageGap();
+            if (window.ThreeStageManager) window.ThreeStageManager.handleResize();
+        });
 
         function getAvatarSvg(gender) {
             const isM = gender === 'M';
@@ -3034,6 +3089,50 @@
                         nameTag.textContent = p.name;
                     }
                 });
+            }
+
+            // Sync with 3D Stage Engine if active
+            if (window.ThreeStageManager) {
+                window.ThreeStageManager.syncPlayers(state.players);
+            }
+        }
+
+        // --- 2D / 3D View Mode Controller ---
+        let currentViewMode = '2D';
+
+        function setViewMode(mode) {
+            currentViewMode = mode;
+            const stage = document.getElementById('stage');
+            const btn2D = document.getElementById('btn-mode-2d');
+            const btn3D = document.getElementById('btn-mode-3d');
+            const container3D = document.getElementById('three-stage-container');
+
+            if (mode === '3D') {
+                if (stage) stage.classList.add('mode-3d');
+                if (btn3D) btn3D.classList.add('active');
+                if (btn2D) btn2D.classList.remove('active');
+
+                if (window.ThreeStageManager) {
+                    if (!window.ThreeStageManager.isInitialized()) {
+                        window.ThreeStageManager.init(container3D);
+                    }
+                    window.ThreeStageManager.setVisible(true);
+                    window.ThreeStageManager.syncPlayers(state.players);
+                    // Sync active waiting animals
+                    const waitingList = (state.room && state.room.waitingAnimals) || [];
+                    ['shark', 'gator', 'gull'].forEach(animal => {
+                        window.ThreeStageManager.updateRoamingAnimal(animal, waitingList.includes(animal));
+                    });
+                }
+            } else {
+                if (stage) stage.classList.remove('mode-3d');
+                if (btn2D) btn2D.classList.add('active');
+                if (btn3D) btn3D.classList.remove('active');
+
+                if (window.ThreeStageManager) {
+                    window.ThreeStageManager.setVisible(false);
+                }
+                renderStage();
             }
         }
 
@@ -4441,6 +4540,9 @@
         }
 
         function spawnWaitingAnimal(animal) {
+            if (window.ThreeStageManager) {
+                window.ThreeStageManager.updateRoamingAnimal(animal, true);
+            }
             const targetLayer = (animal === 'gull') ? getWaitingAnimalsSkyLayer() : getWaitingAnimalsPoolLayer();
             if (!targetLayer) return;
             const existing = document.getElementById(`roaming-animal-${animal}`);
@@ -4473,6 +4575,9 @@
         }
 
         function removeWaitingAnimal(animal) {
+            if (window.ThreeStageManager) {
+                window.ThreeStageManager.updateRoamingAnimal(animal, false);
+            }
             const el = document.getElementById(`roaming-animal-${animal}`);
             if (!el) return;
             el.classList.add('fading-out');
@@ -4493,6 +4598,9 @@
         }
 
         function clearAllWaitingAnimals() {
+            if (window.ThreeStageManager) {
+                ['shark', 'gator', 'gull'].forEach(animal => window.ThreeStageManager.updateRoamingAnimal(animal, false));
+            }
             if (state.room) state.room.waitingAnimals = [];
             if (Array.isArray(state.players)) {
                 state.players.forEach(p => {
@@ -5587,6 +5695,10 @@
                 // Ensure all guests are perfectly synced with status changes (fixes invisible characters)
                 broadcastState();
             }
+
+            if (window.ThreeStageManager) {
+                window.ThreeStageManager.syncPlayers(state.players);
+            }
         }
 
         function triggerFly(playerId, word, specialEvent = null, shieldBlockedAnimal = null) {
@@ -5677,6 +5789,11 @@
             const wrap = document.getElementById(`char-wrap-${playerId}`);
             const chair = document.getElementById(`chair-${playerId}`);
             if(!wrap || !chair) return;
+
+            // Trigger 3D Flying / Animal Animation in Three.js
+            if (window.ThreeStageManager) {
+                window.ThreeStageManager.triggerFly(playerId, specialEvent);
+            }
 
             // Force reflow for mobile Safari to properly restart animations
             wrap.style.transition = 'none';
