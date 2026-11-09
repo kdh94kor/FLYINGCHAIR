@@ -3,6 +3,7 @@ const path = require('path');
 const supabase = require('./supabaseClient');
 
 const DATA_FILE = path.join(__dirname, '..', 'data', 'taboo_words.json');
+const BANNED_FILE = path.join(__dirname, '..', 'data', 'banned_words.json');
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5분 캐시 TTL
 const DB_FLUSH_INTERVAL_MS = 60 * 1000; // 60초 주기 Write-Behind 플러시
 
@@ -13,6 +14,43 @@ let cacheExpiresAt = 0;
 let isDirty = false;
 let saveTimer = null;
 let flushTimer = null;
+
+// ── 0. 비속어/욕설 블랙리스트 데이터셋 로드 (MIT License: doublems & badwords-ko) ──
+let bannedWordsSet = new Set();
+function loadBannedWords() {
+  try {
+    if (fs.existsSync(BANNED_FILE)) {
+      const raw = fs.readFileSync(BANNED_FILE, 'utf8');
+      const list = JSON.parse(raw);
+      if (Array.isArray(list)) {
+        bannedWordsSet = new Set(list.map(w => w.trim().toLowerCase()));
+      }
+    }
+  } catch (err) {
+    console.error('[TabooWords] Failed to load banned_words.json:', err);
+  }
+}
+loadBannedWords();
+
+/**
+ * 주어진 단어가 비속어/욕설에 해당하는지 판별합니다.
+ * - 정확 일치 및 특수문자 제거 후 일치
+ * - 2자 이상 비속어 부분 포함 일치
+ */
+function isProfane(word) {
+  if (!word || typeof word !== 'string') return false;
+  const clean = word.trim().toLowerCase();
+  const stripped = clean.replace(/[\s\-_?!~^.,]/g, '');
+
+  if (bannedWordsSet.has(clean) || bannedWordsSet.has(stripped)) return true;
+
+  for (const bad of bannedWordsSet) {
+    if (bad.length >= 2 && (clean.includes(bad) || stripped.includes(bad))) {
+      return true;
+    }
+  }
+  return false;
+}
 
 // ── 1. 로컬 JSON 파일 1차 로드 (0ms 즉시 기동) ──────────────────────────────────
 function loadLocalWords() {
@@ -31,9 +69,10 @@ function loadLocalWords() {
 
 loadLocalWords();
 
-// ── 2. Top 100 인메모리 정렬 및 캐싱 ──────────────────────────────────────────
+// ── 2. Top 100 인메모리 정렬 및 캐싱 (비속어는 추천에서 100% 필터링 제외) ─────
 function computeTop100() {
   const sorted = Object.entries(wordCounts)
+    .filter(([word]) => !isProfane(word))
     .sort((a, b) => b[1] - a[1])
     .slice(0, 100)
     .map(([word]) => word);
@@ -186,7 +225,9 @@ function recordWords(wordList) {
   for (const item of wordList) {
     if (typeof item !== 'string') continue;
     const clean = item.trim();
-    if (isValidTabooWord(clean)) {
+    // 비속어는 금기어 게임 플레이(채팅·격발)는 자유롭게 허용하되,
+    // 대중적인 추천 TOP 100 집계 카운터에는 누적하지 않음
+    if (isValidTabooWord(clean) && !isProfane(clean)) {
       wordCounts[clean] = (wordCounts[clean] || 0) + 1;
       pendingDeltas[clean] = (pendingDeltas[clean] || 0) + 1;
       updated = true;
@@ -285,5 +326,6 @@ module.exports = {
   recordWordsFromPayload,
   flushToDb, // For manual trigger in tests
   getPendingDeltasCount: () => Object.keys(pendingDeltas).length,
-  getWordCount: (w) => wordCounts[w] || 0
+  getWordCount: (w) => wordCounts[w] || 0,
+  isProfane
 };
