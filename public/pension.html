@@ -92,6 +92,56 @@
       color: #ffffff;
     }
 
+    .game-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      color: #ffffff;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 9px 14px;
+      border-radius: 999px;
+      white-space: nowrap;
+      transition: background 0.15s ease, transform 0.15s ease;
+    }
+
+    .game-cta:hover {
+      background: rgba(255, 255, 255, 0.24);
+      transform: translateY(-1px);
+    }
+
+    .footnote-promo {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .footnote-promo-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #0f172a;
+      color: #ffffff;
+      text-decoration: none;
+      font-size: 12.5px;
+      font-weight: 700;
+      padding: 7px 13px;
+      border-radius: 999px;
+      transition: background 0.15s ease;
+    }
+
+    .footnote-promo-btn:hover {
+      background: #1e293b;
+    }
+
     .kpi-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -483,6 +533,7 @@
             <span>💰 <strong>총액 50만원 이하</strong> 중심 (세금·수수료 포함)</span>
           </div>
         </div>
+        <a class="game-cta" href="/">🪑 게임하러 가기 ↗</a>
       </div>
 
       <div class="kpi-grid">
@@ -649,6 +700,10 @@
         <li>여기어때(대전 부케드빌라)는 C2 객실 기본 요금(₩400,000, 2인 기준)에 현장 인원 추가금(8세 이상 1인 ₩30,000 × 4명 = ₩120,000)을 합산한 총액 ₩520,000으로 계산되었습니다.</li>
         <li>실제 예약 시점에 따라 할인율, 잔여 객실 및 요금은 변동될 수 있습니다.</li>
       </ul>
+      <div class="footnote-promo">
+        <span>🪑 숙소 정하고 다 같이 내기할 땐? <strong>실시간 말폭탄 게임 플라잉체어</strong></span>
+        <a class="footnote-promo-btn" href="/">게임하러 가기 ↗</a>
+      </div>
     </div>
   </div>
 
