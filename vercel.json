@@ -55,6 +55,10 @@
       "destination": "/admin.html"
     },
     {
+      "source": "/pension",
+      "destination": "/pension.html"
+    },
+    {
       "source": "/api/:path*",
       "destination": "https://flyingchair.onrender.com/api/:path*"
     }
