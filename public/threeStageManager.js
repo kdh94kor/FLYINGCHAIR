@@ -1066,140 +1066,266 @@
     // 6. Animals: 3D High-Detail Shark, 4-Legged Shoreline Gator, Seagull
     // ─────────────────────────────────────────────────────────────
     function buildAnimals() {
-        // 6-1. Shark
-        const sharkGroup = new THREE.Group();
-        const sharkMat = createMat(0x34495e, 0.35, 0.15);
-        const sharkBellyMat = createMat(0xf8f9fa, 0.4, 0.05);
-        const toothMat = createMat(0xffffff, 0.2, 0.0);
+        const toothMat = createMat(0xfdfefe, 0.18, 0.05);
         const eyeMat = new THREE.MeshBasicMaterial({ color: 0x050505 });
-        const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
-        const torsoGeo = new THREE.CylinderGeometry(0.75, 0.48, 3.2, 16);
-        torsoGeo.rotateX(Math.PI / 2);
-        const torso = new THREE.Mesh(torsoGeo, sharkMat);
-        torso.position.set(0, 0.1, 0);
-        sharkGroup.add(torso);
+        // 6-1. Realistic Great White Shark (Lathe fusiform body + countershading + 5 gill slits + 2-joint tail)
+        const sharkGroup = new THREE.Group();
+        const sharkTopMat = createMat(0x324658, 0.28, 0.14);
+        const sharkBellyMat = createMat(0xf0f4f7, 0.35, 0.06);
+        const sharkCavityMat = createMat(0x1b0b0d, 0.55, 0.05);
+        const sharkEyeMat = new THREE.MeshStandardMaterial({ color: 0x070a0e, roughness: 0.06, metalness: 0.28 });
 
-        const bellyGeo = new THREE.CylinderGeometry(0.68, 0.42, 3.0, 16);
-        bellyGeo.rotateX(Math.PI / 2);
-        const belly = new THREE.Mesh(bellyGeo, sharkBellyMat);
-        belly.position.set(0, -0.06, 0);
-        sharkGroup.add(belly);
+        // Continuous fusiform body along +Z
+        const sharkProfile = [
+            new THREE.Vector2(0.20, -1.68),
+            new THREE.Vector2(0.30, -1.35),
+            new THREE.Vector2(0.43, -0.95),
+            new THREE.Vector2(0.57, -0.50),
+            new THREE.Vector2(0.72,  0.00),
+            new THREE.Vector2(0.82,  0.45),
+            new THREE.Vector2(0.80,  0.90),
+            new THREE.Vector2(0.72,  1.30),
+            new THREE.Vector2(0.59,  1.65),
+            new THREE.Vector2(0.44,  1.96),
+            new THREE.Vector2(0.28,  2.24),
+            new THREE.Vector2(0.14,  2.44),
+            new THREE.Vector2(0.01,  2.58)
+        ];
+        const sharkBodyGeo = new THREE.LatheGeometry(sharkProfile, 28);
+        sharkBodyGeo.rotateX(Math.PI / 2);
 
+        const sPos = sharkBodyGeo.attributes.position;
+        const sColors = new Float32Array(sPos.count * 3);
+        const cSharkDorsal = new THREE.Color(0x2e4152);
+        const cSharkFlank = new THREE.Color(0x526b80);
+        const cSharkBelly = new THREE.Color(0xf1f5f8);
+        const tmpSharkCol = new THREE.Color();
+
+        for (let i = 0; i < sPos.count; i++) {
+            let vx = sPos.getX(i);
+            let vy = sPos.getY(i);
+            const vz = sPos.getZ(i);
+
+            // Sleek lateral compression toward tail peduncle
+            if (vz < -0.45) {
+                const pedT = smoothstep(-0.45, -1.68, vz);
+                vx *= (1.0 - 0.24 * pedT);
+                vy *= (1.0 + 0.08 * pedT);
+            }
+            // Proud dorsal ridge & flattened belly
+            if (vy > 0 && Math.abs(vx) < 0.28) {
+                vy *= 1.07;
+            } else if (vy < 0) {
+                vy *= 0.85;
+            }
+            // Overhanging conical snout & recessed mouth arch
+            if (vz > 1.2) {
+                vy += smoothstep(1.2, 2.58, vz) * 0.15;
+            }
+            if (vz > 1.05 && vz < 2.05 && vy < -0.05 && Math.abs(vx) < 0.48) {
+                const arch = Math.sin(smoothstep(1.05, 2.05, vz) * Math.PI);
+                const centerW = 1.0 - Math.min(1, Math.abs(vx) / 0.48);
+                vy += arch * centerW * 0.14;
+            }
+
+            sPos.setXYZ(i, vx, vy, vz);
+
+            // Countershading with subtle organic wavy lateral line
+            const waveLine = -0.08 + 0.06 * Math.sin(vz * 3.6);
+            const heightFrac = vy - waveLine;
+            if (heightFrac > 0.28) {
+                tmpSharkCol.copy(cSharkFlank).lerp(cSharkDorsal, Math.min(1, (heightFrac - 0.28) / 0.45));
+            } else if (heightFrac >= -0.08) {
+                tmpSharkCol.copy(cSharkBelly).lerp(cSharkFlank, (heightFrac + 0.08) / 0.36);
+            } else {
+                tmpSharkCol.copy(cSharkBelly);
+            }
+            sColors[i * 3] = tmpSharkCol.r;
+            sColors[i * 3 + 1] = tmpSharkCol.g;
+            sColors[i * 3 + 2] = tmpSharkCol.b;
+        }
+        sharkBodyGeo.setAttribute('color', new THREE.BufferAttribute(sColors, 3));
+        sharkBodyGeo.computeVertexNormals();
+
+        const sharkBodyMat = new THREE.MeshStandardMaterial({
+            vertexColors: true,
+            roughness: 0.28,
+            metalness: 0.12
+        });
+        const sharkBodyMesh = new THREE.Mesh(sharkBodyGeo, sharkBodyMat);
+        sharkBodyMesh.castShadow = true;
+        sharkGroup.add(sharkBodyMesh);
+
+        // Recessed Dark Oral Cavity under snout
+        const cavity = new THREE.Mesh(new THREE.SphereGeometry(0.42, 14, 10), sharkCavityMat);
+        cavity.scale.set(1.0, 0.42, 1.35);
+        cavity.position.set(0, -0.14, 1.48);
+        sharkGroup.add(cavity);
+
+        // Head details (eyes, nostrils, 5 curved gill slits, upper & lower serrated teeth)
         const headGroup = new THREE.Group();
-        headGroup.position.set(0, 0.1, 1.6);
+        headGroup.position.set(0, 0, 0);
 
-        const snoutGeo = new THREE.ConeGeometry(0.72, 1.8, 16);
-        snoutGeo.rotateX(Math.PI / 2);
-        const snout = new THREE.Mesh(snoutGeo, sharkMat);
-        snout.scale.set(1.0, 0.65, 1.0);
-        snout.position.set(0, 0.05, 0.9);
-        headGroup.add(snout);
+        [-0.45, 0.45].forEach(eyeX => {
+            const rim = new THREE.Mesh(new THREE.SphereGeometry(0.085, 10, 10), createMat(0x1c2833, 0.4));
+            rim.scale.set(0.65, 1.0, 1.1);
+            rim.position.set(eyeX, 0.15, 1.56);
+            headGroup.add(rim);
 
-        const snoutBellyGeo = new THREE.ConeGeometry(0.64, 1.6, 16);
-        snoutBellyGeo.rotateX(Math.PI / 2);
-        const snoutBelly = new THREE.Mesh(snoutBellyGeo, sharkBellyMat);
-        snoutBelly.scale.set(0.95, 0.55, 1.0);
-        snoutBelly.position.set(0, -0.05, 0.8);
-        headGroup.add(snoutBelly);
-
-        [-0.48, 0.48].forEach(eyeX => {
-            const eyeSocket = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), eyeWhiteMat);
-            eyeSocket.position.set(eyeX, 0.22, 0.45);
-            headGroup.add(eyeSocket);
-
-            const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), eyeMat);
-            pupil.position.set(eyeX > 0 ? eyeX + 0.05 : eyeX - 0.05, 0.22, 0.48);
-            headGroup.add(pupil);
+            const eyeBall = new THREE.Mesh(new THREE.SphereGeometry(0.068, 10, 10), sharkEyeMat);
+            eyeBall.position.set(eyeX + (eyeX > 0 ? 0.015 : -0.015), 0.15, 1.57);
+            headGroup.add(eyeBall);
         });
 
-        const lowerJaw = new THREE.Group();
-        lowerJaw.position.set(0, -0.15, 0.2);
+        // Snout nostrils
+        [-0.19, 0.19].forEach(nx => {
+            const nostril = new THREE.Mesh(new THREE.SphereGeometry(0.032, 6, 6), createMat(0x111921, 0.7));
+            nostril.position.set(nx, 0.02, 2.16);
+            headGroup.add(nostril);
+        });
 
-        const jawMeshGeo = new THREE.ConeGeometry(0.55, 1.4, 14);
-        jawMeshGeo.rotateX(Math.PI / 2);
-        const jawMesh = new THREE.Mesh(jawMeshGeo, sharkBellyMat);
-        jawMesh.scale.set(0.9, 0.4, 1.0);
-        jawMesh.position.set(0, 0, 0.7);
-        lowerJaw.add(jawMesh);
-
-        const toothGeo = new THREE.ConeGeometry(0.045, 0.12, 5);
-        toothGeo.rotateX(-Math.PI / 2);
-        for (let i = -3; i <= 3; i++) {
-            const tooth = new THREE.Mesh(toothGeo, toothMat);
-            const t = i / 3.5;
-            tooth.position.set(t * 0.35, 0.08, 0.4 + (1 - Math.abs(t)) * 0.75);
-            tooth.rotation.x = -0.3;
-            lowerJaw.add(tooth);
-        }
-        headGroup.add(lowerJaw);
-
-        for (let i = -4; i <= 4; i++) {
-            const uTooth = new THREE.Mesh(toothGeo, toothMat);
-            const t = i / 4.5;
-            uTooth.position.set(t * 0.42, -0.12, 0.5 + (1 - Math.abs(t)) * 0.85);
-            uTooth.rotation.x = Math.PI - 0.3;
-            headGroup.add(uTooth);
-        }
-
-        const gillMat = createMat(0x1a252f, 0.6);
-        [-0.72, 0.72].forEach(gX => {
-            for (let g = 0; g < 3; g++) {
-                const gill = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.35, 0.05), gillMat);
-                gill.position.set(gX, 0.1, -0.1 - g * 0.18);
-                gill.rotation.z = gX > 0 ? -0.2 : 0.2;
+        // 5 Curved Gill Slits on both flanks
+        const gillMat = createMat(0x19242e, 0.7);
+        [-1, 1].forEach(side => {
+            for (let g = 0; g < 5; g++) {
+                const gz = 0.98 - g * 0.13;
+                const gx = side * (0.76 + (g === 2 ? 0.03 : 0.0));
+                const gill = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.34 - g * 0.02, 0.032), gillMat);
+                gill.position.set(gx, 0.02, gz);
+                gill.rotation.set(0.12, side * -0.15, side * -0.12);
                 headGroup.add(gill);
             }
         });
 
+        // Articulated Lower Jaw with serrated teeth
+        const lowerJaw = new THREE.Group();
+        lowerJaw.position.set(0, -0.22, 1.05);
+
+        const jawGeo = new THREE.CylinderGeometry(0.32, 0.44, 0.85, 16);
+        jawGeo.rotateX(Math.PI / 2);
+        const jawMesh = new THREE.Mesh(jawGeo, sharkBellyMat);
+        jawMesh.scale.set(0.95, 0.38, 1.0);
+        jawMesh.position.set(0, 0, 0.40);
+        lowerJaw.add(jawMesh);
+
+        const jawTip = new THREE.Mesh(new THREE.SphereGeometry(0.31, 14, 10), sharkBellyMat);
+        jawTip.scale.set(0.95, 0.38, 1.0);
+        jawTip.position.set(0, 0, 0.80);
+        lowerJaw.add(jawTip);
+
+        const toothGeo = new THREE.ConeGeometry(0.04, 0.11, 4);
+        for (let i = -4; i <= 4; i++) {
+            const t = i / 4.5;
+            const angle = t * 1.1;
+            const lTooth = new THREE.Mesh(toothGeo, toothMat);
+            lTooth.position.set(Math.sin(angle) * 0.31, 0.09, 0.48 + Math.cos(angle) * 0.45);
+            lTooth.rotation.x = 0.15;
+            lowerJaw.add(lTooth);
+        }
+        headGroup.add(lowerJaw);
+
+        // Upper Teeth along snout arch
+        const uToothGeo = new THREE.ConeGeometry(0.042, 0.12, 4);
+        uToothGeo.rotateX(Math.PI);
+        for (let i = -5; i <= 5; i++) {
+            const t = i / 5.5;
+            const angle = t * 1.15;
+            const uTooth = new THREE.Mesh(uToothGeo, toothMat);
+            uTooth.position.set(Math.sin(angle) * 0.36, -0.16, 1.48 + Math.cos(angle) * 0.50);
+            uTooth.rotation.x = -0.18;
+            headGroup.add(uTooth);
+        }
+
         sharkGroup.add(headGroup);
 
-        const finShape = new THREE.Shape();
-        finShape.moveTo(0, 0);
-        finShape.lineTo(0.3, 1.7);
-        finShape.quadraticCurveTo(0.15, 0.9, -1.1, 0);
-        finShape.closePath();
-        const finGeo = new THREE.ExtrudeGeometry(finShape, { depth: 0.12, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03 });
-        finGeo.rotateY(Math.PI / 2);
-        finGeo.translate(-0.06, 0.65, 0.1);
-        const dorsalFin = new THREE.Mesh(finGeo, sharkMat);
+        // Primary Curved Dorsal Fin
+        const dorsalShape = new THREE.Shape();
+        dorsalShape.moveTo(0, 0);
+        dorsalShape.quadraticCurveTo(0.35, 0.95, -0.35, 1.62);
+        dorsalShape.quadraticCurveTo(-0.48, 0.92, -1.05, 0);
+        dorsalShape.closePath();
+        const dorsalGeo = new THREE.ExtrudeGeometry(dorsalShape, { depth: 0.10, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03 });
+        dorsalGeo.rotateY(-Math.PI / 2);
+        dorsalGeo.translate(0.05, 0.68, 0.45);
+        const dorsalFin = new THREE.Mesh(dorsalGeo, sharkTopMat);
+        dorsalFin.castShadow = true;
         sharkGroup.add(dorsalFin);
 
-        const pecShape = new THREE.Shape();
-        pecShape.moveTo(0, 0);
-        pecShape.lineTo(1.4, -0.3);
-        pecShape.quadraticCurveTo(0.7, -0.7, 0, -0.3);
-        pecShape.closePath();
-        const pecGeo = new THREE.ExtrudeGeometry(pecShape, { depth: 0.08, bevelEnabled: false });
+        // Second Dorsal Fin
+        const secDorsalShape = new THREE.Shape();
+        secDorsalShape.moveTo(0, 0);
+        secDorsalShape.lineTo(-0.22, 0.38);
+        secDorsalShape.lineTo(-0.44, 0);
+        secDorsalShape.closePath();
+        const secDorsalGeo = new THREE.ExtrudeGeometry(secDorsalShape, { depth: 0.05, bevelEnabled: false });
+        secDorsalGeo.rotateY(-Math.PI / 2);
+        secDorsalGeo.translate(0.025, 0.34, -0.95);
+        sharkGroup.add(new THREE.Mesh(secDorsalGeo, sharkTopMat));
 
-        const lPec = new THREE.Mesh(pecGeo, sharkMat);
-        lPec.position.set(-0.65, 0, 0.6);
-        lPec.rotation.set(-0.2, 0.4, 0.3);
-        sharkGroup.add(lPec);
+        // Swept Hydrofoil Pectoral Fins (Left & Right, symmetric shapes without negative scale)
+        function createPecFin(sideSign) {
+            const pShape = new THREE.Shape();
+            pShape.moveTo(0, 0);
+            pShape.quadraticCurveTo(sideSign * 0.85, -0.25, sideSign * 1.48, -0.78);
+            pShape.quadraticCurveTo(sideSign * 0.65, -0.68, sideSign * 0.12, -0.42);
+            pShape.closePath();
+            const pGeo = new THREE.ExtrudeGeometry(pShape, { depth: 0.07, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02 });
+            pGeo.rotateX(Math.PI / 2);
+            const fin = new THREE.Mesh(pGeo, sharkTopMat);
+            fin.position.set(sideSign * 0.68, -0.12, 0.72);
+            fin.rotation.set(0.08, 0, sideSign * -0.26);
+            fin.castShadow = true;
+            sharkGroup.add(fin);
+        }
+        createPecFin(-1);
+        createPecFin(1);
 
-        const rPec = new THREE.Mesh(pecGeo, sharkMat);
-        rPec.scale.set(-1, 1, 1);
-        rPec.position.set(0.65, 0, 0.6);
-        rPec.rotation.set(-0.2, -0.4, -0.3);
-        sharkGroup.add(rPec);
+        // Paired Pelvic Fins
+        [-1, 1].forEach(side => {
+            const pelShape = new THREE.Shape();
+            pelShape.moveTo(0, 0);
+            pelShape.lineTo(side * 0.45, -0.35);
+            pelShape.lineTo(side * 0.05, -0.28);
+            pelShape.closePath();
+            const pelGeo = new THREE.ExtrudeGeometry(pelShape, { depth: 0.04, bevelEnabled: false });
+            pelGeo.rotateX(Math.PI / 2);
+            const pel = new THREE.Mesh(pelGeo, sharkBellyMat);
+            pel.position.set(side * 0.36, -0.35, -0.55);
+            pel.rotation.z = side * -0.35;
+            sharkGroup.add(pel);
+        });
+
+        // 2-Segment Articulated Tail + Asymmetrical Crescent Caudal Fin
+        const midTailJoint = new THREE.Group();
+        midTailJoint.position.set(0, 0.02, -1.58);
+
+        const pedGeo = new THREE.CylinderGeometry(0.11, 0.21, 0.84, 14);
+        pedGeo.rotateX(Math.PI / 2);
+        const pedMesh = new THREE.Mesh(pedGeo, sharkTopMat);
+        pedMesh.position.set(0, 0, -0.40);
+        midTailJoint.add(pedMesh);
 
         const tailJoint = new THREE.Group();
-        tailJoint.position.set(0, 0.1, -1.6);
+        tailJoint.position.set(0, 0, -0.78);
 
-        const tailShape = new THREE.Shape();
-        tailShape.moveTo(0, 0);
-        tailShape.lineTo(-0.8, 1.35);
-        tailShape.quadraticCurveTo(-0.5, 0.6, -0.2, 0.1);
-        tailShape.lineTo(-0.6, -0.75);
-        tailShape.quadraticCurveTo(-0.3, -0.3, 0, 0);
-        tailShape.closePath();
+        const caudalShape = new THREE.Shape();
+        caudalShape.moveTo(0, 0.12);
+        caudalShape.quadraticCurveTo(-0.42, 0.85, -0.95, 1.48);
+        caudalShape.lineTo(-0.62, 0.65);
+        caudalShape.quadraticCurveTo(-0.42, 0.15, -0.36, 0.0);
+        caudalShape.quadraticCurveTo(-0.48, -0.42, -0.78, -0.95);
+        caudalShape.quadraticCurveTo(-0.28, -0.52, 0, -0.10);
+        caudalShape.closePath();
 
-        const tailFinGeo = new THREE.ExtrudeGeometry(tailShape, { depth: 0.09, bevelEnabled: false });
-        tailFinGeo.rotateY(Math.PI / 2);
-        tailFinGeo.translate(-0.045, 0, 0);
-        const tailFinMesh = new THREE.Mesh(tailFinGeo, sharkMat);
-        tailJoint.add(tailFinMesh);
-        sharkGroup.add(tailJoint);
+        const caudalGeo = new THREE.ExtrudeGeometry(caudalShape, { depth: 0.08, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02 });
+        caudalGeo.rotateY(-Math.PI / 2);
+        caudalGeo.translate(0.04, 0, 0);
+        const caudalMesh = new THREE.Mesh(caudalGeo, sharkTopMat);
+        tailJoint.add(caudalMesh);
+
+        midTailJoint.add(tailJoint);
+        sharkGroup.add(midTailJoint);
 
         sharkGroup.position.set(0, 0.05, -7);
         sharkGroup.visible = false;
@@ -1208,6 +1334,7 @@
             group: sharkGroup,
             headGroup: headGroup,
             lowerJaw: lowerJaw,
+            midTailJoint: midTailJoint,
             tailJoint: tailJoint,
             isRoaming: false,
             roamTime: 0,
@@ -1328,40 +1455,232 @@
             activeAttackAnim: null
         };
 
-        // 6-3. Seagull
+        // 6-3. Realistic Coastal Seagull (Oriented +Z beak-first, Lathe torso, M-shaped 2-joint wings, black tips & tail band)
         const gullGroup = new THREE.Group();
-        const birdMat = createMat(0xf5f6fa, 0.5);
+        const gullWhiteMat = createMat(0xf7f9fc, 0.58, 0.04);
+        const gullMantleMat = createMat(0x98aab9, 0.62, 0.04);
+        const gullTipMat = createMat(0x1e272e, 0.65, 0.05);
+        const gullBeakMat = createMat(0xf4b41a, 0.32, 0.08);
+        const gullSpotMat = createMat(0xd63031, 0.35);
+        const gullIrisMat = createMat(0xf6e58d, 0.2);
 
-        const gullBody = new THREE.Mesh(new THREE.ConeGeometry(0.45, 1.8, 12), birdMat);
-        gullBody.rotateX(Math.PI / 2);
-        gullGroup.add(gullBody);
+        // Sculpted teardrop avian body along +Z
+        const gullProfile = [
+            new THREE.Vector2(0.01, -0.95),
+            new THREE.Vector2(0.11, -0.78),
+            new THREE.Vector2(0.22, -0.45),
+            new THREE.Vector2(0.32, -0.05),
+            new THREE.Vector2(0.36,  0.24),
+            new THREE.Vector2(0.33,  0.48),
+            new THREE.Vector2(0.24,  0.68),
+            new THREE.Vector2(0.08,  0.80),
+            new THREE.Vector2(0.01,  0.83)
+        ];
+        const gullBodyGeo = new THREE.LatheGeometry(gullProfile, 24);
+        gullBodyGeo.rotateX(Math.PI / 2);
 
-        const beak = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.7, 8), createMat(0xf39c12, 0.3));
-        beak.rotateX(-Math.PI / 2);
-        beak.position.set(0, 0.05, -1.1);
-        gullGroup.add(beak);
+        const gPos = gullBodyGeo.attributes.position;
+        const gColors = new Float32Array(gPos.count * 3);
+        const cGullWhite = new THREE.Color(0xf7f9fc);
+        const cGullMantle = new THREE.Color(0x95a8b8);
+        const tmpGullCol = new THREE.Color();
 
-        const leftWingJoint = new THREE.Group();
-        leftWingJoint.position.set(-0.35, 0.12, -0.1);
-        const lWing = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.06, 0.65), createMat(0xdcdde1, 0.5));
-        lWing.position.set(-0.9, 0, 0);
-        leftWingJoint.add(lWing);
-        gullGroup.add(leftWingJoint);
+        for (let i = 0; i < gPos.count; i++) {
+            const vx = gPos.getX(i) * 1.06;
+            const vy = gPos.getY(i) * 0.86;
+            const vz = gPos.getZ(i);
+            gPos.setXYZ(i, vx, vy, vz);
 
-        const rightWingJoint = new THREE.Group();
-        rightWingJoint.position.set(0.35, 0.12, -0.1);
-        const rWing = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.06, 0.65), createMat(0xdcdde1, 0.5));
-        rWing.position.set(0.9, 0, 0);
-        rightWingJoint.add(rWing);
-        gullGroup.add(rightWingJoint);
+            // Silver-grey back saddle over white chest & underbelly
+            const backBlend = smoothstep(0.02, 0.14, vy) * smoothstep(0.45, -0.1, vz);
+            tmpGullCol.copy(cGullWhite).lerp(cGullMantle, backBlend);
+            gColors[i * 3] = tmpGullCol.r;
+            gColors[i * 3 + 1] = tmpGullCol.g;
+            gColors[i * 3 + 2] = tmpGullCol.b;
+        }
+        gullBodyGeo.setAttribute('color', new THREE.BufferAttribute(gColors, 3));
+        gullBodyGeo.computeVertexNormals();
 
-        gullGroup.position.set(0, 14, -4);
+        const gullBodyMesh = new THREE.Mesh(
+            gullBodyGeo,
+            new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.04 })
+        );
+        gullBodyMesh.castShadow = true;
+        gullGroup.add(gullBodyMesh);
+
+        // Neck, Avian Head, Golden Eyes & Hooked Yellow Bill (+Z)
+        const gHeadGroup = new THREE.Group();
+        gHeadGroup.position.set(0, 0.08, 0.66);
+
+        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.23, 0.42, 14), gullWhiteMat);
+        neck.position.set(0, 0.12, 0.10);
+        neck.rotation.x = 0.68;
+        gHeadGroup.add(neck);
+
+        const skull = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 14), gullWhiteMat);
+        skull.scale.set(0.90, 0.94, 1.22);
+        skull.position.set(0, 0.24, 0.30);
+        gHeadGroup.add(skull);
+
+        // Golden-ringed gull eyes
+        [-0.165, 0.165].forEach(ex => {
+            const eyeRing = new THREE.Mesh(new THREE.SphereGeometry(0.042, 8, 8), gullIrisMat);
+            eyeRing.position.set(ex, 0.27, 0.36);
+            gHeadGroup.add(eyeRing);
+
+            const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 8), eyeMat);
+            pupil.position.set(ex + (ex > 0 ? 0.018 : -0.018), 0.27, 0.37);
+            gHeadGroup.add(pupil);
+        });
+
+        // Two-part hooked yellow bill pointing +Z with red gonys spot
+        const upperBillGeo = new THREE.ConeGeometry(0.064, 0.52, 10);
+        upperBillGeo.rotateX(Math.PI / 2);
+        const upperBill = new THREE.Mesh(upperBillGeo, gullBeakMat);
+        upperBill.scale.set(0.75, 0.9, 1.0);
+        upperBill.position.set(0, 0.23, 0.70);
+        gHeadGroup.add(upperBill);
+
+        const billHook = new THREE.Mesh(new THREE.ConeGeometry(0.032, 0.12, 8), gullBeakMat);
+        billHook.rotation.x = Math.PI * 0.72;
+        billHook.position.set(0, 0.20, 0.96);
+        gHeadGroup.add(billHook);
+
+        const lowerBillGeo = new THREE.ConeGeometry(0.050, 0.46, 10);
+        lowerBillGeo.rotateX(Math.PI / 2);
+        const lowerBill = new THREE.Mesh(lowerBillGeo, gullBeakMat);
+        lowerBill.scale.set(0.72, 0.78, 1.0);
+        lowerBill.position.set(0, 0.19, 0.67);
+        gHeadGroup.add(lowerBill);
+
+        const redSpot = new THREE.Mesh(new THREE.SphereGeometry(0.032, 8, 8), gullSpotMat);
+        redSpot.position.set(0, 0.175, 0.84);
+        gHeadGroup.add(redSpot);
+
+        gullGroup.add(gHeadGroup);
+
+        // Articulated 2-Joint M-Shaped Seagull Wings (Inner Mantle + Swept Black-Tipped Outer Primaries)
+        function createGullWingSide(sideSign) {
+            const shoulderJoint = new THREE.Group();
+            shoulderJoint.position.set(sideSign * 0.30, 0.10, 0.10);
+
+            // Inner wing shape (-sy maps to +Z leading edge, +sy maps to -Z trailing edge)
+            const innerShape = new THREE.Shape();
+            innerShape.moveTo(0, -0.22);
+            innerShape.quadraticCurveTo(sideSign * 0.58, -0.32, sideSign * 1.18, -0.30);
+            innerShape.lineTo(sideSign * 1.18, 0.20);
+            innerShape.quadraticCurveTo(sideSign * 0.58, 0.32, 0, 0.34);
+            innerShape.closePath();
+
+            const innerGeo = new THREE.ExtrudeGeometry(innerShape, {
+                depth: 0.055,
+                bevelEnabled: true,
+                bevelThickness: 0.018,
+                bevelSize: 0.018
+            });
+            innerGeo.rotateX(-Math.PI / 2);
+            const innerMesh = new THREE.Mesh(innerGeo, gullMantleMat);
+            innerMesh.castShadow = true;
+            shoulderJoint.add(innerMesh);
+
+            // White trailing feather edge
+            const trailMesh = new THREE.Mesh(
+                new THREE.BoxGeometry(1.12, 0.025, 0.10),
+                gullWhiteMat
+            );
+            trailMesh.position.set(sideSign * 0.58, 0.015, -0.25);
+            shoulderJoint.add(trailMesh);
+
+            // Wrist / Outer Wing Joint
+            const outerJoint = new THREE.Group();
+            outerJoint.position.set(sideSign * 1.15, 0.01, 0.04);
+
+            const outerShape = new THREE.Shape();
+            outerShape.moveTo(0, -0.26);
+            outerShape.quadraticCurveTo(sideSign * 0.65, -0.05, sideSign * 1.38, 0.46);
+            outerShape.lineTo(sideSign * 1.30, 0.60);
+            outerShape.quadraticCurveTo(sideSign * 0.60, 0.36, 0, 0.24);
+            outerShape.closePath();
+
+            const outerGeo = new THREE.ExtrudeGeometry(outerShape, {
+                depth: 0.042,
+                bevelEnabled: true,
+                bevelThickness: 0.012,
+                bevelSize: 0.012
+            });
+            outerGeo.rotateX(-Math.PI / 2);
+            const outerMesh = new THREE.Mesh(outerGeo, gullMantleMat);
+            outerMesh.castShadow = true;
+            outerJoint.add(outerMesh);
+
+            // Iconic Black Primary Wingtips
+            const tipShape = new THREE.Shape();
+            tipShape.moveTo(sideSign * 0.55, -0.05);
+            tipShape.quadraticCurveTo(sideSign * 0.98, 0.16, sideSign * 1.38, 0.46);
+            tipShape.lineTo(sideSign * 1.30, 0.60);
+            tipShape.quadraticCurveTo(sideSign * 0.88, 0.44, sideSign * 0.55, 0.32);
+            tipShape.closePath();
+
+            const tipGeo = new THREE.ExtrudeGeometry(tipShape, { depth: 0.050, bevelEnabled: false });
+            tipGeo.rotateX(-Math.PI / 2);
+            const tipMesh = new THREE.Mesh(tipGeo, gullTipMat);
+            tipMesh.position.y = -0.003;
+            outerJoint.add(tipMesh);
+
+            // White apical spots on wingtips
+            const spot = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 6), gullWhiteMat);
+            spot.scale.set(1.6, 0.4, 0.9);
+            spot.position.set(sideSign * 1.16, 0.032, -0.42);
+            outerJoint.add(spot);
+
+            shoulderJoint.add(outerJoint);
+            gullGroup.add(shoulderJoint);
+            return { shoulderJoint, outerJoint };
+        }
+
+        const leftWing = createGullWingSide(-1);
+        const rightWing = createGullWingSide(1);
+
+        // Fanned Tail Feathers with Black Subterminal Band (-Z)
+        const tailGroup = new THREE.Group();
+        tailGroup.position.set(0, 0.03, -0.82);
+        for (let f = -2; f <= 2; f++) {
+            const feather = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.03, 0.54), gullWhiteMat);
+            feather.position.set(f * 0.08, 0, -0.22);
+            feather.rotation.y = f * -0.14;
+            tailGroup.add(feather);
+
+            const band = new THREE.Mesh(new THREE.BoxGeometry(0.145, 0.034, 0.13), gullTipMat);
+            band.position.set(f * 0.10, 0, -0.37);
+            band.rotation.y = f * -0.14;
+            tailGroup.add(band);
+        }
+        gullGroup.add(tailGroup);
+
+        // Tucked Webbed Feet under rear belly
+        [-0.14, 0.14].forEach(fx => {
+            const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.025, 0.35, 6), gullBeakMat);
+            leg.rotation.x = Math.PI / 2.2;
+            leg.position.set(fx, -0.18, -0.52);
+            gullGroup.add(leg);
+
+            const web = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.16, 3), gullBeakMat);
+            web.rotation.x = -Math.PI / 2;
+            web.scale.set(1.2, 1.0, 0.25);
+            web.position.set(fx, -0.22, -0.72);
+            gullGroup.add(web);
+        });
+
+        gullGroup.scale.setScalar(1.12);
+        gullGroup.position.set(0, 8.8, -6.5);
         gullGroup.visible = false;
         scene.add(gullGroup);
         gullEntity = {
             group: gullGroup,
-            leftWingJoint: leftWingJoint,
-            rightWingJoint: rightWingJoint,
+            leftWingJoint: leftWing.shoulderJoint,
+            rightWingJoint: rightWing.shoulderJoint,
+            leftOuterWing: leftWing.outerJoint,
+            rightOuterWing: rightWing.outerJoint,
             isRoaming: false,
             roamAngle: 0,
             activeAttackAnim: null
@@ -1650,6 +1969,10 @@
             startTime: attackStart,
             update: (time) => {
                 const el = time - attackStart;
+                if (sharkEntity.midTailJoint) {
+                    sharkEntity.midTailJoint.rotation.y = Math.sin(time * 12) * 0.25;
+                }
+                sharkEntity.tailJoint.rotation.y = Math.sin(time * 12 - 0.7) * 0.45;
                 if (el < 0.9) {
                     const t = el / 0.9;
                     const curX = (pos.x + 6) * (1 - t) + pos.x * t;
@@ -1762,7 +2085,13 @@
                     const skyX = slot.x + Math.sin(soarT * Math.PI * 2) * 7;
                     const skyZ = slot.z - Math.cos(soarT * Math.PI * 2) * 5;
 
+                    const nextT = Math.min(1, soarT + 0.02);
+                    const nextY = 2.8 + nextT * 11;
+                    const nextX = slot.x + Math.sin(nextT * Math.PI * 2) * 7;
+                    const nextZ = slot.z - Math.cos(nextT * Math.PI * 2) * 5;
+
                     gullEntity.group.position.set(skyX, skyY, skyZ);
+                    gullEntity.group.lookAt(nextX, nextY, nextZ);
                     slot.charGroup.position.set(skyX, skyY - 0.85, skyZ);
                     slot.charGroup.rotation.z = Math.sin(time * 12) * 0.3;
                 } else {
@@ -1785,36 +2114,36 @@
             startTime: swimStart,
             update: (time) => {
                 const el = time - swimStart;
-                if (el < 2.4) {
-                    // Horizontal belly-down freestyle crawl back to shore
-                    const t = el / 2.4;
+                if (el < 2.8) {
+                    // Straight, calm belly-down freestyle swim back to shore
+                    const t = el / 2.8;
                     const curX = landingPos.x * (1 - t) + slot.x * t;
                     const curZ = landingPos.z * (1 - t) + shoreZ * t;
-                    const swimY = 0.05 + Math.sin(time * 8.0) * 0.12;
+                    const swimY = 0.06 + Math.sin(time * 3.5) * 0.05;
                     slot.charGroup.position.set(curX, swimY, curZ);
-                    slot.charGroup.rotation.set(Math.PI * 0.42, 0, Math.sin(time * 9.5) * 0.28);
+                    slot.charGroup.rotation.set(Math.PI * 0.42, 0, 0);
 
                     if (slot.avatarMeshes) {
-                        slot.avatarMeshes.leftArm.rotation.x = time * 9.5;
-                        slot.avatarMeshes.rightArm.rotation.x = time * 9.5 + Math.PI;
-                        slot.avatarMeshes.leftLeg.rotation.x = Math.sin(time * 18.0) * 0.45;
-                        slot.avatarMeshes.rightLeg.rotation.x = -Math.sin(time * 18.0) * 0.45;
+                        slot.avatarMeshes.leftArm.rotation.x = time * 5.2;
+                        slot.avatarMeshes.rightArm.rotation.x = time * 5.2 + Math.PI;
+                        slot.avatarMeshes.leftLeg.rotation.x = Math.sin(time * 10.0) * 0.35;
+                        slot.avatarMeshes.rightLeg.rotation.x = -Math.sin(time * 10.0) * 0.35;
                     }
-                    if (Math.random() < 0.35) {
-                        createWaterSplash(curX, 0.05, curZ - 0.5, 0.32);
+                    if (Math.random() < 0.18) {
+                        createWaterSplash(curX, 0.05, curZ - 0.5, 0.28);
                     }
-                } else if (el < 3.8) {
-                    // Stand up and walk from shoreline up the beach slope back to chair
-                    const walkT = (el - 2.4) / 1.4;
+                } else if (el < 3.9) {
+                    // Stand up and walk calmly from shoreline up the beach slope back to chair
+                    const walkT = (el - 2.8) / 1.1;
                     const curZ = shoreZ * (1 - walkT) + (slot.z + 0.1) * walkT;
                     const walkY = getBeachHeight(slot.x, curZ) + 1.2;
                     slot.charGroup.position.set(slot.x, walkY, curZ);
                     slot.charGroup.rotation.set(0, 0, 0);
                     if (slot.avatarMeshes) {
-                        slot.avatarMeshes.leftArm.rotation.x = Math.sin(time * 12) * 0.55;
-                        slot.avatarMeshes.rightArm.rotation.x = -Math.sin(time * 12) * 0.55;
-                        slot.avatarMeshes.leftLeg.rotation.x = -Math.sin(time * 12) * 0.65;
-                        slot.avatarMeshes.rightLeg.rotation.x = Math.sin(time * 12) * 0.65;
+                        slot.avatarMeshes.leftArm.rotation.x = Math.sin(time * 9.0) * 0.45;
+                        slot.avatarMeshes.rightArm.rotation.x = -Math.sin(time * 9.0) * 0.45;
+                        slot.avatarMeshes.leftLeg.rotation.x = -Math.sin(time * 9.0) * 0.55;
+                        slot.avatarMeshes.rightLeg.rotation.x = Math.sin(time * 9.0) * 0.55;
                     }
                 } else {
                     resetSlotToSeat(slot);
@@ -2270,18 +2599,21 @@
             if (cloud.position.x > 155) cloud.position.x = -155;
         });
 
-        // Shark patrolling deeper offshore waters
+        // Shark patrolling deeper offshore waters with fluid 2-segment S-wave tail
         if (sharkEntity && sharkEntity.isRoaming && !sharkEntity.activeAttackAnim) {
             sharkEntity.roamTime += delta;
             const t = sharkEntity.roamTime * 0.45;
             const posX = Math.sin(t) * 11.5;
             const posZ = -7.2 + Math.cos(t * 1.5) * 2.6;
-            sharkEntity.group.position.set(posX, 0.05, posZ);
+            sharkEntity.group.position.set(posX, 0.02, posZ);
 
             const vx = Math.cos(t) * 11.5 * 0.45;
             const vz = -Math.sin(t * 1.5) * 2.6 * 1.5 * 0.45;
             sharkEntity.group.rotation.set(0, Math.atan2(vx, vz), 0);
-            sharkEntity.tailJoint.rotation.y = Math.sin(time * 6) * 0.45;
+            if (sharkEntity.midTailJoint) {
+                sharkEntity.midTailJoint.rotation.y = Math.sin(time * 5.2) * 0.22;
+            }
+            sharkEntity.tailJoint.rotation.y = Math.sin(time * 5.2 - 0.75) * 0.42;
         }
 
         // Crocodile prowling along the sand-sea shoreline boundary
@@ -2310,16 +2642,21 @@
         }
 
         if (gullEntity) {
-            const flap = Math.sin(time * 12) * 0.45;
-            gullEntity.leftWingJoint.rotation.z = flap;
-            gullEntity.rightWingJoint.rotation.z = -flap;
+            const innerFlap = Math.sin(time * 8.5) * 0.36;
+            const outerFlap = Math.sin(time * 8.5 - 0.85) * 0.48;
+            gullEntity.leftWingJoint.rotation.z = -innerFlap;
+            gullEntity.rightWingJoint.rotation.z = innerFlap;
+            if (gullEntity.leftOuterWing) gullEntity.leftOuterWing.rotation.z = -outerFlap;
+            if (gullEntity.rightOuterWing) gullEntity.rightOuterWing.rotation.z = outerFlap;
 
             if (gullEntity.isRoaming && !gullEntity.activeAttackAnim) {
-                gullEntity.roamAngle += delta * 0.38;
-                const rX = Math.sin(gullEntity.roamAngle) * 10.5;
-                const rZ = -4.5 + Math.cos(gullEntity.roamAngle) * 5.5;
-                gullEntity.group.position.set(rX, 13.0 + Math.sin(time * 2) * 0.7, rZ);
-                gullEntity.group.rotation.y = gullEntity.roamAngle + Math.PI / 2;
+                gullEntity.roamAngle += delta * 0.42;
+                const rX = Math.sin(gullEntity.roamAngle) * 11.0;
+                const rZ = -6.5 + Math.cos(gullEntity.roamAngle) * 4.5;
+                const vx = Math.cos(gullEntity.roamAngle) * 11.0 * 0.42;
+                const vz = -Math.sin(gullEntity.roamAngle) * 4.5 * 0.42;
+                gullEntity.group.position.set(rX, 8.8 + Math.sin(time * 2.0) * 0.55, rZ);
+                gullEntity.group.rotation.set(0, Math.atan2(vx, vz), -0.20);
             }
         }
 
