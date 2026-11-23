@@ -6016,6 +6016,25 @@
         }
 
         function createMissileAnimation(senderId, targetId, onHit) {
+            if (currentViewMode === '3D' && window.ThreeStageManager && window.ThreeStageManager.isInitialized() && typeof window.ThreeStageManager.triggerMissile === 'function') {
+                let finished = false;
+                let fallbackTimer = null;
+                function finishHit() {
+                    if (finished) return;
+                    finished = true;
+                    if (fallbackTimer) clearTimeout(fallbackTimer);
+                    playTone(100, 'square', 0.8, 1); // Boom sound
+                    if (onHit) onHit();
+                }
+                fallbackTimer = setTimeout(finishHit, 4800);
+                playTone(150, 'sawtooth', 0.5, 0.5); // launch sound
+                window.ThreeStageManager.triggerMissile(senderId, targetId, {
+                    onStrike: () => playTone(400, 'square', 0.8, 0.6),
+                    onHit: finishHit
+                });
+                return;
+            }
+
             const senderWrap = document.getElementById(`char-wrap-${senderId}`);
             const targetWrap = document.getElementById(`char-wrap-${targetId}`);
             const stage = document.getElementById('stage');
