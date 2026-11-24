@@ -69,10 +69,10 @@ function loadLocalWords() {
 
 loadLocalWords();
 
-// ── 2. Top 100 인메모리 정렬 및 캐싱 (비속어는 추천에서 100% 필터링 제외) ─────
+// ── 2. Top 100 인메모리 정렬 및 캐싱 (비속어 및 1글자 단어는 추천에서 100% 필터링 제외) ──
 function computeTop100() {
   const sorted = Object.entries(wordCounts)
-    .filter(([word]) => !isProfane(word))
+    .filter(([word]) => isValidTabooWord(word) && !isProfane(word))
     .sort((a, b) => b[1] - a[1])
     .slice(0, 100)
     .map(([word]) => word);

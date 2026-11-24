@@ -702,12 +702,16 @@
         const palette = isFemale ? FEMALE_COLORS : MALE_COLORS;
         const bodyColor = palette[slotIndex % palette.length];
 
+        // Head Group (pivots around neck so head can turn sideways when stunned)
+        const headGroup = new THREE.Group();
+        headGroup.position.set(0, 1.3, 0);
+        group.add(headGroup);
+
         // Head
         const skinMat = createMat(0xffdbac, 0.55, 0.02);
         const head = new THREE.Mesh(new THREE.SphereGeometry(0.58, 22, 20), skinMat);
-        head.position.y = 1.3;
         head.castShadow = true;
-        group.add(head);
+        headGroup.add(head);
 
         // Styled Hair (Top/back cap tilted slightly back so +Z face is open + front bangs)
         const hairColor = isFemale ? 0x5c3d99 : 0x2d3436;
@@ -716,35 +720,35 @@
             new THREE.SphereGeometry(0.615, 18, 16, 0, Math.PI * 2, 0, Math.PI * 0.58),
             hairMat
         );
-        hairCap.position.set(0, 1.34, -0.04);
+        hairCap.position.set(0, 0.04, -0.04);
         hairCap.rotation.x = -0.24;
         hairCap.castShadow = true;
-        group.add(hairCap);
+        headGroup.add(hairCap);
 
         // Front Bangs / Fringe (+Z forehead)
         const bangOffsets = [
-            { x: -0.22, y: 1.67, z: 0.38, rx: 0.2, rz: 0.25, s: [0.22, 0.14, 0.18] },
-            { x: 0.0, y: 1.71, z: 0.42, rx: 0.25, rz: 0.0, s: [0.25, 0.14, 0.18] },
-            { x: 0.22, y: 1.67, z: 0.38, rx: 0.2, rz: -0.25, s: [0.22, 0.14, 0.18] }
+            { x: -0.22, y: 0.37, z: 0.38, rx: 0.2, rz: 0.25, s: [0.22, 0.14, 0.18] },
+            { x: 0.0, y: 0.41, z: 0.42, rx: 0.25, rz: 0.0, s: [0.25, 0.14, 0.18] },
+            { x: 0.22, y: 0.37, z: 0.38, rx: 0.2, rz: -0.25, s: [0.22, 0.14, 0.18] }
         ];
         bangOffsets.forEach(b => {
             const bang = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 8), hairMat);
             bang.scale.set(b.s[0], b.s[1], b.s[2]);
             bang.position.set(b.x, b.y, b.z);
             bang.rotation.set(b.rx, 0, b.rz);
-            group.add(bang);
+            headGroup.add(bang);
         });
 
         if (isFemale) {
             [-0.51, 0.51].forEach(sx => {
                 const sideLock = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.08, 0.65, 10), hairMat);
-                sideLock.position.set(sx, 1.15, 0.05);
-                group.add(sideLock);
+                sideLock.position.set(sx, -0.15, 0.05);
+                headGroup.add(sideLock);
             });
             const ponytail = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 10), hairMat);
             ponytail.scale.set(0.9, 1.4, 0.9);
-            ponytail.position.set(0, 1.25, -0.64);
-            group.add(ponytail);
+            ponytail.position.set(0, -0.05, -0.64);
+            headGroup.add(ponytail);
         }
 
         // Expressive Face on +Z (facing camera)
@@ -753,6 +757,13 @@
         const browMat = new THREE.MeshBasicMaterial({ color: 0x2d3436 });
         const blushMat = new THREE.MeshBasicMaterial({ color: 0xff9aa2, transparent: true, opacity: 0.72 });
         const mouthMat = new THREE.MeshBasicMaterial({ color: 0xd63031 });
+        const tongueMat = new THREE.MeshBasicMaterial({ color: 0xff7675 });
+
+        const normalFaceGroup = new THREE.Group();
+        const deadFaceGroup = new THREE.Group();
+        deadFaceGroup.visible = false;
+        headGroup.add(normalFaceGroup);
+        headGroup.add(deadFaceGroup);
 
         [-1, 1].forEach(side => {
             const ex = side * 0.205;
@@ -760,44 +771,73 @@
             // White Sclera
             const sclera = new THREE.Mesh(new THREE.SphereGeometry(0.112, 12, 12), scleraMat);
             sclera.scale.set(1.0, 1.15, 0.55);
-            sclera.position.set(ex, 1.33, 0.515);
-            group.add(sclera);
+            sclera.position.set(ex, 0.03, 0.515);
+            normalFaceGroup.add(sclera);
 
             // Black Pupil
             const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.068, 10, 10), pupilMat);
             pupil.scale.set(1.0, 1.1, 0.6);
-            pupil.position.set(ex, 1.33, 0.558);
-            group.add(pupil);
+            pupil.position.set(ex, 0.03, 0.558);
+            normalFaceGroup.add(pupil);
 
             // Eye Catchlight
             const glint = new THREE.Mesh(new THREE.SphereGeometry(0.023, 8, 8), scleraMat);
-            glint.position.set(ex + 0.026, 1.365, 0.588);
-            group.add(glint);
+            glint.position.set(ex + 0.026, 0.065, 0.588);
+            normalFaceGroup.add(glint);
 
             // Eyebrow
             const brow = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.038, 0.04), browMat);
-            brow.position.set(ex, 1.495, 0.53);
+            brow.position.set(ex, 0.195, 0.53);
             brow.rotation.z = side * -0.10;
-            group.add(brow);
+            normalFaceGroup.add(brow);
 
-            // Cheek Blush
+            // Cheek Blush (shared across expressions)
             const cheek = new THREE.Mesh(new THREE.SphereGeometry(0.088, 10, 8), blushMat);
             cheek.scale.set(1.25, 0.72, 0.4);
-            cheek.position.set(side * 0.34, 1.19, 0.455);
-            group.add(cheek);
+            cheek.position.set(side * 0.34, -0.11, 0.455);
+            headGroup.add(cheek);
+
+            // Dead / Knocked-out X_X Eye
+            const xBar1 = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.036, 0.03), pupilMat);
+            xBar1.position.set(ex, 0.03, 0.56);
+            xBar1.rotation.z = Math.PI / 4;
+            deadFaceGroup.add(xBar1);
+
+            const xBar2 = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.036, 0.03), pupilMat);
+            xBar2.position.set(ex, 0.03, 0.56);
+            xBar2.rotation.z = -Math.PI / 4;
+            deadFaceGroup.add(xBar2);
+
+            // Stunned / Droopy Eyebrow
+            const deadBrow = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.034, 0.035), browMat);
+            deadBrow.position.set(ex, 0.185, 0.535);
+            deadBrow.rotation.z = side * 0.25;
+            deadFaceGroup.add(deadBrow);
         });
 
-        // Nose
+        // Nose (shared)
         const nose = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8), skinMat);
-        nose.position.set(0, 1.24, 0.585);
-        group.add(nose);
+        nose.position.set(0, -0.06, 0.585);
+        headGroup.add(nose);
 
         // Smiling Mouth (Torus arc rotated to bottom half)
         const smileArc = Math.PI * 0.75;
         const mouth = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.024, 8, 14, smileArc), mouthMat);
-        mouth.position.set(0, 1.18, 0.54);
+        mouth.position.set(0, -0.12, 0.54);
         mouth.rotation.z = Math.PI + (Math.PI - smileArc) / 2;
-        group.add(mouth);
+        normalFaceGroup.add(mouth);
+
+        // Knocked-out Mouth + Tongue sticking out ("꿰꼬닥" expression)
+        const deadMouth = new THREE.Mesh(new THREE.SphereGeometry(0.065, 10, 8), pupilMat);
+        deadMouth.scale.set(1.15, 0.9, 0.35);
+        deadMouth.position.set(0, -0.135, 0.565);
+        deadFaceGroup.add(deadMouth);
+
+        const deadTongue = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 8), tongueMat);
+        deadTongue.scale.set(0.9, 1.35, 0.45);
+        deadTongue.position.set(0.042, -0.185, 0.582);
+        deadTongue.rotation.z = -0.35;
+        deadFaceGroup.add(deadTongue);
 
         // Torso
         const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.48, 0.95, 16), createMat(bodyColor, 0.6));
@@ -860,6 +900,9 @@
         return {
             group: group,
             head: head,
+            headGroup: headGroup,
+            normalFaceGroup: normalFaceGroup,
+            deadFaceGroup: deadFaceGroup,
             torso: torso,
             leftArm: leftArm,
             rightArm: rightArm,
@@ -1865,20 +1908,32 @@
         if (!charGroup) return;
 
         if (status === 'flying') {
+            charGroup.visible = true;
             hinge.rotation.x = -1.3;
             charGroup.rotation.set(0, 0, 0);
         } else if (status === 'dead' || status === 'dead-gator') {
+            charGroup.visible = true;
             hinge.rotation.x = -1.3;
             charGroup.position.set(slot.x, -0.45, -11.0);
             charGroup.rotation.set(0, 0, Math.PI / 2);
+            if (slot.avatarMeshes) {
+                slot.avatarMeshes.headGroup.rotation.set(0, 0, 0);
+                slot.avatarMeshes.normalFaceGroup.visible = false;
+                slot.avatarMeshes.deadFaceGroup.visible = true;
+            }
         } else if (status === 'snatched') {
             hinge.rotation.x = -1.3;
-            charGroup.position.set(slot.x, 13, -3);
-            charGroup.rotation.set(0, 0, 0);
+            charGroup.visible = false;
         } else if (status === 'dead-missile') {
+            charGroup.visible = true;
             hinge.rotation.x = -0.65;
             charGroup.position.set(slot.x, 2.55, slot.z + 0.1);
             charGroup.rotation.set(-0.85, 0, 0);
+            if (slot.avatarMeshes) {
+                slot.avatarMeshes.headGroup.rotation.set(0.15, 0.82, -0.22);
+                slot.avatarMeshes.normalFaceGroup.visible = false;
+                slot.avatarMeshes.deadFaceGroup.visible = true;
+            }
         } else {
             resetSlotToSeat(slot);
         }
@@ -1887,9 +1942,13 @@
     function resetSlotToSeat(slot) {
         slot.isTilted = false;
         slot.hinge.rotation.x = 0;
+        slot.charGroup.visible = true;
         slot.charGroup.position.set(slot.x, 2.4, slot.z + 0.1);
         slot.charGroup.rotation.set(0, 0, 0);
         if (slot.avatarMeshes) {
+            slot.avatarMeshes.headGroup.rotation.set(0, 0, 0);
+            slot.avatarMeshes.normalFaceGroup.visible = true;
+            slot.avatarMeshes.deadFaceGroup.visible = false;
             slot.avatarMeshes.leftLeg.rotation.set(-Math.PI / 2, 0, 0);
             slot.avatarMeshes.rightLeg.rotation.set(-Math.PI / 2, 0, 0);
             slot.avatarMeshes.leftArm.rotation.set(-Math.PI / 3.5, 0, 0);
@@ -2060,6 +2119,8 @@
 
     function triggerGullSnatch(slot) {
         if (!gullEntity) return;
+        slot.charGroup.visible = true;
+        slot.currentAnim = { type: 'gull_snatch' };
         gullEntity.group.visible = true;
         const startY = 16;
         gullEntity.group.position.set(slot.x + 10, startY, slot.z - 7);
@@ -2097,6 +2158,7 @@
                 } else {
                     gullEntity.activeAttackAnim = null;
                     gullEntity.group.visible = gullEntity.isRoaming;
+                    slot.charGroup.visible = false;
                     slot.currentAnim = null;
                     targetLookAt.x = 0;
                     targetLookAt.y = 2.9;

@@ -3223,7 +3223,10 @@
                 if (res.ok) {
                     const data = await res.json();
                     if (Array.isArray(data) && data.length > 0) {
-                        window.tabooWordsTop100 = data;
+                        const filtered = data.filter(w => typeof w === 'string' && w.trim().length >= 2);
+                        if (filtered.length > 0) {
+                            window.tabooWordsTop100 = filtered;
+                        }
                     }
                 }
             } catch (e) {
@@ -3292,8 +3295,11 @@
 
             // 3. Deceleration Slot Machine Animation (~760ms)
             input.classList.add('slot-rolling');
-            const words = (window.tabooWordsTop100 && window.tabooWordsTop100.length > 0)
-                ? window.tabooWordsTop100
+            const rawWords = (window.tabooWordsTop100 && window.tabooWordsTop100.length > 0)
+                ? window.tabooWordsTop100.filter(w => typeof w === 'string' && w.trim().length >= 2)
+                : [];
+            const words = rawWords.length > 0
+                ? rawWords
                 : ['진짜', '아니', '근데', '대박', '솔직히'];
 
             const stepDelays = [30, 30, 35, 45, 60, 80, 110, 150, 220];
