@@ -1065,8 +1065,8 @@
         const leftLeg = createLegPivot(-0.25);
         const rightLeg = createLegPivot(0.25);
 
-        // 3D Nickname Sprite
-        const labelSprite = createNameLabel(player.name || '플레이어');
+        // 3D Nickname Sprite (with optional launch count badge)
+        const labelSprite = createNameLabel(player.name || '플레이어', player.splashCount || 0);
         labelSprite.position.set(0, isAlien ? 2.52 : 2.25, 0);
         group.add(labelSprite);
 
@@ -1095,31 +1095,87 @@
         };
     }
 
-    function createNameLabel(text) {
-        const canvas = document.createElement('canvas');
-        canvas.width = 256;
-        canvas.height = 64;
+    function drawNameLabelCanvas(canvas, text, splashCount = 0) {
+        const count = Math.max(0, Number(splashCount) || 0);
         const ctx = canvas.getContext('2d');
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-        if (ctx.roundRect) ctx.roundRect(8, 8, 240, 48, 16);
-        else ctx.rect(8, 8, 240, 48);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const pillW = 240;
+        const pillH = 48;
+        const pillX = count > 0 ? 12 : (canvas.width - pillW) / 2;
+        const pillY = (canvas.height - pillH) / 2;
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.78)';
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(pillX, pillY, pillW, pillH, 16);
+        else ctx.rect(pillX, pillY, pillW, pillH);
         ctx.fill();
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2.5;
         ctx.strokeStyle = '#ffffff';
         ctx.stroke();
 
+        const displayName = text.length > 7 ? text.substring(0, 7) + '..' : text;
         ctx.font = 'bold 26px Pretendard, sans-serif';
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(text.length > 7 ? text.substring(0, 7) + '..' : text, 128, 32);
+        ctx.fillText(displayName, pillX + pillW / 2, pillY + pillH / 2);
+
+        if (count > 0) {
+            const countStr = String(count);
+            const badgeY = canvas.height / 2;
+            const badgeR = 22;
+            const badgeX = pillX + pillW + 24;
+            const extraW = countStr.length >= 3 ? (countStr.length - 2) * 12 : 0;
+
+            ctx.fillStyle = '#ff4757';
+            ctx.beginPath();
+            if (extraW > 0 && ctx.roundRect) {
+                ctx.roundRect(badgeX - badgeR, badgeY - badgeR, badgeR * 2 + extraW, badgeR * 2, badgeR);
+            } else {
+                ctx.arc(badgeX, badgeY, badgeR, 0, Math.PI * 2);
+            }
+            ctx.fill();
+            ctx.lineWidth = 3.5;
+            ctx.strokeStyle = '#ffffff';
+            ctx.stroke();
+
+            ctx.font = countStr.length >= 3 ? 'bold 20px Pretendard, sans-serif' : 'bold 24px Pretendard, sans-serif';
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(countStr, badgeX + extraW / 2, badgeY + 1);
+        }
+    }
+
+    function createNameLabel(text, splashCount = 0) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 320;
+        canvas.height = 76;
+        drawNameLabelCanvas(canvas, text, splashCount);
 
         const texture = new THREE.CanvasTexture(canvas);
         const mat = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false, depthWrite: false });
         const sprite = new THREE.Sprite(mat);
-        sprite.scale.set(2.6, 0.65, 1);
+        sprite.scale.set(3.1, 0.74, 1);
         sprite.renderOrder = 800;
+        sprite.userData = {
+            canvas: canvas,
+            texture: texture,
+            text: text,
+            splashCount: Math.max(0, Number(splashCount) || 0)
+        };
         return sprite;
+    }
+
+    function updateNameLabel(sprite, text, splashCount = 0) {
+        if (!sprite || !sprite.userData || !sprite.userData.canvas) return;
+        const normalizedCount = Math.max(0, Number(splashCount) || 0);
+        if (sprite.userData.text === text && sprite.userData.splashCount === normalizedCount) return;
+        drawNameLabelCanvas(sprite.userData.canvas, text, normalizedCount);
+        sprite.userData.text = text;
+        sprite.userData.splashCount = normalizedCount;
+        sprite.userData.texture.needsUpdate = true;
     }
 
     function createSpeechBubbleSprite(text) {
@@ -2072,6 +2128,9 @@
                 }
                 slot.player = player;
                 slot.charGroup.visible = true;
+                if (slot.avatarMeshes && slot.avatarMeshes.labelSprite) {
+                    updateNameLabel(slot.avatarMeshes.labelSprite, player.name || '플레이어', player.splashCount || 0);
+                }
                 if (slot.avatarMeshes && slot.avatarMeshes.headBombGroup) {
                     slot.avatarMeshes.headBombGroup.visible = !!player.activeBomb;
                 }
@@ -2195,6 +2254,9 @@
         if (!isInitialized) return;
         const slot = chairSlots.find(s => s.player && s.player.id === playerId);
         if (!slot) return;
+        if (slot.avatarMeshes && slot.avatarMeshes.labelSprite && slot.player) {
+            updateNameLabel(slot.avatarMeshes.labelSprite, slot.player.name || '플레이어', slot.player.splashCount || 0);
+        }
 
         const startTime = clock.getElapsedTime();
         const startPos = { x: slot.x, y: 2.4, z: slot.z + 0.1 };
@@ -2615,6 +2677,9 @@
         if (!isInitialized) return;
         const slot = chairSlots.find(s => s.player && s.player.id === playerId);
         if (!slot) return;
+        if (slot.avatarMeshes && slot.avatarMeshes.labelSprite && slot.player) {
+            updateNameLabel(slot.avatarMeshes.labelSprite, slot.player.name || '플레이어', slot.player.splashCount || 0);
+        }
         const pos = slot.charGroup.position.clone().add(new THREE.Vector3(0, 2.35, 0));
         createExplosion3D(pos.x, pos.y, pos.z);
         if (!sharedSmokeGeo) sharedSmokeGeo = new THREE.SphereGeometry(0.22, 6, 6);

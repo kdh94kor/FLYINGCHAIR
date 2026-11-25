@@ -1580,7 +1580,7 @@
                     <li>• <strong>억울함 자극과 리액션 함정:</strong> 상대방을 장난스럽게 오해하거나 황당한 누명을 씌우면 한국인이 가장 참기 힘든 방어 기제 단어인 "아니", "진짜", "왜", "내가 언제"가 1초 만에 튀어나옵니다.</li>
                     <li>• <strong>침묵 타이머 카운트다운 압박:</strong> 침묵(AFK) 발사 타이머 종료 5초 전 경고음이 울릴 때 대답하기 쉬운 이지선다 질문을 던지세요. 시간 압박에 몰린 상대는 단어 검열을 포기하고 급하게 답하다가 함정에 걸려듭니다.</li>
                     <li>• <strong>유도 미사일 중첩과 공중 예약 타격:</strong> 유도 미사일은 이미 미사일에 맞아 기절 중인 상대에게 연속 발사하여 기절 시간을 누적(+30초)시킬 수 있으며, 금기어 발동으로 날아가는 상대에게 명중할 경우 의자로 복귀하는 즉시 30초 기절이 발동되는 정교한 전투 판정을 지원합니다.</li>
-                    <li>• <strong>폭탄해체하기 양자택일 심리전:</strong> <code>💣 폭탄해체하기</code>는 빨간선/파란선 중 살아남는 해제선을 직접 정한 뒤 상대방에게 폭탄을 보냅니다. 상대가 니퍼를 쥐고 손이 떨리며 잘못된 선을 자르거나 15초 내 해체에 실패하면 머리 위에서 폭탄이 터져 머리가 삐죽삐죽 솟구치고 얼굴이 까맣게 그을리며 10초간 채팅이 봉쇄됩니다(방패로도 방어 불가!).</li>
+                    <li>• <strong>폭탄해체하기 양자택일 심리전:</strong> <code>💣 폭탄해체하기</code>는 빨간선/파란선 중 살아남는 해제선을 직접 정한 뒤 상대방에게 폭탄을 보냅니다. 상대가 니퍼를 쥐고 손이 떨리며 잘못된 선을 자르거나 20초 내 해체에 실패하면 머리 위에서 폭탄이 터져 머리가 삐죽삐죽 솟구치고 얼굴이 까맣게 그을리며 10초간 채팅이 봉쇄됩니다(방패로도 방어 불가!).</li>
                 </ul>
 
                 <p style="font-size:0.9rem; color:var(--toss-text-muted); border-top:1px solid var(--toss-card-border); padding-top:16px;">
@@ -1837,7 +1837,7 @@
                     <circle cx="88" cy="112" r="3" fill="#747d8c"/><circle cx="272" cy="112" r="3" fill="#747d8c"/>
                     <!-- Digital LED Screen -->
                     <rect x="115" y="45" width="130" height="46" rx="7" fill="#0c0f14" stroke="#2f3542" stroke-width="2.5"/>
-                    <text id="bomb-led-text" x="180" y="76" text-anchor="middle" fill="#ff4757" font-family="monospace" font-size="27" font-weight="bold" letter-spacing="2">00:15</text>
+                    <text id="bomb-led-text" x="180" y="76" text-anchor="middle" fill="#ff4757" font-family="monospace" font-size="27" font-weight="bold" letter-spacing="2">00:20</text>
                     <!-- Status Indicator LED -->
                     <circle id="bomb-led-light" cx="258" cy="68" r="7" fill="#ff4757" stroke="#111" stroke-width="2"/>
                     <!-- Terminal Blocks -->
@@ -2847,7 +2847,14 @@
                 updateRoomUI();
                 renderStage();
             } else if (data.type === 'USE_ITEM') {
-                executeItem(guestId, data.payload.item, data.payload.index, data.payload.targetId, data.payload.extraData);
+                if (data.payload && data.payload.item === 'bomb_cut_wire') {
+                    if (typeof resolveBombChoice === 'function') {
+                        const ed = data.payload.extraData || {};
+                        resolveBombChoice(ed.bombId, guestId, ed.chosenWire, false);
+                    }
+                } else {
+                    executeItem(guestId, data.payload.item, data.payload.index, data.payload.targetId, data.payload.extraData);
+                }
             } else if (data.type === 'BOMB_CUT_WIRE') {
                 if (data.payload && typeof resolveBombChoice === 'function') {
                     resolveBombChoice(data.payload.bombId, guestId, data.payload.chosenWire, false);
@@ -2900,10 +2907,17 @@
                             existing.flySequenceId = (existing.flySequenceId || 0) + 1;
                         }
                         Object.assign(existing, inc);
+                        if (!inc.activeBomb) existing.activeBomb = null;
                         return existing;
                     }
                     return inc;
                 });
+                if (currentBombModal && !currentBombModal.animating) {
+                    const bombTarget = findPlayerById(currentBombModal.targetId);
+                    if (!bombTarget || !bombTarget.activeBomb || bombTarget.activeBomb.bombId !== currentBombModal.bombId || bombTarget.status === PlayerState.STATUS.DEAD_BOMB) {
+                        closeBombDefuseModal();
+                    }
+                }
                 updateRoomUI();
                 if (typeof updateMissingPlayersUI === 'function') updateMissingPlayersUI();
                 renderStage(); // always re-render to keep seats in sync after player leaves
@@ -4613,13 +4627,14 @@
                 }
             } else if (item === 'bomb_defuse') {
                 const target = findPlayerById(targetId);
+                const BOMB_DURATION_MS = 20000;
                 const bombId = 'bomb-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
-                const expiresAt = Date.now() + 15000;
+                const expiresAt = Date.now() + BOMB_DURATION_MS;
                 const secretSafeWire = extraData.safeWire;
                 target.activeBomb = { bombId, senderId: actualSenderId, expiresAt };
                 const timeoutId = setTimeout(() => {
                     resolveBombChoice(bombId, target.id, null, true);
-                }, 15000);
+                }, BOMB_DURATION_MS);
                 let botTimerId = null;
                 if (target.isBot) {
                     botTimerId = setTimeout(() => {
@@ -4638,8 +4653,8 @@
                     timeoutId,
                     botTimerId
                 };
-                // Never include safeWire in broadcast payload
-                extraData = { bombId, expiresAt };
+                // Never include safeWire in broadcast payload; include durationMs for zero clock skew
+                extraData = { bombId, expiresAt, durationMs: BOMB_DURATION_MS };
                 if (currentMode === MODE_HOST) broadcastState();
             } else if (item === 'call_shark' || item === 'call_gator' || item === 'call_gull') {
                 const animal = item.replace('call_', '');
@@ -4750,6 +4765,10 @@
         // ────────────────────────────────────────────────────────────────────────
 
         function playItemEvent(senderId, item, targetId, extraData = null) {
+            if (item === 'bomb_result' && extraData) {
+                if (typeof handleBombResult === 'function') handleBombResult(extraData);
+                return;
+            }
             const sender = findPlayerById(senderId);
             const target = targetId ? findPlayerById(targetId) : null;
             if (!sender) return;
@@ -4899,22 +4918,23 @@
                 spawnWaitingAnimal(animal);
             } else if (item === 'bomb_defuse') {
                 if (!target || !extraData) return;
+                const localExpiresAt = extraData.durationMs ? (Date.now() + extraData.durationMs) : extraData.expiresAt;
                 target.activeBomb = {
                     bombId: extraData.bombId,
                     senderId: sender.id,
-                    expiresAt: extraData.expiresAt
+                    expiresAt: localExpiresAt
                 };
                 showFloatingHeadBomb(target.id);
                 if (window.ThreeStageManager) window.ThreeStageManager.syncPlayers(state.players);
                 playBombPlantSound();
-                sysChat(`💣 ${sender.name}님이 ${target.name}님에게 [💣 폭탄해체하기]를 설치했습니다!`);
+                sysChat(`💣 ${sender.name}님이 ${target.name}님에게 폭탄을 설치했습니다!`);
 
                 if (target.id === state.myId) {
                     openBombDefuseModal({
                         bombId: extraData.bombId,
                         senderId: sender.id,
                         targetId: target.id,
-                        expiresAt: extraData.expiresAt,
+                        expiresAt: localExpiresAt,
                         isDefuser: true
                     });
                 } else if (sender.id === state.myId || target.isBot) {
@@ -4922,7 +4942,7 @@
                         bombId: extraData.bombId,
                         senderId: sender.id,
                         targetId: target.id,
-                        expiresAt: extraData.expiresAt,
+                        expiresAt: localExpiresAt,
                         isDefuser: false
                     });
                 }
@@ -4948,7 +4968,7 @@
             });
             if (Array.isArray(state.players)) {
                 state.players.forEach(p => {
-                    if (p.activeBomb) delete p.activeBomb;
+                    if (p.activeBomb) p.activeBomb = null;
                     removeFloatingHeadBomb(p.id);
                 });
             }
@@ -5071,7 +5091,7 @@
 
             const ledText = document.getElementById('bomb-led-text');
             ledText.setAttribute('fill', '#ff4757');
-            ledText.textContent = '00:15';
+            ledText.textContent = '00:20';
             document.getElementById('bomb-led-light').setAttribute('fill', '#ff4757');
         }
 
@@ -5147,6 +5167,7 @@
             if (!currentBombModal || !currentBombModal.isDefuser || currentBombModal.chosen) return;
             if (chosenWire !== 'red' && chosenWire !== 'blue') return;
             currentBombModal.chosen = true;
+            if (bombCountdownInterval) { clearInterval(bombCountdownInterval); bombCountdownInterval = null; }
 
             document.getElementById('btn-cut-red').disabled = true;
             document.getElementById('btn-cut-blue').disabled = true;
@@ -5159,8 +5180,13 @@
             } else {
                 socket.emit('SEND_TO_HOST', {
                     roomCode,
-                    type: 'BOMB_CUT_WIRE',
-                    payload: { bombId: currentBombModal.bombId, chosenWire }
+                    type: 'USE_ITEM',
+                    payload: {
+                        item: 'bomb_cut_wire',
+                        index: -1,
+                        targetId: null,
+                        extraData: { bombId: currentBombModal.bombId, chosenWire }
+                    }
                 });
             }
         }
@@ -5171,8 +5197,9 @@
             if (!bomb || bomb.resolved) return;
 
             const actor = findPlayerById(actorId);
+            const bombTarget = findPlayerById(bomb.targetId);
             if (!timedOut) {
-                if (!actor || actor.id !== bomb.targetId) return;
+                if (!actor || !bombTarget || actor !== bombTarget) return;
                 if (chosenWire !== 'red' && chosenWire !== 'blue') return;
             }
 
@@ -5180,11 +5207,12 @@
             if (bomb.timeoutId) { clearTimeout(bomb.timeoutId); bomb.timeoutId = null; }
             if (bomb.botTimerId) { clearTimeout(bomb.botTimerId); bomb.botTimerId = null; }
 
+            const resolvedTargetId = bombTarget ? bombTarget.id : bomb.targetId;
             const defused = !timedOut && (chosenWire === bomb.safeWire);
             const payload = {
                 bombId,
                 senderId: bomb.senderId,
-                targetId: bomb.targetId,
+                targetId: resolvedTargetId,
                 chosenWire: timedOut ? null : chosenWire,
                 safeWire: bomb.safeWire,
                 defused,
@@ -5192,7 +5220,15 @@
             };
 
             if (currentMode === MODE_HOST) {
-                broadcast({ type: 'EVENT_BOMB_RESULT', payload });
+                broadcast({
+                    type: 'EVENT_ITEM',
+                    payload: {
+                        senderId: bomb.senderId,
+                        item: 'bomb_result',
+                        targetId: resolvedTargetId,
+                        extraData: payload
+                    }
+                });
             }
             handleBombResult(payload);
         }
@@ -5334,15 +5370,17 @@
                 if (finished) return;
                 finished = true;
                 delete activeBombs[bombId];
-                delete target.activeBomb;
+                target.activeBomb = null;
                 removeFloatingHeadBomb(target.id);
 
+                const matchesOpenModal = !!(currentBombModal && (currentBombModal.bombId === bombId || currentBombModal.targetId === target.id));
+
                 if (defused) {
-                    if (currentBombModal && currentBombModal.bombId === bombId) {
+                    if (matchesOpenModal) {
                         const statusEl = document.getElementById('bomb-status-text');
                         if (statusEl) statusEl.textContent = `✅ 휴... ${wireKo}이 해제선이었습니다! 살아남았습니다!`;
                         setTimeout(() => {
-                            if (currentBombModal && currentBombModal.bombId === bombId) {
+                            if (currentBombModal && (currentBombModal.bombId === bombId || currentBombModal.targetId === target.id)) {
                                 closeBombDefuseModal();
                             }
                         }, 900);
@@ -5355,7 +5393,7 @@
                     }
                     if (currentMode === MODE_HOST) broadcastState();
                 } else {
-                    if (currentBombModal && currentBombModal.bombId === bombId) {
+                    if (matchesOpenModal) {
                         closeBombDefuseModal();
                     }
                     playBombExplosionSound();
@@ -5391,6 +5429,7 @@
             }
 
             if (currentBombModal && currentBombModal.bombId === bombId) {
+                currentBombModal.animating = true;
                 playNipperCutAnimation(chosenWire, defused, finishOutcome);
             } else {
                 // Spectators who closed/didn't open the modal wait ~3.0s so stage explosion aligns with defuser's cut
@@ -5402,6 +5441,8 @@
             const target = findPlayerById(targetId);
             if (!target) return;
 
+            target.activeBomb = null;
+            removeFloatingHeadBomb(target.id);
             target.flySequenceId = (target.flySequenceId || 0) + 1;
             if (target.flyTimeouts) { target.flyTimeouts.forEach(clearTimeout); target.flyTimeouts = []; }
             if (target.reviveTimeout) { clearTimeout(target.reviveTimeout); target.reviveTimeout = null; }
@@ -6800,8 +6841,8 @@
                 }
             }
 
-            updateStatus(playerId, PlayerState.STATUS.FLYING);
             player.splashCount++;
+            updateStatus(playerId, PlayerState.STATUS.FLYING);
             
             const badge = document.getElementById(`badge-${playerId}`);
             if (badge) { badge.textContent = player.splashCount; badge.classList.remove('hidden'); }
