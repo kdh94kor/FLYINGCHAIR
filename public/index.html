@@ -609,7 +609,7 @@
             display: block;
             width: 100%;
             height: auto;
-            aspect-ratio: 420 / 236;
+            aspect-ratio: 440 / 252;
             border-radius: 8px;
             touch-action: none;
             cursor: grab;
@@ -2195,9 +2195,9 @@
     <div id="modal-salt-farm" class="modal-overlay hidden">
         <div class="modal salt-modal">
             <h2 style="color:#7dd3fc; margin-bottom:6px; font-size:1.25rem;">🧂 외딴섬 염전 노역장</h2>
-            <p id="salt-modal-desc" style="font-size:0.86rem; color:#cbd5e1; margin-bottom:8px; line-height:1.45;">
-                복면 괴한들에게 납치되어 염전 섬에 도착했습니다!<br>
-                마우스나 손가락으로 염전을 <strong style="color:#38bdf8;">드래그(긁기)</strong>해 소금을 100% 채취하면 배를 타고 복귀합니다.
+            <p id="salt-modal-desc" style="font-size:0.84rem; color:#cbd5e1; margin-bottom:8px; line-height:1.45;">
+                복면 괴한들에게 납치되어 신안 염전 섬에 도착했습니다!<br>
+                가는 소금은 1번에, 굵은 소금은 표시된 횟수만큼 <strong style="color:#38bdf8;">왕복 드래그(↔)</strong>로 긁어 모두 채취하세요!
             </p>
             <div class="salt-modal-progress-wrap">
                 <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.88rem; font-weight:700;">
@@ -2209,10 +2209,10 @@
                 </div>
             </div>
             <div class="salt-pan-wrap">
-                <canvas id="salt-pan-canvas" width="420" height="236"></canvas>
+                <canvas id="salt-pan-canvas" width="440" height="252"></canvas>
             </div>
             <div id="salt-modal-hint" style="font-size:0.8rem; color:#94a3b8; font-weight:600;">
-                👆 위 염전 위를 좌우로 문질러(드래그) 소금을 긁어 모으세요!
+                👆 굵은 소금은 좌우/상하로 <strong style="color:#e2e8f0;">왕복 드래그</strong>해야 횟수(예: 1/37)가 올라갑니다!
             </div>
         </div>
     </div>
@@ -6115,14 +6115,14 @@
                     delete botSaltHarvestTimers[botId];
                     return;
                 }
-                const nextPct = Math.min(100, (bot.saltFarm.progress || 0) + 12 + Math.floor(Math.random() * 10));
+                const nextPct = Math.min(100, (bot.saltFarm.progress || 0) + 5 + Math.floor(Math.random() * 6));
                 handleSaltProgressOnHost(bot.id, nextPct);
                 if (nextPct >= 100) {
                     clearInterval(botSaltHarvestTimers[botId]);
                     delete botSaltHarvestTimers[botId];
                     completeSaltFarmOnHost(bot.id);
                 }
-            }, 650);
+            }, 850);
         }
 
         function handleSaltProgressOnHost(playerId, progress) {
@@ -6470,9 +6470,10 @@
             }, 2500);
         }
 
-        // ─── Salt Farm Interactive Canvas Drag Minigame ───────────────────────
-        const SALT_COLS = 14;
-        const SALT_ROWS = 8;
+        // ─── Salt Farm Interactive Canvas Drag Minigame (1~50 Coarseness & Round-Trip) ───
+        const SALT_COLS = 5;
+        const SALT_ROWS = 3;
+        const SALT_MIN_ROUNDTRIP_PX = 12;
         let saltHarvestGrid = [];
         let saltPanActive = false;
         let saltPanCompleted = false;
@@ -6485,16 +6486,79 @@
         let saltAnimRaf = null;
         let saltHandlersBound = false;
 
+        function buildCrystalFacets(vertexCount = 7) {
+            const pts = [];
+            for (let i = 0; i < vertexCount; i++) {
+                const baseAngle = (i / vertexCount) * Math.PI * 2;
+                const angle = baseAngle + (Math.random() - 0.5) * 0.28;
+                const scale = 0.78 + Math.random() * 0.34;
+                pts.push({ angle, scale });
+            }
+            return pts;
+        }
+
         function initSaltHarvestGrid() {
+            const canvas = document.getElementById('salt-pan-canvas');
+            const w = canvas ? canvas.width : 440;
+            const h = canvas ? canvas.height : 252;
+            const panLeft = 10;
+            const panRight = w - 48; // Reserve right edge for growing harvested salt heap
+            const panTop = 8;
+            const panBottom = h - 8;
+            const cellW = (panRight - panLeft) / SALT_COLS;
+            const cellH = (panBottom - panTop) / SALT_ROWS;
+
+            const totalCells = SALT_COLS * SALT_ROWS;
+            const indices = Array.from({ length: totalCells }, (_, i) => i);
+            for (let i = indices.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [indices[i], indices[j]] = [indices[j], indices[i]];
+            }
+
+            // Guarantee every pan mixes 1-drag fine salt AND multi-decade coarse chunks within 1~50
+            const maxStrokeByIdx = new Array(totalCells);
+            for (let k = 0; k < totalCells; k++) {
+                const slotIdx = indices[k];
+                if (k < 4) {
+                    maxStrokeByIdx[slotIdx] = 1; // Instant single-drag fine salt
+                } else if (k < 8) {
+                    maxStrokeByIdx[slotIdx] = 30 + Math.floor(Math.random() * 21); // 30 ~ 50 coarse rock salt
+                } else {
+                    maxStrokeByIdx[slotIdx] = 2 + Math.floor(Math.random() * 49); // 2 ~ 50 random salt
+                }
+            }
+
             saltHarvestGrid = [];
             for (let r = 0; r < SALT_ROWS; r++) {
                 for (let c = 0; c < SALT_COLS; c++) {
+                    const idx = r * SALT_COLS + c;
+                    const maxStrokes = maxStrokeByIdx[idx];
+                    const norm = (maxStrokes - 1) / 49; // 0.0 (fine 1) -> 1.0 (coarse 50)
+                    const baseRadius = maxStrokes === 1 ? 6.8 : (9.2 + norm * 12.2);
+                    const cx = panLeft + (c + 0.5) * cellW + (Math.random() - 0.5) * 12;
+                    const cy = panTop + (r + 0.40) * cellH + (Math.random() - 0.5) * 7;
                     saltHarvestGrid.push({
-                        r, c,
+                        r,
+                        c,
+                        cx,
+                        cy,
+                        baseRadius,
+                        strokes: 0,
+                        maxStrokes,
                         collected: false,
-                        jitterX: (Math.random() - 0.5) * 8,
-                        jitterY: (Math.random() - 0.5) * 6,
-                        size: 0.85 + Math.random() * 0.45
+                        facets: buildCrystalFacets(maxStrokes >= 25 ? 8 : 6),
+                        hitFlash: 0,
+                        // Round-trip drag state machine (왕복 1회 = 1 stroke for maxStrokes > 1)
+                        strokePhase: 0,
+                        firstDirX: 0,
+                        firstDirY: 0,
+                        legStartX: 0,
+                        legStartY: 0,
+                        peakX: 0,
+                        peakY: 0,
+                        legMaxTravel: 0,
+                        lastCompleteDirX: null,
+                        lastCompleteDirY: null
                     });
                 }
             }
@@ -6502,10 +6566,32 @@
 
         function computeSaltHarvestPercent() {
             if (!saltHarvestGrid.length) return 0;
-            const count = saltHarvestGrid.reduce((acc, cell) => acc + (cell.collected ? 1 : 0), 0);
-            const raw = count / saltHarvestGrid.length;
-            if (raw >= 0.94) return 100;
-            return Math.min(99, Math.round((raw / 0.94) * 99));
+            let totalReq = 0;
+            let totalDone = 0;
+            let allCollected = true;
+            for (let i = 0; i < saltHarvestGrid.length; i++) {
+                const cell = saltHarvestGrid[i];
+                totalReq += cell.maxStrokes;
+                totalDone += Math.min(cell.maxStrokes, cell.strokes);
+                if (!cell.collected) allCollected = false;
+            }
+            if (allCollected && totalReq > 0) return 100;
+            if (totalReq <= 0) return 0;
+            return Math.min(99, Math.floor((totalDone / totalReq) * 100));
+        }
+
+        function drawRoundedPill(ctx, x, y, w, h, r) {
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.lineTo(x + w - r, y);
+            ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+            ctx.lineTo(x + w, y + h - r);
+            ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+            ctx.lineTo(x + r, y + h);
+            ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+            ctx.lineTo(x, y + r);
+            ctx.quadraticCurveTo(x, y, x + r, y);
+            ctx.closePath();
         }
 
         function drawSaltPanCanvas() {
@@ -6523,56 +6609,127 @@
             ctx.fillStyle = bgGrad;
             ctx.fillRect(0, 0, w, h);
 
-            ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+            // Subtle evaporation pan tile grid
+            ctx.strokeStyle = 'rgba(255,255,255,0.11)';
             ctx.lineWidth = 1;
-            const tileW = w / SALT_COLS;
-            const tileH = (h - 24) / SALT_ROWS;
-            for (let c = 1; c < SALT_COLS; c++) {
-                ctx.beginPath(); ctx.moveTo(c * tileW, 0); ctx.lineTo(c * tileW, h); ctx.stroke();
+            const panRight = w - 48;
+            const gridW = panRight / SALT_COLS;
+            const gridH = h / SALT_ROWS;
+            for (let c = 1; c <= SALT_COLS; c++) {
+                ctx.beginPath(); ctx.moveTo(c * gridW, 0); ctx.lineTo(c * gridW, h); ctx.stroke();
             }
             for (let r = 1; r < SALT_ROWS; r++) {
-                ctx.beginPath(); ctx.moveTo(0, r * tileH); ctx.lineTo(w, r * tileH); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, r * gridH); ctx.lineTo(panRight, r * gridH); ctx.stroke();
             }
 
             for (let i = 0; i < saltHarvestGrid.length; i++) {
                 const cell = saltHarvestGrid[i];
-                const cx = (cell.c + 0.5) * tileW + cell.jitterX;
-                const cy = (cell.r + 0.5) * tileH + cell.jitterY;
+                if (cell.hitFlash > 0) cell.hitFlash = Math.max(0, cell.hitFlash - 0.12);
+                const jiggle = cell.hitFlash > 0 ? Math.sin(cell.hitFlash * Math.PI * 3) * 2.2 : 0;
+                const cx = cell.cx + jiggle;
+                const cy = cell.cy;
+
                 if (cell.collected) {
-                    ctx.fillStyle = 'rgba(56, 189, 248, 0.14)';
+                    ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
                     ctx.beginPath();
-                    ctx.arc(cx, cy, tileW * 0.34, 0, Math.PI * 2);
+                    ctx.arc(cell.cx, cell.cy, Math.max(8, cell.baseRadius * 0.65), 0, Math.PI * 2);
                     ctx.fill();
+                    continue;
+                }
+
+                if (cell.maxStrokes === 1) {
+                    // Fine 1-drag salt grains (small cluster, no bottom counter)
+                    const r = cell.baseRadius;
+                    const offsets = [[-3.2, 1.5, 0.68], [3.4, 1.8, 0.62], [0, -2.2, 0.78]];
+                    offsets.forEach(([ox, oy, sc]) => {
+                        ctx.fillStyle = '#cbd5e1';
+                        ctx.beginPath();
+                        ctx.arc(cx + ox + 1, cy + oy + 1.4, r * sc, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.fillStyle = '#ffffff';
+                        ctx.beginPath();
+                        ctx.arc(cx + ox, cy + oy, r * sc, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
                 } else {
-                    const rad = Math.min(tileW, tileH) * 0.42 * cell.size;
-                    ctx.fillStyle = '#e2e8f0';
+                    // Coarse multi-drag rock-salt crystal (visual thickness scales with maxStrokes)
+                    const remainFrac = 1 - (cell.strokes / cell.maxStrokes);
+                    const curR = cell.baseRadius * (0.58 + 0.42 * remainFrac);
+
+                    // Drop shadow
+                    ctx.fillStyle = 'rgba(15, 23, 42, 0.42)';
                     ctx.beginPath();
-                    ctx.arc(cx + 1.5, cy + 2, rad, 0, Math.PI * 2);
+                    cell.facets.forEach((f, idx) => {
+                        const px = cx + 2 + Math.cos(f.angle) * curR * f.scale;
+                        const py = cy + 2.8 + Math.sin(f.angle) * curR * f.scale * 0.88;
+                        if (idx === 0) ctx.moveTo(px, py);
+                        else ctx.lineTo(px, py);
+                    });
+                    ctx.closePath();
                     ctx.fill();
 
-                    ctx.fillStyle = '#ffffff';
+                    // Main crystal body
+                    const cGrad = ctx.createLinearGradient(cx - curR, cy - curR, cx + curR, cy + curR);
+                    cGrad.addColorStop(0, '#ffffff');
+                    cGrad.addColorStop(0.58, '#f1f5f9');
+                    cGrad.addColorStop(1, '#bae6fd');
+                    ctx.fillStyle = cGrad;
+                    ctx.strokeStyle = cell.strokePhase === 1 ? '#38bdf8' : 'rgba(255,255,255,0.9)';
+                    ctx.lineWidth = cell.strokePhase === 1 ? 1.8 : 1.1;
                     ctx.beginPath();
-                    ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+                    cell.facets.forEach((f, idx) => {
+                        const px = cx + Math.cos(f.angle) * curR * f.scale;
+                        const py = cy + Math.sin(f.angle) * curR * f.scale * 0.88;
+                        if (idx === 0) ctx.moveTo(px, py);
+                        else ctx.lineTo(px, py);
+                    });
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+
+                    // Inner crystal facet gleam
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+                    ctx.beginPath();
+                    ctx.arc(cx - curR * 0.24, cy - curR * 0.24, Math.max(2, curR * 0.24), 0, Math.PI * 2);
                     ctx.fill();
 
-                    ctx.fillStyle = '#bae6fd';
-                    ctx.fillRect(cx - rad * 0.35, cy - rad * 0.35, 3, 3);
+                    // Bottom stroke counter label (e.g. "1/37", "6/42") ONLY for maxStrokes > 1
+                    const label = `${cell.strokes}/${cell.maxStrokes}`;
+                    ctx.font = '700 10.5px Pretendard, -apple-system, BlinkMacSystemFont, sans-serif';
+                    const textW = ctx.measureText(label).width;
+                    const pillW = Math.max(30, textW + 9);
+                    const pillH = 14;
+                    const pillX = cell.cx - pillW / 2;
+                    const pillY = cell.cy + cell.baseRadius + 3;
+
+                    ctx.fillStyle = 'rgba(9, 14, 26, 0.84)';
+                    drawRoundedPill(ctx, pillX, pillY, pillW, pillH, 5);
+                    ctx.fill();
+                    ctx.strokeStyle = cell.strokes > 0 ? 'rgba(56, 189, 248, 0.65)' : 'rgba(148, 163, 184, 0.35)';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+
+                    ctx.fillStyle = cell.strokes > 0 ? '#7dd3fc' : '#f1f5f9';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(label, cell.cx, pillY + pillH / 2 + 0.5);
                 }
             }
 
-            const heapScale = 0.25 + (pct / 100) * 1.15;
+            // Growing collected salt mound on right rim
+            const heapScale = 0.22 + (pct / 100) * 1.05;
             ctx.save();
-            ctx.translate(w - 42, h - 8);
+            ctx.translate(w - 25, h - 8);
             ctx.fillStyle = '#cbd5e1';
             ctx.beginPath();
-            ctx.moveTo(-34 * heapScale, 0);
-            ctx.quadraticCurveTo(0, -36 * heapScale, 34 * heapScale, 0);
+            ctx.moveTo(-22 * heapScale, 0);
+            ctx.quadraticCurveTo(0, -40 * heapScale, 22 * heapScale, 0);
             ctx.closePath();
             ctx.fill();
             ctx.fillStyle = '#ffffff';
             ctx.beginPath();
-            ctx.moveTo(-30 * heapScale, 0);
-            ctx.quadraticCurveTo(-4 * heapScale, -32 * heapScale, 28 * heapScale, 0);
+            ctx.moveTo(-19 * heapScale, 0);
+            ctx.quadraticCurveTo(-2 * heapScale, -36 * heapScale, 18 * heapScale, 0);
             ctx.closePath();
             ctx.fill();
             ctx.restore();
@@ -6598,52 +6755,134 @@
                 ctx.translate(rx, ry);
                 ctx.strokeStyle = '#92400e';
                 ctx.lineWidth = 4;
-                ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(24, -26); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(22, -24); ctx.stroke();
                 ctx.fillStyle = '#d97706';
-                ctx.fillRect(-18, -4, 36, 8);
+                ctx.fillRect(-16, -4, 32, 8);
                 ctx.strokeStyle = 'rgba(255,255,255,0.65)';
                 ctx.lineWidth = 1.5;
-                ctx.beginPath(); ctx.arc(0, 0, 26, 0, Math.PI * 2); ctx.stroke();
+                ctx.beginPath(); ctx.arc(0, 0, 22, 0, Math.PI * 2); ctx.stroke();
                 ctx.restore();
+            }
+        }
+
+        function distPointToSegment(px, py, x1, y1, x2, y2) {
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const lenSq = dx * dx + dy * dy;
+            if (lenSq === 0) return Math.hypot(px - x1, py - y1);
+            const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq));
+            return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+        }
+
+        function spawnSaltScrapeChips(cx, cy, count = 3) {
+            for (let k = 0; k < count && saltCrystalParticles.length < 64; k++) {
+                saltCrystalParticles.push({
+                    x: cx + (Math.random() - 0.5) * 10,
+                    y: cy + (Math.random() - 0.5) * 10,
+                    vx: 1.5 + Math.random() * 2.8,
+                    vy: -1.8 - Math.random() * 2.4,
+                    life: 1.0
+                });
             }
         }
 
         function saltScrapeSegment(p0, p1) {
             const canvas = document.getElementById('salt-pan-canvas');
             if (!canvas || !saltPanActive || saltPanCompleted) return;
-            const tileW = canvas.width / SALT_COLS;
-            const tileH = (canvas.height - 24) / SALT_ROWS;
-            const brushR = Math.max(tileW, tileH) * 1.15;
-            const dist = Math.hypot(p1.x - p0.x, p1.y - p0.y);
-            const steps = Math.max(1, Math.ceil(dist / 10));
-            let scrapedAny = false;
+            const dx = p1.x - p0.x;
+            const dy = p1.y - p0.y;
+            const segLen = Math.hypot(dx, dy);
+            if (segLen < 1.5) return;
+            const ux = dx / segLen;
+            const uy = dy / segLen;
 
-            for (let s = 0; s <= steps; s++) {
-                const t = s / steps;
-                const sx = p0.x + (p1.x - p0.x) * t;
-                const sy = p0.y + (p1.y - p0.y) * t;
-                for (let i = 0; i < saltHarvestGrid.length; i++) {
-                    const cell = saltHarvestGrid[i];
-                    if (cell.collected) continue;
-                    const cx = (cell.c + 0.5) * tileW;
-                    const cy = (cell.r + 0.5) * tileH;
-                    if (Math.hypot(cx - sx, cy - sy) <= brushR) {
-                        cell.collected = true;
-                        scrapedAny = true;
-                        if (saltCrystalParticles.length < 48) {
-                            saltCrystalParticles.push({
-                                x: cx,
-                                y: cy,
-                                vx: 2.2 + Math.random() * 2.5,
-                                vy: -2.0 - Math.random() * 2.2,
-                                life: 1.0
-                            });
+            let progressedAny = false;
+
+            for (let i = 0; i < saltHarvestGrid.length; i++) {
+                const cell = saltHarvestGrid[i];
+                if (cell.collected) continue;
+                const hitR = Math.max(19, cell.baseRadius + 10);
+                const d = distPointToSegment(cell.cx, cell.cy, p0.x, p0.y, p1.x, p1.y);
+
+                // Keep extending outbound peak even after pointer exits crystal radius on Leg 1
+                if (cell.strokePhase === 1 && d > hitR) {
+                    const dotOut = ux * cell.firstDirX + uy * cell.firstDirY;
+                    if (dotOut > 0.2) {
+                        const fwdOut = (p1.x - cell.legStartX) * cell.firstDirX + (p1.y - cell.legStartY) * cell.firstDirY;
+                        if (fwdOut > cell.legMaxTravel) {
+                            cell.legMaxTravel = fwdOut;
+                            cell.peakX = p1.x;
+                            cell.peakY = p1.y;
+                        }
+                    }
+                    continue;
+                }
+                if (d > hitR) continue;
+
+                if (cell.maxStrokes <= 1) {
+                    // Fine salt: harvested in a single drag pass
+                    cell.strokes = 1;
+                    cell.collected = true;
+                    progressedAny = true;
+                    spawnSaltScrapeChips(cell.cx, cell.cy, 4);
+                    continue;
+                }
+
+                // Multi-stroke coarse salt: requires round-trip (왕복) drag to increment by 1
+                if (cell.strokePhase === 0) {
+                    if (cell.lastCompleteDirX !== null) {
+                        const dotPrev = ux * cell.lastCompleteDirX + uy * cell.lastCompleteDirY;
+                        if (dotPrev > -0.25) continue; // Still moving in the finishing direction of previous round-trip
+                    }
+                    cell.strokePhase = 1;
+                    cell.firstDirX = ux;
+                    cell.firstDirY = uy;
+                    cell.legStartX = p0.x;
+                    cell.legStartY = p0.y;
+                    cell.peakX = p1.x;
+                    cell.peakY = p1.y;
+                    cell.legMaxTravel = segLen;
+                } else {
+                    const dot = ux * cell.firstDirX + uy * cell.firstDirY;
+                    if (dot > 0.2) {
+                        const fwd = (p1.x - cell.legStartX) * cell.firstDirX + (p1.y - cell.legStartY) * cell.firstDirY;
+                        if (fwd > cell.legMaxTravel) {
+                            cell.legMaxTravel = fwd;
+                            cell.peakX = p1.x;
+                            cell.peakY = p1.y;
+                        }
+                    } else if (dot < -0.25) {
+                        if (cell.legMaxTravel < SALT_MIN_ROUNDTRIP_PX) {
+                            // First leg was only a tiny twitch; treat this direction as the new outbound leg
+                            cell.firstDirX = ux;
+                            cell.firstDirY = uy;
+                            cell.legStartX = p0.x;
+                            cell.legStartY = p0.y;
+                            cell.peakX = p1.x;
+                            cell.peakY = p1.y;
+                            cell.legMaxTravel = segLen;
+                        } else {
+                            const ret = -((p1.x - cell.peakX) * cell.firstDirX + (p1.y - cell.peakY) * cell.firstDirY);
+                            if (ret >= SALT_MIN_ROUNDTRIP_PX) {
+                                cell.strokes = Math.min(cell.maxStrokes, cell.strokes + 1);
+                                cell.hitFlash = 1.0;
+                                cell.strokePhase = 0;
+                                cell.lastCompleteDirX = ux;
+                                cell.lastCompleteDirY = uy;
+                                progressedAny = true;
+                                if (cell.strokes >= cell.maxStrokes) {
+                                    cell.collected = true;
+                                    spawnSaltScrapeChips(cell.cx, cell.cy, 7);
+                                } else {
+                                    spawnSaltScrapeChips(cell.cx, cell.cy, 2);
+                                }
+                            }
                         }
                     }
                 }
             }
 
-            if (scrapedAny) {
+            if (progressedAny) {
                 playSaltScrapeSound();
                 const pct = computeSaltHarvestPercent();
                 updateSaltModalProgressUI(pct);
@@ -6684,7 +6923,7 @@
                 setTimeout(() => closeSaltFarmMinigame(), 650);
                 return;
             }
-            if (pct > saltLastSyncedPct && (now - saltLastSyncAt >= 180 || pct - saltLastSyncedPct >= 6)) {
+            if (pct > saltLastSyncedPct && (now - saltLastSyncAt >= 180 || pct - saltLastSyncedPct >= 4)) {
                 saltLastSyncedPct = pct;
                 saltLastSyncAt = now;
                 if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
@@ -6731,6 +6970,10 @@
             const endDrag = () => {
                 saltIsDragging = false;
                 saltLastPoint = null;
+                for (let i = 0; i < saltHarvestGrid.length; i++) {
+                    saltHarvestGrid[i].lastCompleteDirX = null;
+                    saltHarvestGrid[i].lastCompleteDirY = null;
+                }
             };
 
             canvas.addEventListener('pointerdown', (e) => {
@@ -6774,7 +7017,7 @@
             const hintEl = document.getElementById('salt-modal-hint');
             if (hintEl) {
                 hintEl.style.color = '#94a3b8';
-                hintEl.textContent = '👆 위 염전 위를 좌우로 문질러(드래그) 소금을 긁어 모으세요!';
+                hintEl.innerHTML = '👆 굵은 소금은 좌우/상하로 <strong style="color:#e2e8f0;">왕복 드래그</strong>해야 횟수(예: 1/37)가 올라갑니다!';
             }
             updateSaltModalProgressUI(0);
             modal.classList.remove('hidden');
