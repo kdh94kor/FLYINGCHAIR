@@ -50,6 +50,7 @@
 
     const MALE_COLORS = [0x3498db, 0x2980b9, 0x1abc9c, 0x16a085, 0x34495e, 0x2c3e50];
     const FEMALE_COLORS = [0xe84393, 0xfd79a8, 0xe17055, 0xd63031, 0x9b59b6, 0x8e44ad];
+    const ALIEN_COLORS = [0x8e44ad, 0x9b59b6, 0x7158e2, 0x6c5ce7, 0x8854d0, 0x5f27cd];
 
     function createMat(color, roughness = 0.5, metalness = 0.1) {
         return new THREE.MeshStandardMaterial({
@@ -698,8 +699,9 @@
     // ─────────────────────────────────────────────────────────────
     function buildCharacterMesh(player, slotIndex) {
         const group = new THREE.Group();
-        const isFemale = player.gender === 'female' || player.gender === 'F';
-        const palette = isFemale ? FEMALE_COLORS : MALE_COLORS;
+        const isAlien = player.gender === 'alien' || player.gender === 'A';
+        const isFemale = !isAlien && (player.gender === 'female' || player.gender === 'F');
+        const palette = isAlien ? ALIEN_COLORS : (isFemale ? FEMALE_COLORS : MALE_COLORS);
         const bodyColor = palette[slotIndex % palette.length];
 
         // Head Group (pivots around neck so head can turn sideways when stunned)
@@ -708,50 +710,79 @@
         group.add(headGroup);
 
         // Head
-        const originalSkinHex = 0xffdbac;
-        const skinMat = createMat(originalSkinHex, 0.55, 0.02);
+        const originalSkinHex = isAlien ? 0x2ecc71 : 0xffdbac;
+        const skinMat = createMat(originalSkinHex, isAlien ? 0.42 : 0.55, isAlien ? 0.06 : 0.02);
         const head = new THREE.Mesh(new THREE.SphereGeometry(0.58, 22, 20), skinMat);
+        if (isAlien) head.scale.set(1.06, 1.08, 0.96);
         head.castShadow = true;
         headGroup.add(head);
 
-        // Styled Hair (Top/back cap tilted slightly back so +Z face is open + front bangs)
+        // Styled Hair OR Alien Antennas (hidden when bomb-blasted)
         const normalHairGroup = new THREE.Group();
         headGroup.add(normalHairGroup);
-        const hairColor = isFemale ? 0x5c3d99 : 0x2d3436;
-        const hairMat = createMat(hairColor, 0.78);
-        const hairCap = new THREE.Mesh(
-            new THREE.SphereGeometry(0.615, 18, 16, 0, Math.PI * 2, 0, Math.PI * 0.58),
-            hairMat
-        );
-        hairCap.position.set(0, 0.04, -0.04);
-        hairCap.rotation.x = -0.24;
-        hairCap.castShadow = true;
-        normalHairGroup.add(hairCap);
+        let alienAntennaGroup = null;
 
-        // Front Bangs / Fringe (+Z forehead)
-        const bangOffsets = [
-            { x: -0.22, y: 0.37, z: 0.38, rx: 0.2, rz: 0.25, s: [0.22, 0.14, 0.18] },
-            { x: 0.0, y: 0.41, z: 0.42, rx: 0.25, rz: 0.0, s: [0.25, 0.14, 0.18] },
-            { x: 0.22, y: 0.37, z: 0.38, rx: 0.2, rz: -0.25, s: [0.22, 0.14, 0.18] }
-        ];
-        bangOffsets.forEach(b => {
-            const bang = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 8), hairMat);
-            bang.scale.set(b.s[0], b.s[1], b.s[2]);
-            bang.position.set(b.x, b.y, b.z);
-            bang.rotation.set(b.rx, 0, b.rz);
-            normalHairGroup.add(bang);
-        });
-
-        if (isFemale) {
-            [-0.51, 0.51].forEach(sx => {
-                const sideLock = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.08, 0.65, 10), hairMat);
-                sideLock.position.set(sx, -0.15, 0.05);
-                normalHairGroup.add(sideLock);
+        if (isAlien) {
+            alienAntennaGroup = new THREE.Group();
+            const antennaTipMat = new THREE.MeshStandardMaterial({
+                color: 0xe74c3c,
+                emissive: 0x661111,
+                roughness: 0.25,
+                metalness: 0.15
             });
-            const ponytail = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 10), hairMat);
-            ponytail.scale.set(0.9, 1.4, 0.9);
-            ponytail.position.set(0, -0.05, -0.64);
-            normalHairGroup.add(ponytail);
+            [-1, 1].forEach(side => {
+                const curve = new THREE.QuadraticBezierCurve3(
+                    new THREE.Vector3(side * 0.24, 0.48, 0.0),
+                    new THREE.Vector3(side * 0.42, 0.86, 0.04),
+                    new THREE.Vector3(side * 0.58, 0.90, 0.08)
+                );
+                const stalk = new THREE.Mesh(new THREE.TubeGeometry(curve, 10, 0.042, 8, false), skinMat);
+                stalk.castShadow = true;
+                alienAntennaGroup.add(stalk);
+
+                const orb = new THREE.Mesh(new THREE.SphereGeometry(0.11, 14, 12), antennaTipMat);
+                orb.position.set(side * 0.58, 0.90, 0.08);
+                orb.castShadow = true;
+                alienAntennaGroup.add(orb);
+            });
+            normalHairGroup.add(alienAntennaGroup);
+        } else {
+            const hairColor = isFemale ? 0x5c3d99 : 0x2d3436;
+            const hairMat = createMat(hairColor, 0.78);
+            const hairCap = new THREE.Mesh(
+                new THREE.SphereGeometry(0.615, 18, 16, 0, Math.PI * 2, 0, Math.PI * 0.58),
+                hairMat
+            );
+            hairCap.position.set(0, 0.04, -0.04);
+            hairCap.rotation.x = -0.24;
+            hairCap.castShadow = true;
+            normalHairGroup.add(hairCap);
+
+            // Front Bangs / Fringe (+Z forehead)
+            const bangOffsets = [
+                { x: -0.22, y: 0.37, z: 0.38, rx: 0.2, rz: 0.25, s: [0.22, 0.14, 0.18] },
+                { x: 0.0, y: 0.41, z: 0.42, rx: 0.25, rz: 0.0, s: [0.25, 0.14, 0.18] },
+                { x: 0.22, y: 0.37, z: 0.38, rx: 0.2, rz: -0.25, s: [0.22, 0.14, 0.18] }
+            ];
+            bangOffsets.forEach(b => {
+                const bang = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 8), hairMat);
+                bang.scale.set(b.s[0], b.s[1], b.s[2]);
+                bang.position.set(b.x, b.y, b.z);
+                bang.rotation.set(b.rx, 0, b.rz);
+                normalHairGroup.add(bang);
+            });
+
+            if (isFemale) {
+                [-0.51, 0.51].forEach(sx => {
+                    const sideLock = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.08, 0.65, 10), hairMat);
+                    sideLock.position.set(sx, -0.15, 0.05);
+                    normalHairGroup.add(sideLock);
+                });
+                const ponytail = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 10), hairMat);
+                ponytail.scale.set(0.9, 1.4, 0.9);
+                ponytail.position.set(0, -0.05, -0.64);
+                normalHairGroup.add(ponytail);
+            }
         }
 
         // Bomb-Blasted Spiky Hair ("삐죽삐죽 솟구친 머리")
@@ -827,8 +858,8 @@
         const scleraMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
         const pupilMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
         const browMat = new THREE.MeshBasicMaterial({ color: 0x2d3436 });
-        const blushMat = new THREE.MeshBasicMaterial({ color: 0xff9aa2, transparent: true, opacity: 0.72 });
-        const mouthMat = new THREE.MeshBasicMaterial({ color: 0xd63031 });
+        const blushMat = new THREE.MeshBasicMaterial({ color: isAlien ? 0x55efc4 : 0xff9aa2, transparent: true, opacity: isAlien ? 0.55 : 0.72 });
+        const mouthMat = new THREE.MeshBasicMaterial({ color: isAlien ? 0x145a32 : 0xd63031 });
         const tongueMat = new THREE.MeshBasicMaterial({ color: 0xff7675 });
 
         const normalFaceGroup = new THREE.Group();
@@ -842,30 +873,48 @@
         const cheeks = [];
 
         [-1, 1].forEach(side => {
-            const ex = side * 0.205;
+            const ex = side * (isAlien ? 0.22 : 0.205);
 
-            // White Sclera
-            const sclera = new THREE.Mesh(new THREE.SphereGeometry(0.112, 12, 12), scleraMat);
-            sclera.scale.set(1.0, 1.15, 0.55);
-            sclera.position.set(ex, 0.03, 0.515);
-            normalFaceGroup.add(sclera);
+            if (isAlien) {
+                // Iconic large glossy black almond alien eyes
+                const alienEyeMat = new THREE.MeshStandardMaterial({ color: 0x05070a, roughness: 0.08, metalness: 0.2 });
+                const alienEye = new THREE.Mesh(new THREE.SphereGeometry(0.16, 14, 12), alienEyeMat);
+                alienEye.scale.set(0.95, 1.35, 0.45);
+                alienEye.position.set(ex, 0.06, 0.515);
+                alienEye.rotation.z = side * 0.24;
+                normalFaceGroup.add(alienEye);
 
-            // Black Pupil
-            const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.068, 10, 10), pupilMat);
-            pupil.scale.set(1.0, 1.1, 0.6);
-            pupil.position.set(ex, 0.03, 0.558);
-            normalFaceGroup.add(pupil);
+                const glintBig = new THREE.Mesh(new THREE.SphereGeometry(0.036, 8, 8), scleraMat);
+                glintBig.position.set(ex + 0.035, 0.13, 0.578);
+                normalFaceGroup.add(glintBig);
 
-            // Eye Catchlight
-            const glint = new THREE.Mesh(new THREE.SphereGeometry(0.023, 8, 8), scleraMat);
-            glint.position.set(ex + 0.026, 0.065, 0.588);
-            normalFaceGroup.add(glint);
+                const glintSmall = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 6), scleraMat);
+                glintSmall.position.set(ex - 0.025, 0.03, 0.575);
+                normalFaceGroup.add(glintSmall);
+            } else {
+                // White Sclera
+                const sclera = new THREE.Mesh(new THREE.SphereGeometry(0.112, 12, 12), scleraMat);
+                sclera.scale.set(1.0, 1.15, 0.55);
+                sclera.position.set(ex, 0.03, 0.515);
+                normalFaceGroup.add(sclera);
 
-            // Eyebrow
-            const brow = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.038, 0.04), browMat);
-            brow.position.set(ex, 0.195, 0.53);
-            brow.rotation.z = side * -0.10;
-            normalFaceGroup.add(brow);
+                // Black Pupil
+                const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.068, 10, 10), pupilMat);
+                pupil.scale.set(1.0, 1.1, 0.6);
+                pupil.position.set(ex, 0.03, 0.558);
+                normalFaceGroup.add(pupil);
+
+                // Eye Catchlight
+                const glint = new THREE.Mesh(new THREE.SphereGeometry(0.023, 8, 8), scleraMat);
+                glint.position.set(ex + 0.026, 0.065, 0.588);
+                normalFaceGroup.add(glint);
+
+                // Eyebrow
+                const brow = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.038, 0.04), browMat);
+                brow.position.set(ex, 0.195, 0.53);
+                brow.rotation.z = side * -0.10;
+                normalFaceGroup.add(brow);
+            }
 
             // Cheek Blush (shared across expressions)
             const cheek = new THREE.Mesh(new THREE.SphereGeometry(0.088, 10, 8), blushMat);
@@ -908,10 +957,12 @@
             bombFaceGroup.add(bombBrow);
         });
 
-        // Nose (shared)
-        const nose = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8), skinMat);
-        nose.position.set(0, -0.06, 0.585);
-        headGroup.add(nose);
+        // Nose (human characters only; aliens have sleek smooth faces)
+        if (!isAlien) {
+            const nose = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8), skinMat);
+            nose.position.set(0, -0.06, 0.585);
+            headGroup.add(nose);
+        }
 
         // Smiling Mouth (Torus arc rotated to bottom half)
         const smileArc = Math.PI * 0.75;
@@ -947,6 +998,25 @@
         torso.position.y = 0.45;
         torso.castShadow = true;
         group.add(torso);
+
+        if (isAlien) {
+            // Sleek spacesuit collar & glowing chest emblem
+            const suitCollar = new THREE.Mesh(
+                new THREE.TorusGeometry(0.42, 0.055, 8, 18),
+                createMat(0x00cec9, 0.25, 0.65)
+            );
+            suitCollar.rotation.x = Math.PI / 2;
+            suitCollar.position.set(0, 0.92, 0);
+            group.add(suitCollar);
+
+            const chestBadge = new THREE.Mesh(
+                new THREE.OctahedronGeometry(0.11, 0),
+                new THREE.MeshBasicMaterial({ color: 0x00f5d4 })
+            );
+            chestBadge.scale.set(1.0, 1.0, 0.45);
+            chestBadge.position.set(0, 0.56, 0.45);
+            group.add(chestBadge);
+        }
 
         // Arms & Hands (Shoulder Pivot Groups so hands animate cleanly during swim & walk)
         const armMat = createMat(bodyColor, 0.6);
@@ -997,17 +1067,19 @@
 
         // 3D Nickname Sprite
         const labelSprite = createNameLabel(player.name || '플레이어');
-        labelSprite.position.set(0, 2.25, 0);
+        labelSprite.position.set(0, isAlien ? 2.52 : 2.25, 0);
         group.add(labelSprite);
 
         return {
             group: group,
+            isAlien: isAlien,
             head: head,
             headGroup: headGroup,
             skinMat: skinMat,
             originalSkinHex: originalSkinHex,
             cheeks: cheeks,
             normalHairGroup: normalHairGroup,
+            alienAntennaGroup: alienAntennaGroup,
             bombCharredHairGroup: bombCharredHairGroup,
             normalFaceGroup: normalFaceGroup,
             deadFaceGroup: deadFaceGroup,
@@ -1988,7 +2060,7 @@
         chairSlots.forEach((slot, index) => {
             const player = list[index];
             if (player) {
-                if (!slot.avatarMeshes || slot.player?.id !== player.id || slot.player?.name !== player.name) {
+                if (!slot.avatarMeshes || slot.player?.id !== player.id || slot.player?.name !== player.name || slot.player?.gender !== player.gender) {
                     if (slot.charGroup.children.length > 0) {
                         for (let k = slot.charGroup.children.length - 1; k >= 0; k--) {
                             const child = slot.charGroup.children[k];
@@ -2036,11 +2108,21 @@
             charGroup.visible = true;
             hinge.rotation.x = -1.3;
             charGroup.rotation.set(0, 0, 0);
+        } else if (status === 'swimming' || status === 'walking') {
+            setNormalSkinAndHair();
+            charGroup.visible = true;
+            hinge.rotation.x = -1.3;
+            if (status === 'swimming' && charGroup.position.z >= -2) {
+                charGroup.position.set(slot.x, 0.05, -11.0);
+                charGroup.rotation.set(0, 0, 0);
+            }
         } else if (status === 'dead' || status === 'dead-gator') {
             setNormalSkinAndHair();
             charGroup.visible = true;
             hinge.rotation.x = -1.3;
-            charGroup.position.set(slot.x, -0.45, -11.0);
+            const waterX = charGroup.position.z < -2 ? charGroup.position.x : slot.x;
+            const waterZ = charGroup.position.z < -2 ? charGroup.position.z : -11.0;
+            charGroup.position.set(waterX, -0.45, waterZ);
             charGroup.rotation.set(0, 0, Math.PI / 2);
             if (m) {
                 m.headGroup.rotation.set(0, 0, 0);
@@ -2169,6 +2251,8 @@
 
     function triggerSharkAttack(slot, pos) {
         if (!sharkEntity) return;
+        slot.currentAnim = { type: 'shark_attack' };
+        slot.charGroup.position.set(pos.x, 0.05, pos.z);
         sharkEntity.group.visible = true;
         sharkEntity.group.position.set(pos.x + 6, 0.05, pos.z - 3);
         const attackStart = clock.getElapsedTime();
@@ -2186,6 +2270,7 @@
                     const curX = (pos.x + 6) * (1 - t) + pos.x * t;
                     const curZ = (pos.z - 3) * (1 - t) + pos.z * t;
                     sharkEntity.group.position.set(curX, 0.05, curZ);
+                    slot.charGroup.position.set(pos.x, 0.05 + Math.sin(time * 8) * 0.08, pos.z);
 
                     const dx = pos.x - curX;
                     const dz = pos.z - curZ;
@@ -2207,6 +2292,16 @@
                         sharkEntity.splashed = true;
                     }
                 } else {
+                    if (slot.currentAnim && slot.currentAnim.type === 'shark_attack') {
+                        slot.currentAnim = null;
+                    }
+                    slot.charGroup.position.set(pos.x, -0.45, pos.z);
+                    slot.charGroup.rotation.set(0, 0, Math.PI / 2);
+                    if (slot.avatarMeshes) {
+                        slot.avatarMeshes.headGroup.rotation.set(0, 0, 0);
+                        slot.avatarMeshes.normalFaceGroup.visible = false;
+                        slot.avatarMeshes.deadFaceGroup.visible = true;
+                    }
                     sharkEntity.group.rotation.set(0, 0, 0);
                     if (sharkEntity.lowerJaw) sharkEntity.lowerJaw.rotation.x = 0;
                     sharkEntity.splashed = false;
@@ -2221,6 +2316,8 @@
 
     function triggerGatorAttack(slot, pos) {
         if (!gatorEntity) return;
+        slot.currentAnim = { type: 'gator_attack' };
+        slot.charGroup.position.set(pos.x, 0.05, pos.z);
         gatorEntity.group.visible = true;
         const startX = pos.x - 5.5;
         const startZ = 2.2;
@@ -2237,6 +2334,7 @@
                     const curZ = startZ * (1 - t) + pos.z * t;
                     const curY = Math.max(-0.1, getBeachHeight(curX, curZ) + 0.2);
                     gatorEntity.group.position.set(curX, curY, curZ);
+                    slot.charGroup.position.set(pos.x, 0.05 + Math.sin(time * 8) * 0.08, pos.z);
 
                     const dx = pos.x - curX;
                     const dz = pos.z - curZ;
@@ -2254,6 +2352,16 @@
                         createWaterSplash(pos.x, 0.05, pos.z, 0.45);
                     }
                 } else {
+                    if (slot.currentAnim && slot.currentAnim.type === 'gator_attack') {
+                        slot.currentAnim = null;
+                    }
+                    slot.charGroup.position.set(pos.x, -0.45, pos.z);
+                    slot.charGroup.rotation.set(0, 0, Math.PI / 2);
+                    if (slot.avatarMeshes) {
+                        slot.avatarMeshes.headGroup.rotation.set(0, 0, 0);
+                        slot.avatarMeshes.normalFaceGroup.visible = false;
+                        slot.avatarMeshes.deadFaceGroup.visible = true;
+                    }
                     createBloodSplash(pos.x, 0.05, pos.z);
                     gatorEntity.group.rotation.set(0, 0, 0);
                     if (gatorEntity.lowerJaw) gatorEntity.lowerJaw.rotation.x = 0;
@@ -2903,6 +3011,9 @@
                 slot.currentAnim.update(time);
             }
             if (slot.player && slot.avatarMeshes) {
+                if (slot.avatarMeshes.alienAntennaGroup && slot.avatarMeshes.normalHairGroup && slot.avatarMeshes.normalHairGroup.visible) {
+                    slot.avatarMeshes.alienAntennaGroup.rotation.z = Math.sin(time * 3.5 + slot.index) * 0.06;
+                }
                 if (slot.player.activeBomb && slot.avatarMeshes.headBombGroup && slot.avatarMeshes.headBombGroup.visible) {
                     slot.avatarMeshes.headBombGroup.position.y = 1.08 + Math.sin(time * 8) * 0.08;
                     if (slot.avatarMeshes.headBombLed) {
