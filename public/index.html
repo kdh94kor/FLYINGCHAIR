@@ -221,6 +221,7 @@
         .status-flying .exp-fly { display: block; }
         .status-swimming .exp-water { display: block; }
         .status-dead .exp-dead, .status-dead-gator .exp-dead, .status-dead-missile .exp-dead, .status-snatched .exp-dead { display: block; }
+        .status-salt-farm:not(.salt-abducting) { opacity: 0; pointer-events: none; transition: opacity 0.25s; }
         .status-dead-bomb .avatar-normal-hair { display: none; }
         .status-dead-bomb .avatar-bomb-hair { display: block; }
         .status-dead-bomb .avatar-face-skin { fill: #202020 !important; }
@@ -405,6 +406,238 @@
         .item-btn.call_gator { background: rgba(46, 204, 113, 0.25); border-color: rgba(46, 204, 113, 0.6); color: #2ecc71; }
         .item-btn.call_gull { background: rgba(241, 196, 15, 0.25); border-color: rgba(241, 196, 15, 0.6); color: #f1c40f; }
         .item-btn.bomb_defuse { background: rgba(255, 107, 53, 0.25); border-color: rgba(255, 107, 53, 0.65); color: #ff7f50; }
+        .item-btn.salt_farm { background: rgba(56, 189, 248, 0.22); border-color: rgba(56, 189, 248, 0.65); color: #7dd3fc; }
+
+        /* Stage Top-Right HUD (Never overlaps supply timer & salt progress) */
+        .stage-top-right-hud {
+            position: absolute;
+            top: 12px;
+            right: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+            z-index: 100;
+            pointer-events: none;
+            max-width: min(240px, calc(100% - 140px));
+        }
+        .item-timer-pill {
+            background: rgba(0, 0, 0, 0.65);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            border: 1px solid #f39c12;
+            color: #f39c12;
+            white-space: nowrap;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.28);
+        }
+        .salt-progress-hud {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+            width: 100%;
+        }
+        .salt-hud-card {
+            background: rgba(12, 22, 38, 0.86);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(56, 189, 248, 0.65);
+            border-radius: 12px;
+            padding: 6px 10px;
+            min-width: 148px;
+            max-width: 100%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+            color: #e0f2fe;
+        }
+        .salt-hud-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.76rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .salt-hud-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 135px;
+        }
+        .salt-hud-pct {
+            color: #38bdf8;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+        .salt-hud-bar-bg {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.14);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .salt-hud-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #38bdf8, #bae6fd, #ffffff);
+            border-radius: 999px;
+            transition: width 0.2s ease-out;
+        }
+        @media (max-width: 600px) {
+            .stage-top-right-hud { top: 10px; right: 10px; gap: 4px; max-width: 48%; }
+            .item-timer-pill { padding: 4px 9px; font-size: 0.72rem; }
+            .salt-hud-card { padding: 5px 8px; min-width: 118px; }
+            .salt-hud-row { font-size: 0.68rem; gap: 5px; }
+        }
+
+        /* 2D Distant Salt Island & Abduction Overlay */
+        .salt-island-2d {
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 106px;
+            height: 44px;
+            pointer-events: none;
+            z-index: 2;
+            opacity: 0.9;
+        }
+        .salt-island-hill {
+            position: absolute;
+            bottom: 8px;
+            left: 10px;
+            width: 86px;
+            height: 28px;
+            background: radial-gradient(circle at 40% 35%, #c084fc 0%, #7c3aed 55%, #4c1d95 100%);
+            border-radius: 50% 50% 14px 14px;
+            box-shadow: 0 3px 0 #d8b4fe;
+        }
+        .salt-island-pan {
+            position: absolute;
+            bottom: 4px;
+            left: 22px;
+            width: 58px;
+            height: 12px;
+            background: linear-gradient(180deg, #f5fbff 0%, #dbeafe 100%);
+            border: 1.5px solid #5b21b6;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.6rem;
+            line-height: 1;
+        }
+        .salt-island-dock {
+            position: absolute;
+            bottom: 0;
+            left: 46px;
+            width: 14px;
+            height: 6px;
+            background: #8b5cf6;
+            box-shadow: 0 0 6px rgba(168, 85, 247, 0.7);
+            border-radius: 1px;
+        }
+        .salt-hood-2d {
+            position: absolute;
+            top: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 44px;
+            height: 46px;
+            background: radial-gradient(circle at 35% 30%, #2b2d38 0%, #0b0c10 75%);
+            border-radius: 45% 45% 35% 35%;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+            z-index: 25;
+            pointer-events: none;
+        }
+        .salt-hood-2d::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 14px;
+            height: 10px;
+            background: #14161d;
+            clip-path: polygon(20% 100%, 0 0, 45% 35%, 100% 0, 80% 100%);
+        }
+        .salt-rope-2d {
+            position: absolute;
+            top: 46px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 42px;
+            height: 16px;
+            border-radius: 8px;
+            background: repeating-linear-gradient(165deg, #c68b59 0px, #c68b59 4px, #8d5524 4px, #8d5524 7px);
+            border: 1px solid #5c3a21;
+            z-index: 24;
+            pointer-events: none;
+        }
+        .salt-boat-2d {
+            position: absolute;
+            width: 78px;
+            height: 34px;
+            z-index: 36;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Salt Farm Minigame Modal (fits safely within 90vh mobile/desktop viewports) */
+        .salt-modal {
+            width: min(94vw, 520px);
+            max-width: 94vw;
+            max-height: 90vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            background: linear-gradient(180deg, #1b2838 0%, #101924 100%);
+            border: 2px solid rgba(56, 189, 248, 0.55);
+            text-align: center;
+            padding: 18px 18px 20px;
+        }
+        .salt-pan-wrap {
+            position: relative;
+            width: 100%;
+            margin: 10px auto 12px;
+            border-radius: 12px;
+            padding: 6px;
+            background: linear-gradient(145deg, #7c5335, #4e331e);
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.45), 0 8px 20px rgba(0,0,0,0.45);
+        }
+        #salt-pan-canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 420 / 236;
+            border-radius: 8px;
+            touch-action: none;
+            cursor: grab;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        #salt-pan-canvas:active { cursor: grabbing; }
+        .salt-modal-progress-wrap {
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            border-radius: 10px;
+            padding: 8px 12px;
+        }
+        .salt-modal-progress-bar {
+            width: 100%;
+            height: 12px;
+            background: rgba(255,255,255,0.12);
+            border-radius: 999px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+        .salt-modal-progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #0ea5e9, #38bdf8, #e0f2fe);
+            border-radius: 999px;
+            transition: width 0.12s ease-out;
+        }
 
         /* Roaming Waiting Animals Layers & Elements */
         #waiting-animals-sky-layer,
@@ -568,7 +801,7 @@
         }
 
         /* Modals */
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(3px); }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(3px); overflow: hidden; }
         .modal { background: var(--bg-panel); padding: 30px; border-radius: 12px; width: 400px; max-width: 90%; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #444; }
         .modal-content { background: var(--bg-panel); padding: 30px; border-radius: 12px; width: 400px; max-width: 90%; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #444; }
         .modal h2, .modal-content h2 { text-align: center; border-bottom: 2px solid #444; padding-bottom: 15px; margin-bottom: 20px; color: var(--accent); flex-shrink: 0; }
@@ -578,7 +811,8 @@
         .modal > button { flex-shrink: 0; }
 
         /* Bomb Setup & Defuse Modal Styles */
-        .bomb-modal { width: 440px; max-width: 94vw; max-height: 90vh; overflow-y: auto; position: relative; box-sizing: border-box; }
+        .bomb-modal { width: 440px; max-width: 94vw; max-height: 90vh; overflow-x: hidden; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none; position: relative; box-sizing: border-box; }
+        .bomb-modal::-webkit-scrollbar { display: none; }
         .bomb-wire-pick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; flex-shrink: 0; }
         .bomb-wire-pick-btn {
             display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
@@ -618,7 +852,7 @@
         }
         @keyframes bomb-flash-pop {
             0% { opacity: 0; transform: scale(0.8); }
-            35% { opacity: 1; transform: scale(1.02); }
+            35% { opacity: 1; transform: scale(1); }
             100% { opacity: 0.9; transform: scale(1); }
         }
         @media (max-width: 768px) {
@@ -1446,8 +1680,8 @@
                         <div class="card-icon-badge">🎒</div>
                         <span class="card-tag">아이템</span>
                     </div>
-                    <h4>9종 특수 아이템 도감</h4>
-                    <p>유도 미사일, 폭탄해체하기, 방패, 금기어 조작 및 상어/악어/부산갈매기 소환 스펙 & 밸런스 분석</p>
+                    <h4>10종 특수 아이템 도감</h4>
+                    <p>유도 미사일, 폭탄해체하기, 염전으로 보내기, 방패, 금기어 조작 및 상어/악어/부산갈매기 소환 스펙 & 밸런스 분석</p>
                     <span class="card-action">자세히 보기 &rarr;</span>
                 </a>
 
@@ -1547,8 +1781,8 @@
                         <p style="font-size:0.88rem; line-height:1.6;">게임 시작 전 서로에게 지정한 비밀 단어! 일상 대화 속에 교묘한 낚시 질문을 던져 상대방이 금기어를 외치게 유도하세요. 발화 즉시 의자가 격발되어 시원한 수영장으로 날아갑니다.</p>
                     </div>
                     <div style="background:rgba(255,255,255,0.03); padding:18px; border-radius:14px; border:1px solid rgba(255,255,255,0.06);">
-                        <h3 style="font-size:1.05rem; font-weight:700; color:var(--toss-blue); margin-bottom:8px;">⚡ 9종 전략 특수 아이템</h3>
-                        <p style="font-size:0.88rem; line-height:1.6;">유도 미사일(30초 기절 및 시간 중첩), 폭탄해체하기(빨간선·파란선 심리전 & 폭발 시 10초 그을림 침묵), 이지스 방패, 금기어 변경/추가/삭제, 상어/악어/부산갈매기 소환 등 전세를 뒤집는 전략 아이템으로 역전승을 거두세요.</p>
+                        <h3 style="font-size:1.05rem; font-weight:700; color:var(--toss-blue); margin-bottom:8px;">⚡ 10종 전략 특수 아이템</h3>
+                        <p style="font-size:0.88rem; line-height:1.6;">유도 미사일(30초 기절 및 시간 중첩), 폭탄해체하기(빨간선·파란선 심리전 & 폭발 시 10초 그을림 침묵), 염전으로 보내기(사용 알림 없는 랜덤 납치 & 소금 채취), 이지스 방패, 금기어 변경/추가/삭제, 상어/악어/부산갈매기 소환 등 전세를 뒤집는 전략 아이템으로 역전승을 거두세요.</p>
                     </div>
                     <div style="background:rgba(255,255,255,0.03); padding:18px; border-radius:14px; border:1px solid rgba(255,255,255,0.06);">
                         <h3 style="font-size:1.05rem; font-weight:700; color:var(--toss-blue); margin-bottom:8px;">📱 모바일 앱 전환 완벽 복구</h3>
@@ -1568,10 +1802,10 @@
                     <li>• <strong>1단계 (대기실 & 맞춤 룰셋 구성):</strong> 방장은 참가자당 금기어 개수(1~3개), 침묵 방지(AFK) 자동 발사 타이머(최소 30초 이상), 특수 아이템 보급 주기를 모임 성격에 맞게 자유롭게 설정할 수 있습니다. 4자리 숫자 방 코드 또는 초대 링크 복사로 친구들을 간편하게 초대하세요.</li>
                     <li>• <strong>2단계 (비밀 금기어 교차 등록):</strong> 게임이 시작되면 본인을 제외한 다른 참가자들에게 부여할 금기어를 직접 입력합니다. 공정한 게임 밸런스를 위해 <strong>2글자 이상 25글자 이하의 단어</strong>로 제한되며, 초성(ㅋㅋ, ㅎㅎ 등) 및 특수기호(?!, ^^ 등)도 자유롭게 설정할 수 있습니다. 단, 띄어쓰기(공백)와 시스템 예약어(???) 및 동일 대상 중복 단어는 단일 검증 엔진(WordValidator)에 의해 자동으로 차단됩니다.</li>
                     <li>• <strong>3단계 (실시간 채팅 & 부분 문자열 격발 판정):</strong> 상단 전광판에는 다른 모든 참가자의 금기어가 투명하게 공개되지만, 정작 <strong>내 머리 위에 걸린 금기어는 나에게만 `?`로 가려져 보이지 않습니다.</strong> 채팅 메시지에 내 금기어가 부분 문자열(Substring)로 포함되는 순간(예: 금기어가 '치킨'일 때 '양념치킨 먹고 싶다' 입력), 서버가 0.05초 내에 감지하여 의자를 수영장으로 발사합니다.</li>
-                    <li>• <strong>4단계 (특수 아이템 공방 & 결과 리포트):</strong> 보급 주기에 따라 지급되는 9종의 아이템(유도 미사일, 폭탄해체하기 등)으로 상대를 기절시키거나 내 금기어를 정화할 수 있습니다. 라운드 종료 시 총 비행 횟수, 상어/악어/갈매기 조우 횟수, 미사일·폭탄 피격 횟수 및 금기어별 발동 통계를 한눈에 확인할 수 있습니다.</li>
+                    <li>• <strong>4단계 (특수 아이템 공방 & 결과 리포트):</strong> 보급 주기에 따라 지급되는 10종의 아이템(유도 미사일, 폭탄해체하기, 염전으로 보내기 등)으로 상대를 기절·격리시키거나 내 금기어를 정화할 수 있습니다. 라운드 종료 시 총 비행 횟수, 상어/악어/갈매기 조우 횟수, 미사일·폭탄 피격 및 염전 납치 횟수, 금기어별 발동 통계를 한눈에 확인할 수 있습니다.</li>
                 </ul>
 
-                <h3 style="font-size:1.15rem; font-weight:700; color:#fff; margin:24px 0 10px;">🌟 승리를 위한 고수들의 5대 심리 대화 & 아이템 전술</h3>
+                <h3 style="font-size:1.15rem; font-weight:700; color:#fff; margin:24px 0 10px;">🌟 승리를 위한 고수들의 6대 심리 대화 & 아이템 전술</h3>
                 <p style="margin-bottom:12px;">
                     플라잉 체어의 진정한 묘미는 고도의 대화 심리전과 아이템 타이밍의 결합입니다. 무작정 질문을 퍼붓기보다 상대방의 성향과 말버릇을 정밀하게 공략해 보세요:
                 </p>
@@ -1581,12 +1815,13 @@
                     <li>• <strong>침묵 타이머 카운트다운 압박:</strong> 침묵(AFK) 발사 타이머 종료 5초 전 경고음이 울릴 때 대답하기 쉬운 이지선다 질문을 던지세요. 시간 압박에 몰린 상대는 단어 검열을 포기하고 급하게 답하다가 함정에 걸려듭니다.</li>
                     <li>• <strong>유도 미사일 중첩과 공중 예약 타격:</strong> 유도 미사일은 이미 미사일에 맞아 기절 중인 상대에게 연속 발사하여 기절 시간을 누적(+30초)시킬 수 있으며, 금기어 발동으로 날아가는 상대에게 명중할 경우 의자로 복귀하는 즉시 30초 기절이 발동되는 정교한 전투 판정을 지원합니다.</li>
                     <li>• <strong>폭탄해체하기 양자택일 심리전:</strong> <code>💣 폭탄해체하기</code>는 빨간선/파란선 중 살아남는 해제선을 직접 정한 뒤 상대방에게 폭탄을 보냅니다. 상대가 니퍼를 쥐고 손이 떨리며 잘못된 선을 자르거나 20초 내 해체에 실패하면 머리 위에서 폭탄이 터져 머리가 삐죽삐죽 솟구치고 얼굴이 까맣게 그을리며 10초간 채팅이 봉쇄됩니다(방패로도 방어 불가!).</li>
+                    <li>• <strong>염전으로 보내기 은밀 기습:</strong> <code>🧂 염전으로 보내기</code>는 사용 순간 알림이 전혀 뜨지 않고 1분 이내 랜덤 시점에 복면 괴한 2명이 비닐봉다리와 밧줄을 들고 나타나 배로 염전 섬에 납치합니다. 드래그(긁기)로 소금 100%를 채취해야 복귀할 수 있으며 채취 진행도는 우측 상단에 실시간으로 모두에게 공개됩니다.</li>
                 </ul>
 
                 <p style="font-size:0.9rem; color:var(--toss-text-muted); border-top:1px solid var(--toss-card-border); padding-top:16px;">
                     더 깊이 있는 전략과 기술 아카이브가 궁금하신가요?
                     <a href="/guide/rules" style="color:var(--toss-blue); font-weight:600;">게임 규칙 매뉴얼</a>,
-                    <a href="/guide/items" style="color:var(--toss-blue); font-weight:600;">9종 아이템 도감</a>,
+                    <a href="/guide/items" style="color:var(--toss-blue); font-weight:600;">10종 아이템 도감</a>,
                     <a href="/guide/strategy" style="color:var(--toss-blue); font-weight:600;">심리전 공략집</a>,
                     <a href="/words" style="color:var(--toss-blue); font-weight:600;">금기어 백과 100선</a>,
                     <a href="/history" style="color:var(--toss-blue); font-weight:600;">예능의 역사</a>,
@@ -1649,8 +1884,16 @@
                     <button type="button" id="btn-mode-3d" class="toggle-mode-btn" onclick="setViewMode('3D')" aria-label="3D 모드로 전환">3D</button>
                 </div>
             </div>
-            <div id="item-timer" class="hidden" style="position: absolute; top: 15px; right: 20px; background: rgba(0,0,0,0.6); padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; border: 1px solid #f39c12; color: #f39c12; z-index: 100;"></div>
+            <div id="stage-top-right-hud" class="stage-top-right-hud">
+                <div id="item-timer" class="item-timer-pill hidden"></div>
+                <div id="salt-progress-hud" class="salt-progress-hud hidden"></div>
+            </div>
             <div class="pool" id="pool">
+                <div class="salt-island-2d" id="salt-island-2d" aria-hidden="true">
+                    <div class="salt-island-hill"></div>
+                    <div class="salt-island-pan"><span>🧂</span></div>
+                    <div class="salt-island-dock"></div>
+                </div>
                 <div id="waiting-animals-pool-layer"></div>
                 <div class="wave wave1"></div>
                 <div class="wave wave2"></div>
@@ -1729,6 +1972,7 @@
                     <li>🐊 악어떼 습격: <strong id="stats-gator" style="color:#fff;">0</strong>회</li>
                     <li>🚀 미사일 피격: <strong id="stats-missile" style="color:#fff;">0</strong>회</li>
                     <li>💣 폭탄 피격: <strong id="stats-bomb" style="color:#fff;">0</strong>회</li>
+                    <li>🧂 염전 끌려감: <strong id="stats-salt" style="color:#fff;">0</strong>회</li>
                 </ul>
                 <div style="margin-top:15px; border-top:1px solid #444; padding-top:15px;">
                     <h4 style="margin-bottom:5px; color:#aaa;">발동된 금기어 횟수</h4>
@@ -1947,6 +2191,32 @@
         </div>
     </div>
 
+    <!-- Salt Farm Minigame Modal -->
+    <div id="modal-salt-farm" class="modal-overlay hidden">
+        <div class="modal salt-modal">
+            <h2 style="color:#7dd3fc; margin-bottom:6px; font-size:1.25rem;">🧂 외딴섬 염전 노역장</h2>
+            <p id="salt-modal-desc" style="font-size:0.86rem; color:#cbd5e1; margin-bottom:8px; line-height:1.45;">
+                복면 괴한들에게 납치되어 염전 섬에 도착했습니다!<br>
+                마우스나 손가락으로 염전을 <strong style="color:#38bdf8;">드래그(긁기)</strong>해 소금을 100% 채취하면 배를 타고 복귀합니다.
+            </p>
+            <div class="salt-modal-progress-wrap">
+                <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.88rem; font-weight:700;">
+                    <span style="color:#e0f2fe;">⛏️ 소금 채취 진행도</span>
+                    <span id="salt-modal-pct" style="color:#38bdf8; font-variant-numeric:tabular-nums;">0%</span>
+                </div>
+                <div class="salt-modal-progress-bar">
+                    <div id="salt-modal-progress-fill" class="salt-modal-progress-fill"></div>
+                </div>
+            </div>
+            <div class="salt-pan-wrap">
+                <canvas id="salt-pan-canvas" width="420" height="236"></canvas>
+            </div>
+            <div id="salt-modal-hint" style="font-size:0.8rem; color:#94a3b8; font-weight:600;">
+                👆 위 염전 위를 좌우로 문질러(드래그) 소금을 긁어 모으세요!
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script>
     // --- Toss Guide Navigator ---
@@ -1998,17 +2268,18 @@
                 DEAD_GATOR: 'dead-gator',     // 악어 떼에게 물림 (15초 수영장 기절)
                 SNATCHED_GULL: 'snatched',    // 부산갈매기에게 납치됨 (1분 상공 기절/채팅불가)
                 DEAD_MISSILE: 'dead-missile', // 미사일 피격 (30초 의자 반전 기절)
-                DEAD_BOMB: 'dead-bomb'        // 폭탄 폭발 피격 (10초 그을림/머리 삐죽 기절)
+                DEAD_BOMB: 'dead-bomb',       // 폭탄 폭발 피격 (10초 그을림/머리 삐죽 기절)
+                SALT_FARM: 'salt-farm'        // 염전 납치 노역 (소금 100% 채취 시 복귀)
             },
 
-            // 1. 좌석 이탈 상태 목록 (의자에서 튕겨나가 공중, 물속, 심해, 납치 등 자리를 벗어난 상태)
-            AWAY_STATUSES: ['flying', 'swimming', 'walking', 'dead', 'dead-gator', 'snatched'],
+            // 1. 좌석 이탈 상태 목록 (의자에서 튕겨나가 공중, 물속, 심해, 납치, 염전 등 자리를 벗어난 상태)
+            AWAY_STATUSES: ['flying', 'swimming', 'walking', 'dead', 'dead-gator', 'snatched', 'salt-farm'],
 
             // 2. 동물 3종(상어/악어/부산갈매기)에게 잡힌 상태 목록
             ANIMAL_CAUGHT_STATUSES: ['dead', 'dead-gator', 'snatched'],
 
-            // 3. 행동 불능/기절 상태 목록 (상어, 악어, 갈매기, 미사일, 폭탄 피격으로 행동/채팅 불가)
-            INCAPACITATED_STATUSES: ['dead', 'dead-gator', 'snatched', 'dead-missile', 'dead-bomb'],
+            // 3. 행동 불능/기절 상태 목록 (상어, 악어, 갈매기, 미사일, 폭탄 피격, 염전 노역으로 행동/채팅 불가)
+            INCAPACITATED_STATUSES: ['dead', 'dead-gator', 'snatched', 'dead-missile', 'dead-bomb', 'salt-farm'],
 
             // 상태 문자열 안전 추출 헬퍼 (플레이어 객체 또는 문자열 수용)
             _toStatus(p) {
@@ -2075,6 +2346,11 @@
                 return this._toStatus(p) === this.STATUS.DEAD_BOMB;
             },
 
+            // 염전에 납치되어 소금 채취 중인가?
+            isAtSaltFarm(p) {
+                return this._toStatus(p) === this.STATUS.SALT_FARM;
+            },
+
             // [4. 기절 / 행동 불능 상태 체크]
             // 공격을 받거나 동물에게 잡혀 기절 중(채팅/일반행동 불가)인가?
             isIncapacitated(p) {
@@ -2090,6 +2366,11 @@
             // 폭탄해체하기 아이템의 타깃이 될 수 있는가? (건강하게 착석 중이며 현재 진행 중인 폭탄이 없는 대상)
             canBeTargetedByBomb(p) {
                 return this.isHealthySeated(p) && !(p && typeof p === 'object' && p.activeBomb);
+            },
+
+            // 염전으로 보내기 아이템의 타깃이 될 수 있는가? (현재 염전 노역 중이 아닌 상대)
+            canBeTargetedBySaltFarm(p) {
+                return !this.isAtSaltFarm(p) && !(p && typeof p === 'object' && p.saltFarm);
             },
 
             // 채팅을 전송할 수 있는 상태인가? (기절하지 않았고 좌석을 이탈하지 않은 상태)
@@ -2115,6 +2396,7 @@
                     case this.STATUS.SNATCHED_GULL: return '이탈 (갈매기에게 납치됨)';
                     case this.STATUS.DEAD_MISSILE: return '착석 (미사일 기절)';
                     case this.STATUS.DEAD_BOMB: return '착석 (폭탄 피격)';
+                    case this.STATUS.SALT_FARM: return '이탈 (염전 소금 채취 중)';
                     default: return '알 수 없음';
                 }
             }
@@ -2133,10 +2415,12 @@
                 isCaughtByAnimal: PlayerState.isCaughtByAnimal(p),
                 caughtAnimal: PlayerState.getCaughtAnimal(p),
                 isHitByBomb: PlayerState.isHitByBomb(p),
+                isAtSaltFarm: PlayerState.isAtSaltFarm(p),
                 isIncapacitated: PlayerState.isIncapacitated(p),
                 canChat: PlayerState.canChat(p),
                 canBeTargetedByMissile: PlayerState.canBeTargetedByMissile(p),
                 canBeTargetedByBomb: PlayerState.canBeTargetedByBomb(p),
+                canBeTargetedBySaltFarm: PlayerState.canBeTargetedBySaltFarm(p),
                 label: PlayerState.getKoreanLabel(p)
             };
         }
@@ -2229,6 +2513,24 @@
             playTone(523.25, 'sine', 0.14, 0.18);
             setTimeout(() => playTone(659.25, 'sine', 0.14, 0.18), 110);
             setTimeout(() => playTone(783.99, 'sine', 0.28, 0.22), 220);
+        }
+        function playSaltAbductSound() {
+            playTone(220, 'sawtooth', 0.12, 0.18);
+            setTimeout(() => playTone(165, 'sawtooth', 0.22, 0.2), 110);
+            setTimeout(() => playTone(130, 'triangle', 0.28, 0.2), 240);
+        }
+        let lastSaltScrapeSoundAt = 0;
+        function playSaltScrapeSound() {
+            const now = Date.now();
+            if (now - lastSaltScrapeSoundAt < 95) return;
+            lastSaltScrapeSoundAt = now;
+            playTone(980 + Math.random() * 240, 'triangle', 0.035, 0.06);
+        }
+        function playSaltCompleteSound() {
+            playTone(523.25, 'triangle', 0.12, 0.18);
+            setTimeout(() => playTone(659.25, 'triangle', 0.12, 0.18), 95);
+            setTimeout(() => playTone(783.99, 'triangle', 0.16, 0.2), 190);
+            setTimeout(() => playTone(1046.5, 'sine', 0.3, 0.22), 300);
         }
         function playBombExplosionSound() {
             try {
@@ -2486,7 +2788,10 @@
             document.getElementById('modal-word-change').classList.add('hidden');
             document.getElementById('modal-bomb-setup').classList.add('hidden');
             document.getElementById('modal-bomb-defuse').classList.add('hidden');
+            const saltModal = document.getElementById('modal-salt-farm');
+            if (saltModal) saltModal.classList.add('hidden');
             if (typeof clearAllActiveBombs === 'function') clearAllActiveBombs();
+            if (typeof clearAllSaltFarms === 'function') clearAllSaltFarms();
             pendingItemUse = null;
         }
 
@@ -2509,6 +2814,10 @@
                         }
                     }
                 });
+            }
+            if (typeof cleanupSaltFarmsForPlayer === 'function') {
+                cleanupSaltFarmsForPlayer(actualId);
+                cleanupSaltFarmsForPlayer(guestId);
             }
             if (state.disconnectTimeouts[guestId]) {
                 clearTimeout(state.disconnectTimeouts[guestId]);
@@ -2612,7 +2921,7 @@
                         state.myId = 'host';
                         state.room = { status: 'waiting', title: '멀티플레이 방', wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds };
                         updateBodyState();
-                        state.players = [{ id: state.myId, name: myName, gender: myGender, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0 } }];
+                        state.players = [{ id: state.myId, name: myName, gender: myGender, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0, salt_farm: 0 } }];
                         
                         switchView('room-view');
                         updateRoomUI();
@@ -2792,6 +3101,7 @@
                         // Reconnect! Update ID and preserve oldId history for any active timer closures
                         const oldId = existingPlayer.id;
                         existingPlayer.isDisconnected = false;
+                        existingPlayer.lastChatTime = Date.now();
                         if (oldId !== guestId) {
                             if (!existingPlayer.previousIds) existingPlayer.previousIds = [];
                             if (!existingPlayer.previousIds.includes(oldId)) existingPlayer.previousIds.push(oldId);
@@ -2830,7 +3140,7 @@
                 
                 if (state.room.status !== 'waiting') return socket.emit('SEND_TO_GUEST', { roomCode, guestId, type: 'REJECT_JOIN', payload: { reason: '이미 게임이 시작되어 입장할 수 없습니다.' } });
                 if (state.players.length >= 6) return socket.emit('SEND_TO_GUEST', { roomCode, guestId, type: 'REJECT_JOIN', payload: { reason: '방이 꽉 찼습니다.' } });
-                state.players.push({ ...data.payload, id: guestId, previousIds: [], isBot: false, isReady: false, hasSubmittedWords: false, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0 } });
+                state.players.push({ ...data.payload, id: guestId, previousIds: [], isBot: false, isReady: false, hasSubmittedWords: false, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0, salt_farm: 0 } });
                 broadcastState();
                 updateRoomUI();
                 renderStage();
@@ -2851,6 +3161,15 @@
                     if (typeof resolveBombChoice === 'function') {
                         const ed = data.payload.extraData || {};
                         resolveBombChoice(ed.bombId, guestId, ed.chosenWire, false);
+                    }
+                } else if (data.payload && data.payload.item === 'salt_progress') {
+                    if (typeof handleSaltProgressOnHost === 'function') {
+                        const ed = data.payload.extraData || {};
+                        handleSaltProgressOnHost(guestId, ed.progress);
+                    }
+                } else if (data.payload && data.payload.item === 'salt_complete') {
+                    if (typeof completeSaltFarmOnHost === 'function') {
+                        completeSaltFarmOnHost(guestId);
                     }
                 } else {
                     executeItem(guestId, data.payload.item, data.payload.index, data.payload.targetId, data.payload.extraData);
@@ -2906,12 +3225,21 @@
                             existing.flyTimeouts = [];
                             existing.flySequenceId = (existing.flySequenceId || 0) + 1;
                         }
+                        const prevSalt = existing.saltFarm;
                         Object.assign(existing, inc);
                         if (!inc.activeBomb) existing.activeBomb = null;
+                        if (!inc.saltFarm) {
+                            existing.saltFarm = null;
+                        } else if (existing.id === state.myId && typeof saltPanActive === 'boolean' && saltPanActive && prevSalt) {
+                            existing.saltFarm.progress = Math.max(prevSalt.progress || 0, inc.saltFarm.progress || 0);
+                            existing.saltFarm.abducting = false;
+                        }
                         return existing;
                     }
                     return inc;
                 });
+                if (typeof syncSaltModalFromState === 'function') syncSaltModalFromState();
+                if (typeof renderSaltProgressHud === 'function') renderSaltProgressHud();
                 if (currentBombModal && !currentBombModal.animating) {
                     const bombTarget = findPlayerById(currentBombModal.targetId);
                     if (!bombTarget || !bombTarget.activeBomb || bombTarget.activeBomb.bombId !== currentBombModal.bombId || bombTarget.status === PlayerState.STATUS.DEAD_BOMB) {
@@ -2961,7 +3289,7 @@
             const { wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds } = options;
             state.room = { status: 'waiting', title: '시뮬레이션 방', wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds };
             updateBodyState();
-            state.players = [{ id: state.myId, name: sanitizeNickname(els.nickname.value.trim(), '게스트'), gender: document.querySelector('input[name="gender"]:checked').value, isBot: false, isReady: true, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0 } }];
+            state.players = [{ id: state.myId, name: sanitizeNickname(els.nickname.value.trim(), '게스트'), gender: document.querySelector('input[name="gender"]:checked').value, isBot: false, isReady: true, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0, salt_farm: 0 } }];
             
             switchView('room-view');
             document.getElementById('guest-controls').classList.add('hidden');
@@ -2980,7 +3308,7 @@
             const botGender = r < 0.33 ? 'M' : (r < 0.66 ? 'F' : 'A');
             state.players.push({
                 id: botId, name: `봇 ${botNum}호`, gender: botGender,
-                isBot: true, isReady: true, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0 }
+                isBot: true, isReady: true, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0, salt_farm: 0 }
             });
             updateRoomUI();
             renderStage();
@@ -3060,6 +3388,10 @@
                     }
                 }
             });
+
+            if (typeof catchUpSaltAbductionsOnResume === 'function') {
+                if (catchUpSaltAbductionsOnResume(now)) stateChanged = true;
+            }
 
             if (state.room.itemEnabled && state.room.nextItemDropTime && now >= state.room.nextItemDropTime) {
                 distributeItems();
@@ -3395,7 +3727,9 @@
             if (p.status === PlayerState.STATUS.DEAD_MISSILE && (p.incomingMissiles || 0) > 0 && wrap.classList.contains('status-idle')) {
                 return;
             }
-            wrap.className = `character-wrapper status-${p.status}`;
+            const wasSaltAbducting = wrap.classList.contains('salt-abducting');
+            const keepSaltAbducting = p.status === PlayerState.STATUS.SALT_FARM && (wasSaltAbducting || (p.saltFarm && p.saltFarm.abducting));
+            wrap.className = `character-wrapper status-${p.status}` + (keepSaltAbducting ? ' salt-abducting' : '');
             if (p.status === PlayerState.STATUS.DEAD_MISSILE) {
                 applyMissileStunPose(p.id, opts.animate !== false, false);
             } else if (PlayerState.isHealthySeated(p) || p.status === PlayerState.STATUS.DEAD_BOMB) {
@@ -3408,75 +3742,113 @@
             }
         }
 
+        function createChairSlotDom(p) {
+            const slot = document.createElement('div');
+            slot.className = 'chair-slot';
+            slot.dataset.playerId = p.id;
+            const showReady = p.isReady && state.room.status === 'waiting';
+            const showReconn = !!p.isDisconnected;
+            slot.innerHTML = `
+                <div class="ready-badge ${showReady ? '' : 'hidden'}" id="ready-${p.id}" style="position:absolute; bottom:5px; left:50%; transform:translateX(-50%); background:var(--accent); color:white; font-size:0.75rem; padding:4px 8px; border-radius:12px; font-weight:bold; white-space:nowrap; z-index:25; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">준비 완료!</div>
+                <div class="reconnect-badge ${showReconn ? '' : 'hidden'}" id="reconn-${p.id}" style="position:absolute; top:-22px; left:50%; transform:translateX(-50%); background:rgba(255,159,67,0.95); color:#fff; font-size:0.7rem; padding:2px 7px; border-radius:10px; font-weight:bold; white-space:nowrap; z-index:30; box-shadow: 0 2px 6px rgba(0,0,0,0.4);">📡 재연결 중...</div>
+                <div class="chair-base" id="chair-${p.id}"><div class="chair-back"></div></div>
+                <div class="character-wrapper status-${p.status}" id="char-wrap-${p.id}">
+                    <div class="speech-bubble" id="bubble-${p.id}"></div>
+                    <div class="badge-count ${p.splashCount > 0 ? '' : 'hidden'}" id="badge-${p.id}">${p.splashCount}</div>
+                    <div class="name-tag" id="name-${p.id}">${p.name}</div>
+                    ${getAvatarSvg(p.gender)}
+                </div>`;
+            return slot;
+        }
+
+        function rebindChairSlotIds(slot, oldId, newId) {
+            if (!slot || !oldId || oldId === newId) return;
+            slot.dataset.playerId = newId;
+            ['ready', 'reconn', 'chair', 'char-wrap', 'bubble', 'badge', 'name'].forEach(prefix => {
+                const el = slot.querySelector(`[id="${prefix}-${oldId}"]`);
+                if (el) el.id = `${prefix}-${newId}`;
+            });
+        }
+
         function renderStage() {
             updateStageGap();
-            
-            // Check if we need a full rebuild (players joined/left)
-            const currentIds = Array.from(els.chairsContainer.querySelectorAll('.chair-slot')).map(slot => slot.dataset.playerId);
-            const newIds = state.players.map(p => p.id);
-            const needsFullRender = currentIds.join(',') !== newIds.join(',');
-            
-            if (needsFullRender) {
-                els.chairsContainer.innerHTML = '';
-                state.players.forEach(p => {
-                    const slot = document.createElement('div');
-                    slot.className = 'chair-slot';
-                    slot.dataset.playerId = p.id;
-                    const showReady = p.isReady && state.room.status === 'waiting';
-                    const showReconn = !!p.isDisconnected;
-                    slot.innerHTML = `
-                        <div class="ready-badge ${showReady ? '' : 'hidden'}" id="ready-${p.id}" style="position:absolute; bottom:5px; left:50%; transform:translateX(-50%); background:var(--accent); color:white; font-size:0.75rem; padding:4px 8px; border-radius:12px; font-weight:bold; white-space:nowrap; z-index:25; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">준비 완료!</div>
-                        <div class="reconnect-badge ${showReconn ? '' : 'hidden'}" id="reconn-${p.id}" style="position:absolute; top:-22px; left:50%; transform:translateX(-50%); background:rgba(255,159,67,0.95); color:#fff; font-size:0.7rem; padding:2px 7px; border-radius:10px; font-weight:bold; white-space:nowrap; z-index:30; box-shadow: 0 2px 6px rgba(0,0,0,0.4);">📡 재연결 중...</div>
-                        <div class="chair-base" id="chair-${p.id}"><div class="chair-back"></div></div>
-                        <div class="character-wrapper status-${p.status}" id="char-wrap-${p.id}">
-                            <div class="speech-bubble" id="bubble-${p.id}"></div>
-                            <div class="badge-count ${p.splashCount > 0 ? '' : 'hidden'}" id="badge-${p.id}">${p.splashCount}</div>
-                            <div class="name-tag" id="name-${p.id}">${p.name}</div>
-                            ${getAvatarSvg(p.gender)}
-                        </div>`;
-                    els.chairsContainer.appendChild(slot);
-                });
-                // A full rebuild creates brand-new elements with no inline styles.
-                // Re-apply status-driven poses here, otherwise a player who is hit
-                // during a rebuild keeps the X_X face but silently loses the flip.
-                state.players.forEach(p => syncPlayerStatusVisual(p, { animate: true }));
-            } else {
-                // Surgical update to PRESERVE inline animations (fixes teleporting during supply drops)
-                state.players.forEach(p => {
-                    const showReady = p.isReady && state.room.status === 'waiting';
-                    const readyBadge = document.getElementById(`ready-${p.id}`);
-                    if (readyBadge) {
-                        if (showReady) readyBadge.classList.remove('hidden');
-                        else readyBadge.classList.add('hidden');
+
+            const existingSlots = Array.from(els.chairsContainer.querySelectorAll('.chair-slot'));
+            const slotById = new Map();
+            existingSlots.forEach(slot => {
+                if (slot.dataset.playerId) slotById.set(slot.dataset.playerId, slot);
+            });
+
+            const keptSlots = new Set();
+            const createdSlots = new Set();
+
+            state.players.forEach((p, idx) => {
+                let slot = slotById.get(p.id);
+                if (!slot && Array.isArray(p.previousIds)) {
+                    for (let k = p.previousIds.length - 1; k >= 0; k--) {
+                        const candidate = slotById.get(p.previousIds[k]);
+                        if (candidate && !keptSlots.has(candidate)) {
+                            slot = candidate;
+                            break;
+                        }
                     }
-                    const reconnBadge = document.getElementById(`reconn-${p.id}`);
-                    if (reconnBadge) {
-                        if (p.isDisconnected) reconnBadge.classList.remove('hidden');
-                        else reconnBadge.classList.add('hidden');
+                }
+
+                if (slot) {
+                    keptSlots.add(slot);
+                    if (slot.dataset.playerId !== p.id) {
+                        rebindChairSlotIds(slot, slot.dataset.playerId, p.id);
                     }
-                    
-                    // Single entry point: keeps the class (X_X eyes) and the pose
-                    // (180° flip) in lockstep for both host and guest clients.
-                    syncPlayerStatusVisual(p);
-                    
-                    const badge = document.getElementById(`badge-${p.id}`);
-                    if (badge) {
-                        badge.textContent = p.splashCount;
-                        if (p.splashCount > 0) badge.classList.remove('hidden');
-                        else badge.classList.add('hidden');
-                    }
-                    
-                    const nameTag = document.getElementById(`name-${p.id}`);
-                    if (nameTag) {
-                        nameTag.textContent = p.name;
-                    }
-                });
-            }
+                } else {
+                    slot = createChairSlotDom(p);
+                    keptSlots.add(slot);
+                    createdSlots.add(slot);
+                }
+
+                // Keep container order synchronized without moving already-ordered nodes (preserves CSS animations)
+                if (els.chairsContainer.children[idx] !== slot) {
+                    els.chairsContainer.insertBefore(slot, els.chairsContainer.children[idx] || null);
+                }
+
+                const showReady = p.isReady && state.room.status === 'waiting';
+                const readyBadge = document.getElementById(`ready-${p.id}`);
+                if (readyBadge) {
+                    if (showReady) readyBadge.classList.remove('hidden');
+                    else readyBadge.classList.add('hidden');
+                }
+                const reconnBadge = document.getElementById(`reconn-${p.id}`);
+                if (reconnBadge) {
+                    if (p.isDisconnected) reconnBadge.classList.remove('hidden');
+                    else reconnBadge.classList.add('hidden');
+                }
+
+                syncPlayerStatusVisual(p, { animate: createdSlots.has(slot) });
+
+                const badge = document.getElementById(`badge-${p.id}`);
+                if (badge) {
+                    badge.textContent = p.splashCount;
+                    if (p.splashCount > 0) badge.classList.remove('hidden');
+                    else badge.classList.add('hidden');
+                }
+
+                const nameTag = document.getElementById(`name-${p.id}`);
+                if (nameTag) {
+                    nameTag.textContent = p.name;
+                }
+            });
+
+            // Remove only slots belonging to players who actually left
+            existingSlots.forEach(slot => {
+                if (!keptSlots.has(slot)) {
+                    slot.remove();
+                }
+            });
 
             // Sync with 3D Stage Engine if active
             if (window.ThreeStageManager) {
                 window.ThreeStageManager.syncPlayers(state.players);
             }
+            if (typeof renderSaltProgressHud === 'function') renderSaltProgressHud();
         }
 
         // --- 2D / 3D View Mode Controller ---
@@ -3960,7 +4332,7 @@
                 return;
             }
             
-            const itemTypes = ['missile', 'shield', 'word_change', 'word_add', 'word_delete', 'call_shark', 'call_gator', 'call_gull', 'bomb_defuse'];
+            const itemTypes = ['missile', 'shield', 'word_change', 'word_add', 'word_delete', 'call_shark', 'call_gator', 'call_gull', 'bomb_defuse', 'salt_farm'];
             state.players.forEach(p => {
                 const randomItem = itemTypes[Math.floor(Math.random() * itemTypes.length)];
                 if (!p.items) p.items = [];
@@ -4046,7 +4418,8 @@
                 'call_shark': '🦈 상어부르기',
                 'call_gator': '🐊 악어부르기',
                 'call_gull': '🦅 부산갈매기부르기',
-                'bomb_defuse': '💣 폭탄해체하기'
+                'bomb_defuse': '💣 폭탄해체하기',
+                'salt_farm': '🧂 염전으로 보내기'
             };
             
             const grouped = {};
@@ -4089,7 +4462,7 @@
                 } else {
                     socket.emit('SEND_TO_HOST', { roomCode, type: 'USE_ITEM', payload: { item, index, targetId: null, extraData: null } });
                 }
-            } else if (item === 'missile' || item === 'word_change') {
+            } else if (item === 'missile' || item === 'word_change' || item === 'salt_farm') {
                 pendingItemUse = { item, index };
                 openTargetModal();
             } else if (item === 'bomb_defuse') {
@@ -4287,6 +4660,8 @@
             document.getElementById('stats-missile').textContent = me.stats.missile || 0;
             const bombStatEl = document.getElementById('stats-bomb');
             if (bombStatEl) bombStatEl.textContent = me.stats.bomb || 0;
+            const saltStatEl = document.getElementById('stats-salt');
+            if (saltStatEl) saltStatEl.textContent = me.stats.salt_farm || 0;
             
             // Word counts
             const countsDiv = document.getElementById('stats-word-counts');
@@ -4317,13 +4692,18 @@
             if (item === 'word_change') {
                 // Word change can target anyone EXCEPT yourself
                 targets = state.players.filter(p => p.id !== state.myId);
+            } else if (item === 'salt_farm') {
+                targets = state.players.filter(p => p.id !== state.myId && PlayerState.canBeTargetedBySaltFarm(p) && !(typeof hasPendingSaltAbduction === 'function' && hasPendingSaltAbduction(p.id)));
             } else {
                 // Missile etc. - Only target those currently healthy and sitting in their chair
                 targets = state.players.filter(p => p.id !== state.myId && PlayerState.canBeTargetedByMissile(p));
             }
             
             if (targets.length === 0) {
-                list.innerHTML = `<span style="color:#aaa; text-align:center; padding: 12px 0;">${item === 'missile' ? '현재 자리에 착석 중인 타깃이 없습니다.' : '타깃이 없습니다.'}</span>`;
+                const emptyText = item === 'missile'
+                    ? '현재 자리에 착석 중인 타깃이 없습니다.'
+                    : (item === 'salt_farm' ? '현재 염전에 보낼 수 있는 타깃이 없습니다.' : '타깃이 없습니다.');
+                list.innerHTML = `<span style="color:#aaa; text-align:center; padding: 12px 0;">${emptyText}</span>`;
             } else {
                 targets.forEach(p => {
                     const btn = document.createElement('button');
@@ -4359,6 +4739,13 @@
                 if (!target || !PlayerState.canBeTargetedByMissile(target)) {
                     pendingItemUse = null;
                     alert('해당 플레이어가 자리에 없어 미사일을 발사할 수 없습니다.');
+                    return;
+                }
+            } else if (item === 'salt_farm') {
+                const target = state.players.find(p => p.id === targetId);
+                if (!target || !PlayerState.canBeTargetedBySaltFarm(target)) {
+                    pendingItemUse = null;
+                    alert('해당 플레이어는 이미 염전 노역 중입니다.');
                     return;
                 }
             }
@@ -4570,6 +4957,18 @@
                     if (targetId === state.myId) renderInventory();
                 }
                 extraData = { ...(extraData || {}), blockedByShield };
+            } else if (item === 'salt_farm') {
+                const target = findPlayerById(targetId);
+                if (!target || target.id === actualSenderId || !PlayerState.canBeTargetedBySaltFarm(target) || (typeof hasPendingSaltAbduction === 'function' && hasPendingSaltAbduction(target.id))) {
+                    const msg = '해당 플레이어는 이미 염전에 끌려가는 중이거나 노역 중입니다.';
+                    if (actualSenderId === state.myId) {
+                        sysChat(msg);
+                    } else if (currentMode === MODE_HOST) {
+                        socket.emit('SEND_TO_GUEST', { guestId: actualSenderId, type: 'EVENT_SYS', payload: { text: msg } });
+                    }
+                    return; // Abort without consuming item!
+                }
+                targetId = target.id;
             } else if (item === 'bomb_defuse') {
                 const safeWire = extraData && extraData.safeWire;
                 if (safeWire !== 'red' && safeWire !== 'blue') return;
@@ -4664,6 +5063,10 @@
                 }
                 extraData = { animal };
                 if (currentMode === MODE_HOST) broadcastState();
+            } else if (item === 'salt_farm') {
+                // Silent item use: consume item cleanly and schedule random abduction within 1 minute with ZERO immediate alert.
+                scheduleSilentSaltAbduction(actualSenderId, targetId);
+                return;
             }
             
             // Broadcast event to trigger animation
@@ -4767,6 +5170,18 @@
         function playItemEvent(senderId, item, targetId, extraData = null) {
             if (item === 'bomb_result' && extraData) {
                 if (typeof handleBombResult === 'function') handleBombResult(extraData);
+                return;
+            }
+            if (item === 'salt_abduct') {
+                if (typeof handleSaltAbductEvent === 'function') handleSaltAbductEvent(targetId, extraData);
+                return;
+            }
+            if (item === 'salt_progress') {
+                if (typeof handleSaltProgressEvent === 'function') handleSaltProgressEvent(targetId, extraData);
+                return;
+            }
+            if (item === 'salt_return') {
+                if (typeof handleSaltReturnEvent === 'function') handleSaltReturnEvent(targetId, extraData);
                 return;
             }
             const sender = findPlayerById(senderId);
@@ -5523,6 +5938,872 @@
                 }
             }
         }
+
+        // ─── Salt Farm Abduction ("염전으로 보내기") System ──────────────────────
+        const pendingSaltAbductions = [];
+        const botSaltHarvestTimers = {};
+        const saltReturnTimers = {};
+        const activeSalt2DOverlays = [];
+
+        function hasPendingSaltAbduction(targetId) {
+            return pendingSaltAbductions.some(entry => entry.targetId === targetId);
+        }
+
+        function cleanupSaltFarmsForPlayer(playerId) {
+            for (let i = pendingSaltAbductions.length - 1; i >= 0; i--) {
+                if (pendingSaltAbductions[i].targetId === playerId) {
+                    clearTimeout(pendingSaltAbductions[i].timerId);
+                    pendingSaltAbductions.splice(i, 1);
+                }
+            }
+            if (botSaltHarvestTimers[playerId]) {
+                clearInterval(botSaltHarvestTimers[playerId]);
+                delete botSaltHarvestTimers[playerId];
+            }
+            if (saltReturnTimers[playerId]) {
+                clearTimeout(saltReturnTimers[playerId]);
+                delete saltReturnTimers[playerId];
+            }
+        }
+
+        function clearAllSaltFarms() {
+            while (pendingSaltAbductions.length > 0) {
+                const entry = pendingSaltAbductions.pop();
+                if (entry.timerId) clearTimeout(entry.timerId);
+            }
+            Object.keys(botSaltHarvestTimers).forEach(k => {
+                clearInterval(botSaltHarvestTimers[k]);
+                delete botSaltHarvestTimers[k];
+            });
+            Object.keys(saltReturnTimers).forEach(k => {
+                clearTimeout(saltReturnTimers[k]);
+                delete saltReturnTimers[k];
+            });
+            while (activeSalt2DOverlays.length > 0) {
+                const el = activeSalt2DOverlays.pop();
+                if (el && el.remove) el.remove();
+            }
+            state.players.forEach(p => {
+                if (p.saltFarm) p.saltFarm = null;
+            });
+            closeSaltFarmMinigame();
+            renderSaltProgressHud();
+        }
+
+        function scheduleSilentSaltAbduction(senderId, targetId) {
+            // Random delay strictly inside 1 minute (5s ~ 53s) with ZERO notification at time of use
+            const minMs = 5000;
+            const maxMs = 53000;
+            const delayMs = minMs + Math.floor(Math.random() * (maxMs - minMs));
+            const id = 'salt-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+            const triggerAt = Date.now() + delayMs;
+            const entry = { id, senderId, targetId, triggerAt, timerId: null };
+            entry.timerId = setTimeout(() => triggerSaltAbductionOnHost(id), delayMs);
+            pendingSaltAbductions.push(entry);
+        }
+
+        function catchUpSaltAbductionsOnResume(now = Date.now()) {
+            let fired = false;
+            for (let i = pendingSaltAbductions.length - 1; i >= 0; i--) {
+                const entry = pendingSaltAbductions[i];
+                if (entry.triggerAt <= now) {
+                    if (entry.timerId) clearTimeout(entry.timerId);
+                    triggerSaltAbductionOnHost(entry.id);
+                    fired = true;
+                }
+            }
+            return fired;
+        }
+
+        function triggerSaltAbductionOnHost(abductionId) {
+            const idx = pendingSaltAbductions.findIndex(e => e.id === abductionId);
+            if (idx === -1) return;
+            const entry = pendingSaltAbductions[idx];
+            if (!state.room || state.room.status !== 'playing') {
+                pendingSaltAbductions.splice(idx, 1);
+                return;
+            }
+            const target = findPlayerById(entry.targetId);
+            if (!target) {
+                pendingSaltAbductions.splice(idx, 1);
+                return;
+            }
+            // Wait quietly until target is healthy seated with no active bomb modal
+            if (!PlayerState.isHealthySeated(target) || target.activeBomb) {
+                entry.timerId = setTimeout(() => triggerSaltAbductionOnHost(abductionId), 1000);
+                return;
+            }
+            pendingSaltAbductions.splice(idx, 1);
+
+            target.flySequenceId = (target.flySequenceId || 0) + 1;
+            if (target.flyTimeouts) { target.flyTimeouts.forEach(clearTimeout); target.flyTimeouts = []; }
+            if (target.reviveTimeout) { clearTimeout(target.reviveTimeout); target.reviveTimeout = null; }
+            target.pendingMissileStunMs = 0;
+            target.penaltyEndTime = null;
+            clearCharacterPose(target.id);
+
+            if (target.stats) target.stats.salt_farm = (target.stats.salt_farm || 0) + 1;
+            target.saltFarm = { abducting: true, returning: false, progress: 0, total: 100, startTime: Date.now() };
+            target.status = PlayerState.STATUS.SALT_FARM;
+
+            const extraData = { startTime: target.saltFarm.startTime };
+            if (currentMode === MODE_HOST) {
+                broadcastState();
+                broadcast({ type: 'EVENT_ITEM', payload: { senderId: entry.senderId, item: 'salt_abduct', targetId: target.id, extraData } });
+            }
+            handleSaltAbductEvent(target.id, extraData);
+        }
+
+        function handleSaltAbductEvent(targetId, extraData = null) {
+            const target = findPlayerById(targetId);
+            if (!target || state.room.status !== 'playing') return;
+
+            target.status = PlayerState.STATUS.SALT_FARM;
+            if (!target.saltFarm) {
+                target.saltFarm = { abducting: true, returning: false, progress: 0, total: 100, startTime: (extraData && extraData.startTime) || Date.now() };
+            } else {
+                target.saltFarm.abducting = true;
+                target.saltFarm.returning = false;
+            }
+
+            playSaltAbductSound();
+            sysChat(`🕶️ 갑자기 복면 쓴 두 명이 저 멀리서 밧줄과 까만 비닐봉다리를 들고 나타나 ${target.name}님을 납치해 배를 타고 염전 섬으로 데려갑니다!`);
+            renderSaltProgressHud();
+            updateChatUI();
+
+            const wrap = document.getElementById(`char-wrap-${target.id}`);
+            if (wrap) {
+                wrap.className = `character-wrapper status-${PlayerState.STATUS.SALT_FARM} salt-abducting`;
+            }
+
+            const onArrived = () => {
+                const liveTarget = findPlayerById(target.id);
+                if (!liveTarget || state.room.status !== 'playing') return;
+                if (liveTarget.saltFarm) liveTarget.saltFarm.abducting = false;
+                const liveWrap = document.getElementById(`char-wrap-${liveTarget.id}`);
+                if (liveWrap) liveWrap.classList.remove('salt-abducting');
+                renderSaltProgressHud();
+
+                if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
+                    if (currentMode === MODE_HOST) broadcastState();
+                    if (liveTarget.isBot) startBotSaltHarvest(liveTarget.id);
+                    else handleBotSaltReaction(liveTarget.id, 'abduct');
+                }
+                if (liveTarget.id === state.myId) {
+                    openSaltFarmMinigame();
+                }
+            };
+
+            if (currentViewMode === '3D' && window.ThreeStageManager && window.ThreeStageManager.isInitialized()) {
+                window.ThreeStageManager.triggerSaltAbduction(target.id, onArrived);
+            } else {
+                createSaltAbduction2D(target.id, onArrived);
+            }
+        }
+
+        function startBotSaltHarvest(botId) {
+            if (botSaltHarvestTimers[botId]) clearInterval(botSaltHarvestTimers[botId]);
+            botSaltHarvestTimers[botId] = setInterval(() => {
+                if (!state.room || state.room.status !== 'playing') {
+                    clearInterval(botSaltHarvestTimers[botId]);
+                    delete botSaltHarvestTimers[botId];
+                    return;
+                }
+                const bot = findPlayerById(botId);
+                if (!bot || !bot.saltFarm || bot.saltFarm.returning) {
+                    clearInterval(botSaltHarvestTimers[botId]);
+                    delete botSaltHarvestTimers[botId];
+                    return;
+                }
+                const nextPct = Math.min(100, (bot.saltFarm.progress || 0) + 12 + Math.floor(Math.random() * 10));
+                handleSaltProgressOnHost(bot.id, nextPct);
+                if (nextPct >= 100) {
+                    clearInterval(botSaltHarvestTimers[botId]);
+                    delete botSaltHarvestTimers[botId];
+                    completeSaltFarmOnHost(bot.id);
+                }
+            }, 650);
+        }
+
+        function handleSaltProgressOnHost(playerId, progress) {
+            const p = findPlayerById(playerId);
+            if (!p || !p.saltFarm || state.room.status !== 'playing') return;
+            const pct = Math.max(p.saltFarm.progress || 0, Math.min(100, Math.round(Number(progress) || 0)));
+            p.saltFarm.progress = pct;
+            if (currentMode === MODE_HOST) {
+                broadcast({ type: 'EVENT_ITEM', payload: { senderId: p.id, item: 'salt_progress', targetId: p.id, extraData: { progress: pct } } });
+                broadcastState();
+            }
+            handleSaltProgressEvent(p.id, { progress: pct });
+        }
+
+        function handleSaltProgressEvent(targetId, extraData = null) {
+            const p = findPlayerById(targetId);
+            if (!p || !p.saltFarm) return;
+            if (extraData && typeof extraData.progress === 'number') {
+                p.saltFarm.progress = Math.max(0, Math.min(100, Math.round(extraData.progress)));
+            }
+            renderSaltProgressHud();
+        }
+
+        function completeSaltFarmOnHost(playerId) {
+            const p = findPlayerById(playerId);
+            if (!p || !p.saltFarm || p.saltFarm.returning || state.room.status !== 'playing') return;
+            p.saltFarm.progress = 100;
+            p.saltFarm.abducting = false;
+            p.saltFarm.returning = true;
+            if (botSaltHarvestTimers[p.id]) {
+                clearInterval(botSaltHarvestTimers[p.id]);
+                delete botSaltHarvestTimers[p.id];
+            }
+            if (currentMode === MODE_HOST) {
+                broadcastState();
+                broadcast({ type: 'EVENT_ITEM', payload: { senderId: p.id, item: 'salt_return', targetId: p.id, extraData: {} } });
+            }
+            handleSaltReturnEvent(p.id, {});
+
+            if (saltReturnTimers[p.id]) clearTimeout(saltReturnTimers[p.id]);
+            saltReturnTimers[p.id] = setTimeout(() => {
+                delete saltReturnTimers[p.id];
+                const live = findPlayerById(p.id);
+                if (!live || state.room.status !== 'playing') return;
+                live.saltFarm = null;
+                clearCharacterPose(live.id);
+                if (currentMode === MODE_HOST) {
+                    broadcast({ type: 'EVENT_SYS', payload: { text: `⛵ ${live.name}님이 소금 100% 채취를 마치고 배를 타고 자리로 복귀했습니다!` } });
+                }
+                sysChat(`⛵ ${live.name}님이 소금 100% 채취를 마치고 배를 타고 자리로 복귀했습니다!`);
+                updateStatus(live.id, PlayerState.STATUS.IDLE);
+                renderSaltProgressHud();
+                handleBotSaltReaction(live.id, 'return');
+            }, 2700);
+        }
+
+        function handleSaltReturnEvent(targetId) {
+            const target = findPlayerById(targetId);
+            if (!target) return;
+            if (target.saltFarm) {
+                target.saltFarm.progress = 100;
+                target.saltFarm.abducting = false;
+                target.saltFarm.returning = true;
+            }
+            if (target.id === state.myId) {
+                closeSaltFarmMinigame();
+            }
+            renderSaltProgressHud();
+            const onReturned = () => {
+                const live = findPlayerById(target.id);
+                if (!live) return;
+                if (currentMode === MODE_GUEST && live.status === PlayerState.STATUS.IDLE) {
+                    syncPlayerStatusVisual(live);
+                }
+            };
+            if (currentViewMode === '3D' && window.ThreeStageManager && window.ThreeStageManager.isInitialized()) {
+                window.ThreeStageManager.triggerSaltReturn(target.id, onReturned);
+            } else {
+                createSaltReturn2D(target.id, onReturned);
+            }
+        }
+
+        function handleBotSaltReaction(targetId, phase) {
+            const victim = findPlayerById(targetId);
+            if (!victim) return;
+            if (phase === 'return' && victim.isBot) {
+                setTimeout(() => {
+                    if (state.room.status === 'playing' && PlayerState.isHealthySeated(victim)) {
+                        sendChat(victim.id, '아이고 허리야... 염전에서 소금 긁다가 땀 다 뺐네 🧂ㅋㅋ');
+                    }
+                }, 600);
+                return;
+            }
+            const idleBots = state.players.filter(p => p.isBot && p.id !== victim.id && PlayerState.isHealthySeated(p));
+            if (idleBots.length > 0 && Math.random() < 0.75) {
+                const bot = idleBots[Math.floor(Math.random() * idleBots.length)];
+                const msg = phase === 'abduct'
+                    ? `헐?! 복면 쓴 두 명이 ${victim.name}님한테 검은 봉다리 씌워서 염전 섬으로 데려갔다 ㄷㄷ`
+                    : `어 ${victim.name}님 염전 탈출해서 배 타고 살아 돌아오셨네요 ⛵ㅋㅋ`;
+                setTimeout(() => {
+                    if (state.room.status === 'playing' && PlayerState.isHealthySeated(bot)) {
+                        sendChat(bot.id, msg);
+                    }
+                }, 800);
+            }
+        }
+
+        function renderSaltProgressHud() {
+            const hud = document.getElementById('salt-progress-hud');
+            if (!hud) return;
+            if (!state.room || state.room.status !== 'playing') {
+                hud.innerHTML = '';
+                hud.classList.add('hidden');
+                return;
+            }
+            const active = state.players.filter(p => PlayerState.isAtSaltFarm(p) || p.saltFarm);
+            if (active.length === 0) {
+                hud.innerHTML = '';
+                hud.classList.add('hidden');
+                return;
+            }
+            hud.classList.remove('hidden');
+            hud.innerHTML = '';
+            active.forEach(p => {
+                const sf = p.saltFarm || { progress: 0 };
+                const pct = Math.max(0, Math.min(100, Math.round(sf.progress || 0)));
+                const statusTag = sf.returning ? '⛵ 복귀중' : (sf.abducting ? '🕶️ 이송중' : '🧂 채취중');
+                const card = document.createElement('div');
+                card.className = 'salt-hud-card';
+                card.dataset.playerId = p.id;
+                card.innerHTML = `
+                    <div class="salt-hud-row">
+                        <span class="salt-hud-name">🧂 ${escapeHtmlText(p.name)}</span>
+                        <span class="salt-hud-pct">${statusTag} ${pct}%</span>
+                    </div>
+                    <div class="salt-hud-bar-bg">
+                        <div class="salt-hud-bar-fill" style="width:${pct}%;"></div>
+                    </div>
+                `;
+                hud.appendChild(card);
+            });
+        }
+
+        function escapeHtmlText(str) {
+            return String(str || '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
+        }
+
+        // ─── 2D Masked Duo, Bag, Rope & Boat Abduction / Return ────────────────
+        function buildMaskedAbductor2DSvg(propType) {
+            const propSvg = propType === 'bag'
+                ? `<g transform="translate(2,28)"><ellipse cx="9" cy="12" rx="8" ry="10" fill="#0d0e14" stroke="#334155" stroke-width="1.2"/><path d="M5,4 C5,-1 13,-1 13,4" fill="none" stroke="#1e293b" stroke-width="2"/></g>`
+                : `<g transform="translate(2,28)"><ellipse cx="9" cy="9" rx="7" ry="3.5" fill="none" stroke="#d4a373" stroke-width="3"/><ellipse cx="9" cy="13" rx="7" ry="3.5" fill="none" stroke="#c68b59" stroke-width="3"/></g>`;
+            return `<svg viewBox="0 0 48 64" width="44" height="58" style="overflow:visible;">
+                <g>
+                    <rect x="14" y="42" width="7" height="17" rx="3" fill="#18181b"/>
+                    <rect x="27" y="42" width="7" height="17" rx="3" fill="#18181b"/>
+                    <rect x="11" y="24" width="26" height="21" rx="6" fill="#27272a"/>
+                    <circle cx="24" cy="14" r="11" fill="#09090b"/>
+                    <rect x="16" y="10" width="16" height="6" rx="2.5" fill="#f1c27d"/>
+                    <circle cx="20" cy="13" r="1.6" fill="#111"/>
+                    <circle cx="28" cy="13" r="1.6" fill="#111"/>
+                    <path d="M11,28 L3,33" stroke="#27272a" stroke-width="5" stroke-linecap="round"/>
+                    <path d="M37,28 L43,34" stroke="#27272a" stroke-width="5" stroke-linecap="round"/>
+                    ${propSvg}
+                </g>
+            </svg>`;
+        }
+
+        function buildBoat2DSvg(hasCaptive) {
+            return `<svg viewBox="0 0 90 42" width="84" height="38" style="overflow:visible;">
+                ${hasCaptive ? '<circle cx="45" cy="12" r="10" fill="#111218"/><rect x="38" y="20" width="14" height="10" fill="#c68b59" rx="2"/>' : '<circle cx="52" cy="15" r="5" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>'}
+                <path d="M6,22 L84,22 L72,37 L18,37 Z" fill="#8d5524" stroke="#4b2c16" stroke-width="2.5"/>
+                <line x1="22" y1="22" x2="68" y2="22" stroke="#c9965c" stroke-width="3"/>
+            </svg>`;
+        }
+
+        function registerSaltOverlay(el) {
+            if (el) activeSalt2DOverlays.push(el);
+            return el;
+        }
+
+        function unregisterSaltOverlay(el) {
+            if (!el) return;
+            const idx = activeSalt2DOverlays.indexOf(el);
+            if (idx !== -1) activeSalt2DOverlays.splice(idx, 1);
+            el.remove();
+        }
+
+        function createSaltAbduction2D(targetId, onArrived) {
+            const stage = document.getElementById('stage');
+            const wrap = document.getElementById(`char-wrap-${targetId}`);
+            const island = document.getElementById('salt-island-2d');
+            if (!stage || !wrap || currentViewMode === '3D') {
+                setTimeout(() => { if (onArrived) onArrived(); }, 4600);
+                return;
+            }
+            const sRect = stage.getBoundingClientRect();
+            const wRect = wrap.getBoundingClientRect();
+            const iRect = island ? island.getBoundingClientRect() : { left: sRect.left + sRect.width / 2, top: sRect.top + 30, width: 60, height: 30 };
+
+            const targetX = wRect.left - sRect.left + wRect.width / 2;
+            const targetY = wRect.top - sRect.top + 10;
+            const shoreY = Math.max(70, (sRect.height * 0.42));
+            const islandX = iRect.left - sRect.left + iRect.width / 2;
+            const islandY = iRect.top - sRect.top + iRect.height * 0.6;
+            const spawnX = targetX > sRect.width / 2 ? -55 : sRect.width + 55;
+
+            const abdA = registerSaltOverlay(document.createElement('div'));
+            abdA.style.cssText = `position:absolute; left:${spawnX}px; top:${targetY}px; z-index:48; pointer-events:none; transform:translate(-50%, 0); transition: left 1.3s cubic-bezier(0.22,1,0.36,1), top 0.95s ease-in-out;`;
+            abdA.innerHTML = buildMaskedAbductor2DSvg('bag');
+
+            const abdB = registerSaltOverlay(document.createElement('div'));
+            abdB.style.cssText = `position:absolute; left:${spawnX}px; top:${targetY + 6}px; z-index:48; pointer-events:none; transform:translate(-50%, 0); transition: left 1.35s cubic-bezier(0.22,1,0.36,1), top 0.95s ease-in-out;`;
+            abdB.innerHTML = buildMaskedAbductor2DSvg('rope');
+
+            const boat = registerSaltOverlay(document.createElement('div'));
+            boat.className = 'salt-boat-2d';
+            boat.style.left = `${targetX}px`;
+            boat.style.top = `${shoreY}px`;
+            boat.innerHTML = buildBoat2DSvg(false);
+
+            stage.appendChild(boat);
+            stage.appendChild(abdA);
+            stage.appendChild(abdB);
+
+            let hoodEl = null;
+            let ropeEl = null;
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    abdA.style.left = `${targetX - 30}px`;
+                    abdB.style.left = `${targetX + 30}px`;
+                });
+            });
+
+            // Phase 2: Bag over head & rope wrap (1.35s)
+            setTimeout(() => {
+                if (state.room.status !== 'playing') return;
+                hoodEl = registerSaltOverlay(document.createElement('div'));
+                hoodEl.className = 'salt-hood-2d';
+                wrap.appendChild(hoodEl);
+                setTimeout(() => {
+                    if (state.room.status !== 'playing') return;
+                    ropeEl = registerSaltOverlay(document.createElement('div'));
+                    ropeEl.className = 'salt-rope-2d';
+                    wrap.appendChild(ropeEl);
+                }, 380);
+            }, 1350);
+
+            // Phase 3: Drag victim down into boat (2.35s)
+            setTimeout(() => {
+                if (state.room.status !== 'playing') return;
+                const dy = shoreY - targetY - 12;
+                wrap.style.transition = 'transform 0.9s ease-in, opacity 0.2s';
+                wrap.style.transform = `translateY(${dy}px) scale(0.72)`;
+                abdA.style.transition = 'left 0.9s ease-in, top 0.9s ease-in, opacity 0.2s';
+                abdB.style.transition = 'left 0.9s ease-in, top 0.9s ease-in, opacity 0.2s';
+                abdA.style.top = `${shoreY - 22}px`;
+                abdB.style.top = `${shoreY - 22}px`;
+            }, 2350);
+
+            // Phase 4: Board boat & sail toward the distant back island (3.25s)
+            setTimeout(() => {
+                if (state.room.status !== 'playing') return;
+                unregisterSaltOverlay(hoodEl);
+                unregisterSaltOverlay(ropeEl);
+                unregisterSaltOverlay(abdA);
+                unregisterSaltOverlay(abdB);
+                wrap.style.opacity = '0';
+                boat.innerHTML = buildBoat2DSvg(true);
+                boat.style.transition = 'left 1.55s ease-in-out, top 1.55s ease-in-out, transform 1.55s ease-in-out, opacity 0.3s ease-out';
+                requestAnimationFrame(() => {
+                    boat.style.left = `${islandX}px`;
+                    boat.style.top = `${islandY}px`;
+                    boat.style.transform = 'translate(-50%, -50%) scale(0.32)';
+                });
+            }, 3250);
+
+            setTimeout(() => {
+                unregisterSaltOverlay(hoodEl);
+                unregisterSaltOverlay(ropeEl);
+                unregisterSaltOverlay(abdA);
+                unregisterSaltOverlay(abdB);
+                unregisterSaltOverlay(boat);
+                wrap.style.transition = '';
+                wrap.style.transform = 'none';
+                if (onArrived) onArrived();
+            }, 4850);
+        }
+
+        function createSaltReturn2D(targetId, onReturned) {
+            const stage = document.getElementById('stage');
+            const wrap = document.getElementById(`char-wrap-${targetId}`);
+            const island = document.getElementById('salt-island-2d');
+            if (!stage || !wrap || currentViewMode === '3D') {
+                setTimeout(() => { if (onReturned) onReturned(); }, 2300);
+                return;
+            }
+            const sRect = stage.getBoundingClientRect();
+            const wRect = wrap.getBoundingClientRect();
+            const iRect = island ? island.getBoundingClientRect() : { left: sRect.left + sRect.width / 2, top: sRect.top + 30, width: 60, height: 30 };
+
+            const targetX = wRect.left - sRect.left + wRect.width / 2;
+            const targetY = wRect.top - sRect.top + 10;
+            const shoreY = Math.max(70, (sRect.height * 0.42));
+            const islandX = iRect.left - sRect.left + iRect.width / 2;
+            const islandY = iRect.top - sRect.top + iRect.height * 0.6;
+
+            const boat = registerSaltOverlay(document.createElement('div'));
+            boat.className = 'salt-boat-2d';
+            boat.style.left = `${islandX}px`;
+            boat.style.top = `${islandY}px`;
+            boat.style.transform = 'translate(-50%, -50%) scale(0.32)';
+            boat.innerHTML = buildBoat2DSvg(false);
+            stage.appendChild(boat);
+
+            requestAnimationFrame(() => {
+                boat.style.transition = 'left 1.7s ease-out, top 1.7s ease-out, transform 1.7s ease-out';
+                boat.style.left = `${targetX}px`;
+                boat.style.top = `${shoreY}px`;
+                boat.style.transform = 'translate(-50%, -50%) scale(1)';
+            });
+
+            setTimeout(() => {
+                if (wrap) {
+                    const dy = shoreY - targetY - 12;
+                    wrap.style.transition = 'none';
+                    wrap.style.transform = `translateY(${dy}px) scale(0.78)`;
+                    wrap.style.opacity = '1';
+                    requestAnimationFrame(() => {
+                        wrap.style.transition = 'transform 0.65s cubic-bezier(0.22,1,0.36,1)';
+                        wrap.style.transform = 'none';
+                    });
+                }
+            }, 1750);
+
+            setTimeout(() => {
+                unregisterSaltOverlay(boat);
+                if (wrap) {
+                    wrap.style.transition = '';
+                    wrap.style.transform = 'none';
+                    wrap.style.opacity = '1';
+                }
+                if (onReturned) onReturned();
+            }, 2500);
+        }
+
+        // ─── Salt Farm Interactive Canvas Drag Minigame ───────────────────────
+        const SALT_COLS = 14;
+        const SALT_ROWS = 8;
+        let saltHarvestGrid = [];
+        let saltPanActive = false;
+        let saltPanCompleted = false;
+        let saltIsDragging = false;
+        let saltLastPoint = null;
+        let saltRakePoint = null;
+        let saltCrystalParticles = [];
+        let saltLastSyncedPct = -1;
+        let saltLastSyncAt = 0;
+        let saltAnimRaf = null;
+        let saltHandlersBound = false;
+
+        function initSaltHarvestGrid() {
+            saltHarvestGrid = [];
+            for (let r = 0; r < SALT_ROWS; r++) {
+                for (let c = 0; c < SALT_COLS; c++) {
+                    saltHarvestGrid.push({
+                        r, c,
+                        collected: false,
+                        jitterX: (Math.random() - 0.5) * 8,
+                        jitterY: (Math.random() - 0.5) * 6,
+                        size: 0.85 + Math.random() * 0.45
+                    });
+                }
+            }
+        }
+
+        function computeSaltHarvestPercent() {
+            if (!saltHarvestGrid.length) return 0;
+            const count = saltHarvestGrid.reduce((acc, cell) => acc + (cell.collected ? 1 : 0), 0);
+            const raw = count / saltHarvestGrid.length;
+            if (raw >= 0.94) return 100;
+            return Math.min(99, Math.round((raw / 0.94) * 99));
+        }
+
+        function drawSaltPanCanvas() {
+            const canvas = document.getElementById('salt-pan-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+            const pct = saltPanCompleted ? 100 : computeSaltHarvestPercent();
+
+            const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+            bgGrad.addColorStop(0, '#1e3a5f');
+            bgGrad.addColorStop(0.55, '#1d4ed8');
+            bgGrad.addColorStop(1, '#1e3a8a');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, w, h);
+
+            ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+            ctx.lineWidth = 1;
+            const tileW = w / SALT_COLS;
+            const tileH = (h - 24) / SALT_ROWS;
+            for (let c = 1; c < SALT_COLS; c++) {
+                ctx.beginPath(); ctx.moveTo(c * tileW, 0); ctx.lineTo(c * tileW, h); ctx.stroke();
+            }
+            for (let r = 1; r < SALT_ROWS; r++) {
+                ctx.beginPath(); ctx.moveTo(0, r * tileH); ctx.lineTo(w, r * tileH); ctx.stroke();
+            }
+
+            for (let i = 0; i < saltHarvestGrid.length; i++) {
+                const cell = saltHarvestGrid[i];
+                const cx = (cell.c + 0.5) * tileW + cell.jitterX;
+                const cy = (cell.r + 0.5) * tileH + cell.jitterY;
+                if (cell.collected) {
+                    ctx.fillStyle = 'rgba(56, 189, 248, 0.14)';
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, tileW * 0.34, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    const rad = Math.min(tileW, tileH) * 0.42 * cell.size;
+                    ctx.fillStyle = '#e2e8f0';
+                    ctx.beginPath();
+                    ctx.arc(cx + 1.5, cy + 2, rad, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#bae6fd';
+                    ctx.fillRect(cx - rad * 0.35, cy - rad * 0.35, 3, 3);
+                }
+            }
+
+            const heapScale = 0.25 + (pct / 100) * 1.15;
+            ctx.save();
+            ctx.translate(w - 42, h - 8);
+            ctx.fillStyle = '#cbd5e1';
+            ctx.beginPath();
+            ctx.moveTo(-34 * heapScale, 0);
+            ctx.quadraticCurveTo(0, -36 * heapScale, 34 * heapScale, 0);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(-30 * heapScale, 0);
+            ctx.quadraticCurveTo(-4 * heapScale, -32 * heapScale, 28 * heapScale, 0);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+
+            for (let i = saltCrystalParticles.length - 1; i >= 0; i--) {
+                const pt = saltCrystalParticles[i];
+                pt.x += pt.vx;
+                pt.y += pt.vy;
+                pt.vy += 0.18;
+                pt.life -= 0.05;
+                if (pt.life <= 0) {
+                    saltCrystalParticles.splice(i, 1);
+                    continue;
+                }
+                ctx.fillStyle = `rgba(255,255,255,${pt.life})`;
+                ctx.fillRect(pt.x, pt.y, 4, 4);
+            }
+
+            if (saltRakePoint && !saltPanCompleted) {
+                const rx = saltRakePoint.x;
+                const ry = saltRakePoint.y;
+                ctx.save();
+                ctx.translate(rx, ry);
+                ctx.strokeStyle = '#92400e';
+                ctx.lineWidth = 4;
+                ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(24, -26); ctx.stroke();
+                ctx.fillStyle = '#d97706';
+                ctx.fillRect(-18, -4, 36, 8);
+                ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.arc(0, 0, 26, 0, Math.PI * 2); ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        function saltScrapeSegment(p0, p1) {
+            const canvas = document.getElementById('salt-pan-canvas');
+            if (!canvas || !saltPanActive || saltPanCompleted) return;
+            const tileW = canvas.width / SALT_COLS;
+            const tileH = (canvas.height - 24) / SALT_ROWS;
+            const brushR = Math.max(tileW, tileH) * 1.15;
+            const dist = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+            const steps = Math.max(1, Math.ceil(dist / 10));
+            let scrapedAny = false;
+
+            for (let s = 0; s <= steps; s++) {
+                const t = s / steps;
+                const sx = p0.x + (p1.x - p0.x) * t;
+                const sy = p0.y + (p1.y - p0.y) * t;
+                for (let i = 0; i < saltHarvestGrid.length; i++) {
+                    const cell = saltHarvestGrid[i];
+                    if (cell.collected) continue;
+                    const cx = (cell.c + 0.5) * tileW;
+                    const cy = (cell.r + 0.5) * tileH;
+                    if (Math.hypot(cx - sx, cy - sy) <= brushR) {
+                        cell.collected = true;
+                        scrapedAny = true;
+                        if (saltCrystalParticles.length < 48) {
+                            saltCrystalParticles.push({
+                                x: cx,
+                                y: cy,
+                                vx: 2.2 + Math.random() * 2.5,
+                                vy: -2.0 - Math.random() * 2.2,
+                                life: 1.0
+                            });
+                        }
+                    }
+                }
+            }
+
+            if (scrapedAny) {
+                playSaltScrapeSound();
+                const pct = computeSaltHarvestPercent();
+                updateSaltModalProgressUI(pct);
+                syncSaltHarvestProgress(pct);
+            }
+        }
+
+        function updateSaltModalProgressUI(pct) {
+            const pctEl = document.getElementById('salt-modal-pct');
+            const fillEl = document.getElementById('salt-modal-progress-fill');
+            if (pctEl) pctEl.textContent = `${pct}%`;
+            if (fillEl) fillEl.style.width = `${pct}%`;
+
+            const me = findPlayerById(state.myId);
+            if (me && me.saltFarm) {
+                me.saltFarm.progress = pct;
+                renderSaltProgressHud();
+            }
+        }
+
+        function syncSaltHarvestProgress(pct) {
+            const now = Date.now();
+            if (pct >= 100) {
+                if (saltPanCompleted) return;
+                saltPanCompleted = true;
+                saltIsDragging = false;
+                playSaltCompleteSound();
+                const hintEl = document.getElementById('salt-modal-hint');
+                if (hintEl) {
+                    hintEl.style.color = '#4ade80';
+                    hintEl.textContent = '⛵ 소금 100% 채취 완료! 배를 타고 자리로 복귀합니다...';
+                }
+                if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
+                    completeSaltFarmOnHost(state.myId);
+                } else if (socket && socket.connected) {
+                    socket.emit('SEND_TO_HOST', { roomCode, type: 'USE_ITEM', payload: { item: 'salt_complete', index: -1, targetId: state.myId, extraData: {} } });
+                }
+                setTimeout(() => closeSaltFarmMinigame(), 650);
+                return;
+            }
+            if (pct > saltLastSyncedPct && (now - saltLastSyncAt >= 180 || pct - saltLastSyncedPct >= 6)) {
+                saltLastSyncedPct = pct;
+                saltLastSyncAt = now;
+                if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
+                    handleSaltProgressOnHost(state.myId, pct);
+                } else if (socket && socket.connected) {
+                    socket.emit('SEND_TO_HOST', { roomCode, type: 'USE_ITEM', payload: { item: 'salt_progress', index: -1, targetId: state.myId, extraData: { progress: pct } } });
+                }
+            }
+        }
+
+        function getCanvasPoint(canvas, clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
+            const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
+            return {
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY
+            };
+        }
+
+        function bindSaltCanvasEvents() {
+            if (saltHandlersBound) return;
+            const canvas = document.getElementById('salt-pan-canvas');
+            if (!canvas) return;
+            saltHandlersBound = true;
+
+            const startDrag = (clientX, clientY) => {
+                if (!saltPanActive || saltPanCompleted) return;
+                const pt = getCanvasPoint(canvas, clientX, clientY);
+                saltIsDragging = true;
+                saltLastPoint = pt;
+                saltRakePoint = pt;
+            };
+            const moveDrag = (clientX, clientY) => {
+                if (!saltPanActive || saltPanCompleted) return;
+                const pt = getCanvasPoint(canvas, clientX, clientY);
+                saltRakePoint = pt;
+                if (!saltIsDragging) return;
+                if (saltLastPoint && (Math.abs(pt.x - saltLastPoint.x) + Math.abs(pt.y - saltLastPoint.y)) >= 2) {
+                    saltScrapeSegment(saltLastPoint, pt);
+                    saltLastPoint = pt;
+                }
+            };
+            const endDrag = () => {
+                saltIsDragging = false;
+                saltLastPoint = null;
+            };
+
+            canvas.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
+                if (canvas.setPointerCapture) {
+                    try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+                }
+                startDrag(e.clientX, e.clientY);
+            });
+            canvas.addEventListener('pointermove', (e) => {
+                moveDrag(e.clientX, e.clientY);
+            });
+            canvas.addEventListener('pointerup', endDrag);
+            canvas.addEventListener('pointercancel', endDrag);
+            canvas.addEventListener('pointerleave', () => { saltRakePoint = null; endDrag(); });
+        }
+
+        function startSaltAnimLoop() {
+            if (saltAnimRaf) cancelAnimationFrame(saltAnimRaf);
+            const loop = () => {
+                if (!saltPanActive) return;
+                drawSaltPanCanvas();
+                saltAnimRaf = requestAnimationFrame(loop);
+            };
+            saltAnimRaf = requestAnimationFrame(loop);
+        }
+
+        function openSaltFarmMinigame() {
+            const modal = document.getElementById('modal-salt-farm');
+            if (!modal) return;
+            bindSaltCanvasEvents();
+            saltPanActive = true;
+            saltPanCompleted = false;
+            saltIsDragging = false;
+            saltLastPoint = null;
+            saltRakePoint = null;
+            saltCrystalParticles = [];
+            saltLastSyncedPct = -1;
+            saltLastSyncAt = 0;
+            initSaltHarvestGrid();
+            const hintEl = document.getElementById('salt-modal-hint');
+            if (hintEl) {
+                hintEl.style.color = '#94a3b8';
+                hintEl.textContent = '👆 위 염전 위를 좌우로 문질러(드래그) 소금을 긁어 모으세요!';
+            }
+            updateSaltModalProgressUI(0);
+            modal.classList.remove('hidden');
+            drawSaltPanCanvas();
+            startSaltAnimLoop();
+        }
+
+        function closeSaltFarmMinigame() {
+            saltPanActive = false;
+            saltIsDragging = false;
+            saltLastPoint = null;
+            if (saltAnimRaf) {
+                cancelAnimationFrame(saltAnimRaf);
+                saltAnimRaf = null;
+            }
+            const modal = document.getElementById('modal-salt-farm');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function syncSaltModalFromState() {
+            const me = findPlayerById(state.myId);
+            const activeFarm = !!(me && PlayerState.isAtSaltFarm(me) && me.saltFarm && !me.saltFarm.returning);
+            if (!activeFarm && saltPanActive) {
+                closeSaltFarmMinigame();
+            } else if (activeFarm && !saltPanActive && !saltPanCompleted && (!me.saltFarm.abducting || (Date.now() - (me.saltFarm.startTime || 0) > 6000))) {
+                openSaltFarmMinigame();
+            }
+        }
+        // ────────────────────────────────────────────────────────────────────────
 
         // ─── Roaming Waiting Animals System (Single Source of Truth) ─────────
         function getWaitingAnimalsSkyLayer() {
@@ -6430,7 +7711,7 @@
             const afkMs = (state.room.afkSeconds || 60) * 1000;
             const now = Date.now();
             state.players.forEach(p => {
-                if (!p.isBot && PlayerState.isHealthySeated(p) && (now - p.lastChatTime > afkMs)) {
+                if (!p.isBot && !p.isDisconnected && PlayerState.isHealthySeated(p) && (now - p.lastChatTime > afkMs)) {
                     p.lastChatTime = now;
                     triggerRandomFly(p.id, `[${state.room.afkSeconds || 60}초 침묵]`);
                 }
@@ -6715,6 +7996,9 @@
                     els.chatInput.placeholder = `🚀 미사일에 격추되어 기절 중...${remainText}`;
                 } else if (me.status === PlayerState.STATUS.DEAD_BOMB) {
                     els.chatInput.placeholder = `💣 폭탄에 맞아 그을려 말할 수 없습니다...${remainText}`;
+                } else if (PlayerState.isAtSaltFarm(me)) {
+                    const pct = (me.saltFarm && typeof me.saltFarm.progress === 'number') ? me.saltFarm.progress : 0;
+                    els.chatInput.placeholder = `🧂 염전에서 소금을 채취해야 복귀할 수 있습니다 (${pct}%)`;
                 }
             } else if (PlayerState.isAway(me)) {
                 els.chatInput.disabled = true; els.chatSend.disabled = true;
@@ -6735,6 +8019,7 @@
             } else {
                 itemTimerEl.classList.add('hidden');
             }
+            if (typeof renderSaltProgressHud === 'function') renderSaltProgressHud();
         }
 
         function updateStatus(id, newStatus) {

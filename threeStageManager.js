@@ -31,6 +31,7 @@
     let gullEntity = null;
     const activeParticles = [];
     const activeMissiles = [];
+    const activeSaltAnims = [];
     let sharedSmokeGeo = null;
     let sharedEmberGeo = null;
     let sharedSparkGeo = null;
@@ -42,7 +43,11 @@
     let isDragging = false;
     let prevMouseX = 0, prevMouseY = 0;
     const DEFAULT_PHI = Math.PI / 2.34; // ~77 deg from zenith -> frames chairs, shoreline, sea, islands, clouds & sky
+    const BASE_FOV = 50;
     let baseRadius = 24;
+    let baselineW = 0;
+    let baselineH = 0;
+    let userHasZoomed = false;
     let spherical = { radius: 24, theta: 0, phi: DEFAULT_PHI };
     let targetSpherical = { radius: 24, theta: 0, phi: DEFAULT_PHI };
     let currentLookAt = { x: 0, y: 2.9, z: 0.8 };
@@ -102,9 +107,14 @@
         scene.background = new THREE.Color(0x87ceeb);
         scene.fog = new THREE.FogExp2(0xb8e6ff, 0.0042);
 
-        const w = containerEl.clientWidth || (containerEl.parentElement ? containerEl.parentElement.clientWidth : 800) || 800;
-        const h = containerEl.clientHeight || (containerEl.parentElement ? containerEl.parentElement.clientHeight : 500) || 500;
+        const rawW = containerEl.clientWidth || (containerEl.parentElement ? containerEl.parentElement.clientWidth : 0);
+        const rawH = containerEl.clientHeight || (containerEl.parentElement ? containerEl.parentElement.clientHeight : 0);
+        const w = rawW || 800;
+        const h = rawH || 500;
         const aspect = w / h;
+        baselineW = rawW || 0;
+        baselineH = rawH || 0;
+        userHasZoomed = false;
 
         if (aspect < 0.85) {
             baseRadius = 37;
@@ -122,7 +132,7 @@
             targetSpherical.radius = 24;
         }
 
-        camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 600);
+        camera = new THREE.PerspectiveCamera(BASE_FOV, aspect, 0.1, 600);
         updateCameraPosition();
 
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
@@ -373,20 +383,20 @@
         scene.add(rock);
     }
 
-    function createDistantIsland(x, z, radius, height) {
+    function createDistantIsland(x, z, radius, height, isSaltIsland = false) {
         const group = new THREE.Group();
         group.position.set(x, -0.4, z);
 
         const sandBase = new THREE.Mesh(
             new THREE.ConeGeometry(radius, height * 0.42, 18),
-            createMat(0xe8cd95, 0.9)
+            createMat(isSaltIsland ? 0xd8c8e8 : 0xe8cd95, 0.9)
         );
         sandBase.position.y = height * 0.15;
         group.add(sandBase);
 
         const hill = new THREE.Mesh(
             new THREE.SphereGeometry(radius * 0.62, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.52),
-            createMat(0x2e8b57, 0.85)
+            createMat(isSaltIsland ? 0x7c3aed : 0x2e8b57, 0.85)
         );
         hill.scale.set(1.0, height / (radius * 0.62), 0.9);
         hill.position.y = height * 0.2;
@@ -394,10 +404,95 @@
 
         const peak = new THREE.Mesh(
             new THREE.SphereGeometry(radius * 0.35, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.5),
-            createMat(0x27ae60, 0.8)
+            createMat(isSaltIsland ? 0xa855f7 : 0x27ae60, 0.8)
         );
         peak.position.set(radius * 0.15, height * 0.48, -radius * 0.1);
         group.add(peak);
+
+        if (isSaltIsland) {
+            // Shinan Purple Island lavender bushes & coastal flower clusters
+            const bushMatA = createMat(0xc084fc, 0.78);
+            const bushMatB = createMat(0x9333ea, 0.82);
+            [
+                [-11.5, 4.4, -2.5, 3.6, true],
+                [-5.0, 6.2, -5.0, 3.2, false],
+                [8.5, 5.2, -4.0, 3.5, true],
+                [13.5, 3.6, 2.5, 2.8, false]
+            ].forEach(([bx, by, bz, br, alt]) => {
+                const bush = new THREE.Mesh(new THREE.SphereGeometry(br, 12, 10), alt ? bushMatA : bushMatB);
+                bush.scale.set(1.15, 0.85, 1.0);
+                bush.position.set(bx, by, bz);
+                group.add(bush);
+            });
+
+            // Salt evaporation pan bed on front-facing shore of the island
+            const panZ = radius * 0.62;
+            const panBase = new THREE.Mesh(
+                new THREE.BoxGeometry(20, 0.6, 12),
+                createMat(0x4c1d95, 0.9)
+            );
+            panBase.position.set(-2, 0.65, panZ);
+            group.add(panBase);
+
+            const saltSurface = new THREE.Mesh(
+                new THREE.BoxGeometry(18.6, 0.25, 10.6),
+                createMat(0xf4f9ff, 0.35)
+            );
+            saltSurface.position.set(-2, 0.98, panZ);
+            group.add(saltSurface);
+
+            // Purple-stained boardwalk dividers inside the salt pan
+            const dividerMat = createMat(0x6d28d9, 0.85);
+            for (let dx = -5; dx <= 5; dx += 5) {
+                const beam = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.35, 10.8), dividerMat);
+                beam.position.set(-2 + dx, 1.05, panZ);
+                group.add(beam);
+            }
+            const midBeam = new THREE.Mesh(new THREE.BoxGeometry(18.8, 0.35, 0.4), dividerMat);
+            midBeam.position.set(-2, 1.05, panZ);
+            group.add(midBeam);
+
+            // White salt harvest mounds
+            const saltMoundMat = createMat(0xffffff, 0.25);
+            [[-7, 1.9, panZ - 2.2, 2.2, 1.9], [-2, 2.1, panZ + 2.0, 2.5, 2.2], [3.5, 1.8, panZ - 1.5, 2.0, 1.7]].forEach(([mx, my, mz, r, h]) => {
+                const mound = new THREE.Mesh(new THREE.ConeGeometry(r, h, 8), saltMoundMat);
+                mound.position.set(mx, my, mz);
+                group.add(mound);
+            });
+
+            // Iconic Shinan Purple Island village houses (lavender walls + vivid purple roofs)
+            const wallMat = createMat(0xf3e8ff, 0.78);
+            const roofMat = createMat(0x6d28d9, 0.7);
+            const shack = new THREE.Mesh(new THREE.BoxGeometry(6.2, 4.2, 5.2), wallMat);
+            shack.position.set(11, 2.6, panZ - 3.5);
+            group.add(shack);
+            const roof = new THREE.Mesh(new THREE.ConeGeometry(5.2, 2.4, 4), roofMat);
+            roof.rotation.y = Math.PI / 4;
+            roof.position.set(11, 5.8, panZ - 3.5);
+            group.add(roof);
+
+            const sideHouse = new THREE.Mesh(new THREE.BoxGeometry(4.8, 3.3, 4.2), wallMat);
+            sideHouse.position.set(-12, 2.2, panZ - 4.5);
+            group.add(sideHouse);
+            const sideRoof = new THREE.Mesh(new THREE.ConeGeometry(4.1, 2.0, 4), roofMat);
+            sideRoof.rotation.y = Math.PI / 4;
+            sideRoof.position.set(-12, 4.75, panZ - 4.5);
+            group.add(sideRoof);
+
+            // Signature Purple Bridge jetty dock jutting toward the main stage sea
+            const pier = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.5, 10.5), createMat(0x8b5cf6, 0.88));
+            pier.position.set(0, 0.85, panZ + 10.2);
+            group.add(pier);
+            const lanternMat = new THREE.MeshBasicMaterial({ color: 0xe9d5ff });
+            [[-2.2, panZ + 14.5], [2.2, panZ + 14.5]].forEach(([px, pz]) => {
+                const post = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.35, 3.2, 8), dividerMat);
+                post.position.set(px, 1.4, pz);
+                group.add(post);
+                const lantern = new THREE.Mesh(new THREE.SphereGeometry(0.45, 8, 8), lanternMat);
+                lantern.position.set(px, 3.15, pz);
+                group.add(lantern);
+            });
+        }
 
         scene.add(group);
     }
@@ -536,7 +631,7 @@
         // 7. Distant Tropical Islands on Horizon
         createDistantIsland(-78, -108, 22, 11);
         createDistantIsland(84, -120, 26, 13);
-        createDistantIsland(-10, -158, 30, 12);
+        createDistantIsland(-10, -158, 30, 12, true); // Salt Farm Island in the back sea
 
         // 8. Beach Flank Props (kept clear of up to 6-player chair strip |x| <= 10.5)
         createPalmTree(-15.2, 7.8, 0.80, -1);
@@ -566,6 +661,29 @@
     function disposeSlot(slot) {
         if (!slot) return;
         if (slot.bubbleTimeout) clearTimeout(slot.bubbleTimeout);
+        if (sharkEntity && sharkEntity.activeAttackAnim && sharkEntity.activeAttackAnim.targetSlot === slot) {
+            sharkEntity.activeAttackAnim = null;
+            sharkEntity.splashed = false;
+            sharkEntity.group.rotation.set(0, 0, 0);
+            if (sharkEntity.lowerJaw) sharkEntity.lowerJaw.rotation.x = 0;
+            sharkEntity.group.visible = sharkEntity.isRoaming;
+        }
+        if (gatorEntity && gatorEntity.activeAttackAnim && gatorEntity.activeAttackAnim.targetSlot === slot) {
+            gatorEntity.activeAttackAnim = null;
+            gatorEntity.group.rotation.set(0, 0, 0);
+            if (gatorEntity.lowerJaw) gatorEntity.lowerJaw.rotation.x = 0;
+            gatorEntity.group.visible = gatorEntity.isRoaming;
+        }
+        if (gullEntity && gullEntity.activeAttackAnim && gullEntity.activeAttackAnim.targetSlot === slot) {
+            gullEntity.activeAttackAnim = null;
+            gullEntity.group.visible = gullEntity.isRoaming;
+        }
+        for (let i = activeSaltAnims.length - 1; i >= 0; i--) {
+            if (activeSaltAnims[i].slot === slot) {
+                finishSaltAnimImmediate(activeSaltAnims[i]);
+                activeSaltAnims.splice(i, 1);
+            }
+        }
 
         if (slot.chairGroup) {
             scene.remove(slot.chairGroup);
@@ -664,14 +782,7 @@
         };
     }
 
-    function buildChairs(count) {
-        while (chairSlots.length > 0) {
-            const oldSlot = chairSlots.pop();
-            disposeSlot(oldSlot);
-        }
-
-        if (!count || count <= 0) return;
-
+    function getChairLayout(count) {
         // Generous horizontal spacing when fewer than 6 players so speech bubbles don't overlap;
         // supports up to 6 players cleanly on the beach terrace.
         let chairSpacing = 3.85;
@@ -683,15 +794,25 @@
         else chairSpacing = Math.max(3.1, 19.5 / (count - 1));
 
         const startX = -((count - 1) * chairSpacing) / 2;
-        const slotZ = 6.6;
+        return { chairSpacing, startX, slotZ: 6.6 };
+    }
 
+    function buildChairs(count) {
+        while (chairSlots.length > 0) {
+            const oldSlot = chairSlots.pop();
+            disposeSlot(oldSlot);
+        }
+
+        if (!count || count <= 0) return;
+
+        const { chairSpacing, startX, slotZ } = getChairLayout(count);
         for (let i = 0; i < count; i++) {
             const slotX = startX + i * chairSpacing;
             const slot = createChairSlot(i, slotX, slotZ);
             chairSlots.push(slot);
         }
 
-        onResize();
+        onResize({ forceRadius: true });
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -2009,6 +2130,7 @@
         function onPointerUp() { isDragging = false; }
 
         function onWheel(e) {
+            userHasZoomed = true;
             targetSpherical.radius += e.deltaY * 0.02;
             targetSpherical.radius = Math.max(12, Math.min(54, targetSpherical.radius));
             e.preventDefault();
@@ -2028,6 +2150,7 @@
             if (e.touches.length === 2 && touchStartDist > 0) {
                 const curDist = getTouchDistance(e);
                 if (curDist > 0) {
+                    userHasZoomed = true;
                     const factor = touchStartDist / curDist;
                     targetSpherical.radius = Math.max(12, Math.min(54, initialRadius * factor));
                 }
@@ -2072,30 +2195,55 @@
         camera.lookAt(currentLookAt.x, currentLookAt.y, currentLookAt.z);
     }
 
-    function onResize() {
+    function onResize(opts) {
         if (!renderer || !containerEl || !camera) return;
-        const w = containerEl.clientWidth || (containerEl.parentElement ? containerEl.parentElement.clientWidth : 800) || 800;
-        const h = containerEl.clientHeight || (containerEl.parentElement ? containerEl.parentElement.clientHeight : 500) || 500;
+        const w = containerEl.clientWidth || (containerEl.parentElement ? containerEl.parentElement.clientWidth : 0);
+        const h = containerEl.clientHeight || (containerEl.parentElement ? containerEl.parentElement.clientHeight : 0);
+        if (w <= 0 || h <= 0) return;
+
         const aspect = w / h;
+        const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+        const keyboardOpen = typeof document !== 'undefined' && document.body && document.body.classList.contains('keyboard-open');
+        const widthChanged = baselineW === 0 || Math.abs(w - baselineW) >= 4;
+        const isMobileHeightResize = isMobile && !widthChanged && (keyboardOpen || (baselineH > 0 && h < baselineH - 20));
+
+        if (widthChanged) {
+            baselineW = w;
+            baselineH = h;
+        } else if (!keyboardOpen && h > baselineH) {
+            baselineH = h;
+        }
+
+        if (isMobileHeightResize && baselineH > 0) {
+            // Preserve exact 3D visual scale while mobile keyboard shrinks stage height
+            const baseTanHalfFov = Math.tan(THREE.MathUtils.degToRad(BASE_FOV / 2));
+            const scaledFov = THREE.MathUtils.radToDeg(2 * Math.atan(baseTanHalfFov * (h / baselineH)));
+            camera.fov = Math.max(14, Math.min(65, scaledFov));
+        } else {
+            camera.fov = BASE_FOV;
+            const forceRadius = !!(opts && typeof opts === 'object' && opts.forceRadius === true);
+            if (!userHasZoomed && (widthChanged || forceRadius)) {
+                const count = chairSlots.length || 6;
+                let calcBase = 24;
+                if (count <= 2) calcBase = 21;
+                else if (count <= 4) calcBase = 24;
+                else if (count === 5) calcBase = 26;
+                else calcBase = 28;
+
+                const refAspect = (baselineW > 0 && baselineH > 0) ? (baselineW / baselineH) : aspect;
+                if (refAspect < 0.85) {
+                    targetSpherical.radius = calcBase + 16;
+                } else if (refAspect < 1.2) {
+                    targetSpherical.radius = calcBase + 7;
+                } else {
+                    targetSpherical.radius = calcBase;
+                }
+            }
+        }
 
         camera.aspect = aspect;
         camera.updateProjectionMatrix();
         renderer.setSize(w, h);
-
-        const count = chairSlots.length || 6;
-        let calcBase = 24;
-        if (count <= 2) calcBase = 21;
-        else if (count <= 4) calcBase = 24;
-        else if (count === 5) calcBase = 26;
-        else calcBase = 28;
-
-        if (aspect < 0.85) {
-            targetSpherical.radius = calcBase + 16;
-        } else if (aspect < 1.2) {
-            targetSpherical.radius = calcBase + 7;
-        } else {
-            targetSpherical.radius = calcBase;
-        }
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -2104,19 +2252,34 @@
     function syncPlayers(players) {
         if (!isInitialized) return;
         const list = players || [];
+        const countChanged = chairSlots.length !== list.length;
 
-        const currentIds = chairSlots.map(s => s.player ? s.player.id : null);
-        const newIds = list.map(p => p.id);
-        const needsRebuild = chairSlots.length !== list.length || currentIds.join(',') !== newIds.join(',');
-
-        if (needsRebuild) {
-            buildChairs(list.length);
+        if (list.length === 0) {
+            buildChairs(0);
+            return;
         }
 
-        chairSlots.forEach((slot, index) => {
-            const player = list[index];
-            if (player) {
-                if (!slot.avatarMeshes || slot.player?.id !== player.id || slot.player?.name !== player.name || slot.player?.gender !== player.gender) {
+        const { chairSpacing, startX, slotZ } = getChairLayout(list.length);
+        const reused = new Set();
+        const nextSlots = [];
+
+        list.forEach((player, index) => {
+            const slotX = startX + index * chairSpacing;
+            let slot = chairSlots.find(s => !reused.has(s) && s.player && s.player.id === player.id);
+            if (!slot && Array.isArray(player.previousIds)) {
+                slot = chairSlots.find(s => !reused.has(s) && s.player && player.previousIds.includes(s.player.id));
+            }
+
+            if (slot) {
+                reused.add(slot);
+                slot.index = index;
+                slot.x = slotX;
+                slot.z = slotZ;
+                if (slot.chairGroup) {
+                    slot.chairGroup.position.set(slotX, 1.2, slotZ);
+                }
+                const prevPlayer = slot.player;
+                if (!slot.avatarMeshes || !prevPlayer || prevPlayer.name !== player.name || prevPlayer.gender !== player.gender) {
                     if (slot.charGroup.children.length > 0) {
                         for (let k = slot.charGroup.children.length - 1; k >= 0; k--) {
                             const child = slot.charGroup.children[k];
@@ -2126,24 +2289,46 @@
                     slot.avatarMeshes = buildCharacterMesh(player, index);
                     slot.charGroup.add(slot.avatarMeshes.group);
                 }
-                slot.player = player;
-                slot.charGroup.visible = true;
-                if (slot.avatarMeshes && slot.avatarMeshes.labelSprite) {
-                    updateNameLabel(slot.avatarMeshes.labelSprite, player.name || '플레이어', player.splashCount || 0);
-                }
-                if (slot.avatarMeshes && slot.avatarMeshes.headBombGroup) {
-                    slot.avatarMeshes.headBombGroup.visible = !!player.activeBomb;
-                }
-
-                if (player.status === 'idle') {
-                    resetSlotToSeat(slot);
-                } else if (!slot.currentAnim) {
-                    applyStatusToSlot(slot, player.status);
-                }
             } else {
-                slot.player = null;
-                slot.charGroup.visible = false;
-                slot.hinge.rotation.x = 0;
+                slot = createChairSlot(index, slotX, slotZ);
+                slot.avatarMeshes = buildCharacterMesh(player, index);
+                slot.charGroup.add(slot.avatarMeshes.group);
+            }
+
+            slot.player = player;
+            nextSlots.push(slot);
+        });
+
+        // Dispose only slots for players who genuinely left
+        chairSlots.forEach(oldSlot => {
+            if (!reused.has(oldSlot)) {
+                disposeSlot(oldSlot);
+            }
+        });
+
+        chairSlots.length = 0;
+        chairSlots.push(...nextSlots);
+        if (countChanged) {
+            onResize({ forceRadius: true });
+        }
+
+        chairSlots.forEach(slot => {
+            const player = slot.player;
+            if (!player) return;
+            slot.charGroup.visible = true;
+            if (slot.avatarMeshes && slot.avatarMeshes.labelSprite) {
+                updateNameLabel(slot.avatarMeshes.labelSprite, player.name || '플레이어', player.splashCount || 0);
+            }
+            if (slot.avatarMeshes && slot.avatarMeshes.headBombGroup) {
+                slot.avatarMeshes.headBombGroup.visible = !!player.activeBomb;
+            }
+
+            if (player.status === 'idle') {
+                if (slot.currentAnim !== 'salt-abduct' && slot.currentAnim !== 'salt-return') {
+                    resetSlotToSeat(slot);
+                }
+            } else if (!slot.currentAnim) {
+                applyStatusToSlot(slot, player.status);
             }
         });
     }
@@ -2191,6 +2376,10 @@
         } else if (status === 'snatched') {
             setNormalSkinAndHair();
             hinge.rotation.x = -1.3;
+            charGroup.visible = false;
+        } else if (status === 'salt-farm') {
+            setNormalSkinAndHair();
+            hinge.rotation.x = 0;
             charGroup.visible = false;
         } else if (status === 'dead-missile') {
             setNormalSkinAndHair();
@@ -2320,6 +2509,7 @@
         const attackStart = clock.getElapsedTime();
 
         sharkEntity.activeAttackAnim = {
+            targetSlot: slot,
             startTime: attackStart,
             update: (time) => {
                 const el = time - attackStart;
@@ -2387,6 +2577,7 @@
         const attackStart = clock.getElapsedTime();
 
         gatorEntity.activeAttackAnim = {
+            targetSlot: slot,
             startTime: attackStart,
             update: (time) => {
                 const el = time - attackStart;
@@ -2446,6 +2637,7 @@
         const snatchStart = clock.getElapsedTime();
 
         gullEntity.activeAttackAnim = {
+            targetSlot: slot,
             startTime: snatchStart,
             update: (time) => {
                 const el = time - snatchStart;
@@ -3105,6 +3297,7 @@
         });
 
         updateActiveMissiles(time, delta);
+        updateActiveSaltAnims(time, delta);
 
         for (let i = activeParticles.length - 1; i >= 0; i--) {
             const p = activeParticles[i];
@@ -3125,6 +3318,435 @@
         }
 
         renderer.render(scene, camera);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 14B. 3D Salt Farm Abduction & Return Boat Animations
+    // ─────────────────────────────────────────────────────────────
+    function buildMaskedAbductor3D(carryType) {
+        const g = new THREE.Group();
+        const suitMat = createMat(0x16181f, 0.85);
+        const maskMat = createMat(0x0c0d12, 0.9);
+        const skinMat = createMat(0xf1c27d, 0.6);
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const pupilMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
+
+        // Legs
+        const legGeo = new THREE.BoxGeometry(0.28, 0.85, 0.28);
+        const leftLeg = new THREE.Mesh(legGeo, suitMat);
+        leftLeg.position.set(-0.18, 0.42, 0);
+        g.add(leftLeg);
+        const rightLeg = new THREE.Mesh(legGeo, suitMat);
+        rightLeg.position.set(0.18, 0.42, 0);
+        g.add(rightLeg);
+
+        // Torso
+        const torso = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.92, 0.42), suitMat);
+        torso.position.set(0, 1.32, 0);
+        torso.castShadow = true;
+        g.add(torso);
+
+        // Head with black balaclava mask & eye slit
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 12, 12), maskMat);
+        head.position.set(0, 2.08, 0);
+        g.add(head);
+        const slit = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.14, 0.14), skinMat);
+        slit.position.set(0, 2.1, -0.24);
+        g.add(slit);
+        [-0.1, 0.1].forEach(ex => {
+            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 8), eyeMat);
+            eye.position.set(ex, 2.1, -0.31);
+            g.add(eye);
+            const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.024, 6, 6), pupilMat);
+            pupil.position.set(ex, 2.1, -0.34);
+            g.add(pupil);
+        });
+
+        // Arms extended forward to carry bag / rope
+        const armGeo = new THREE.BoxGeometry(0.22, 0.72, 0.22);
+        const leftArm = new THREE.Mesh(armGeo, suitMat);
+        leftArm.position.set(-0.46, 1.48, -0.22);
+        leftArm.rotation.x = Math.PI / 2.6;
+        g.add(leftArm);
+        const rightArm = new THREE.Mesh(armGeo, suitMat);
+        rightArm.position.set(0.46, 1.48, -0.22);
+        rightArm.rotation.x = Math.PI / 2.6;
+        g.add(rightArm);
+
+        let prop = null;
+        if (carryType === 'bag') {
+            prop = new THREE.Group();
+            const bagMat = createMat(0x0d0e13, 0.28);
+            const bagBody = new THREE.Mesh(new THREE.SphereGeometry(0.36, 12, 10), bagMat);
+            bagBody.scale.set(1.0, 1.2, 0.95);
+            prop.add(bagBody);
+            const handleA = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.03, 6, 10), bagMat);
+            handleA.position.set(-0.1, 0.42, 0);
+            prop.add(handleA);
+            const handleB = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.03, 6, 10), bagMat);
+            handleB.position.set(0.1, 0.42, 0);
+            prop.add(handleB);
+            prop.position.set(0, 1.45, -0.58);
+            g.add(prop);
+        } else if (carryType === 'rope') {
+            prop = new THREE.Group();
+            const ropeMat = createMat(0xd4a373, 0.85);
+            for (let r = 0; r < 4; r++) {
+                const ring = new THREE.Mesh(new THREE.TorusGeometry(0.25, 0.045, 7, 14), ropeMat);
+                ring.rotation.x = Math.PI / 2 + (r * 0.12);
+                ring.position.set(0, (r - 1.5) * 0.07, 0);
+                prop.add(ring);
+            }
+            prop.position.set(0, 1.45, -0.55);
+            g.add(prop);
+        }
+
+        return { group: g, leftLeg, rightLeg, leftArm, rightArm, prop };
+    }
+
+    function buildSaltBoat3D() {
+        const g = new THREE.Group();
+        const hullMat = createMat(0x7c4a26, 0.82);
+        const trimMat = createMat(0x4b2c16, 0.88);
+        const plankMat = createMat(0xa46b3e, 0.78);
+
+        const hull = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.9, 5.2), hullMat);
+        hull.position.set(0, 0.35, 0);
+        g.add(hull);
+
+        const bow = new THREE.Mesh(new THREE.ConeGeometry(1.45, 1.9, 4), trimMat);
+        bow.rotation.x = -Math.PI / 2;
+        bow.rotation.z = Math.PI / 4;
+        bow.scale.set(1.2, 0.62, 1);
+        bow.position.set(0, 0.42, -3.45);
+        g.add(bow);
+
+        [-0.9, 0.3, 1.5].forEach(z => {
+            const bench = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.16, 0.55), plankMat);
+            bench.position.set(0, 0.84, z);
+            g.add(bench);
+        });
+
+        // Outrigger oar poles
+        const oarMat = createMat(0xc9965c, 0.8);
+        [-1.45, 1.45].forEach(ox => {
+            const oar = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 3.0, 6), oarMat);
+            oar.rotation.z = ox < 0 ? 0.65 : -0.65;
+            oar.rotation.x = 0.25;
+            oar.position.set(ox, 0.85, 0.2);
+            g.add(oar);
+        });
+
+        return g;
+    }
+
+    function buildVictimBindRigs3D() {
+        const bagGroup = new THREE.Group();
+        const bagMat = createMat(0x0b0c10, 0.26);
+        const hood = new THREE.Mesh(new THREE.SphereGeometry(0.56, 14, 12), bagMat);
+        hood.scale.set(1.02, 1.24, 1.02);
+        hood.position.set(0, 2.08, 0);
+        bagGroup.add(hood);
+        const knot = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.32, 6), bagMat);
+        knot.position.set(0, 2.75, 0);
+        bagGroup.add(knot);
+        bagGroup.visible = false;
+
+        const ropeGroup = new THREE.Group();
+        const ropeMat = createMat(0xd4a373, 0.85);
+        [0.95, 1.22, 1.48].forEach(ry => {
+            const coil = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.055, 8, 16), ropeMat);
+            coil.rotation.x = Math.PI / 2;
+            coil.position.set(0, ry, 0);
+            ropeGroup.add(coil);
+        });
+        ropeGroup.visible = false;
+
+        return { bagGroup, ropeGroup };
+    }
+
+    function finishSaltAnimImmediate(anim) {
+        if (!anim || anim.finished) return;
+        anim.finished = true;
+        if (anim.container) {
+            scene.remove(anim.container);
+            disposeObjectGroup(anim.container);
+        }
+        if (anim.victimBag && anim.victimParent) {
+            anim.victimParent.remove(anim.victimBag);
+            disposeObjectGroup(anim.victimBag);
+        }
+        if (anim.victimRope && anim.victimParent) {
+            anim.victimParent.remove(anim.victimRope);
+            disposeObjectGroup(anim.victimRope);
+        }
+        if (anim.slot) {
+            if (anim.mode === 'abduct') {
+                anim.slot.charGroup.visible = false;
+                anim.slot.hinge.rotation.x = 0;
+                anim.slot.currentAnim = null;
+            } else {
+                resetSlotToSeat(anim.slot);
+            }
+        }
+        if (typeof anim.callback === 'function') {
+            try { anim.callback(); } catch (e) {}
+        }
+    }
+
+    function triggerSaltAbduction(playerId, onArrived) {
+        if (!isInitialized || !isVisible) {
+            if (typeof onArrived === 'function') setTimeout(onArrived, 4200);
+            return;
+        }
+        const slot = chairSlots.find(s => s.player && s.player.id === playerId);
+        if (!slot) {
+            if (typeof onArrived === 'function') setTimeout(onArrived, 4200);
+            return;
+        }
+        // Cancel any previous salt anim on this slot
+        for (let i = activeSaltAnims.length - 1; i >= 0; i--) {
+            if (activeSaltAnims[i].slot === slot) {
+                finishSaltAnimImmediate(activeSaltAnims[i]);
+                activeSaltAnims.splice(i, 1);
+            }
+        }
+
+        slot.currentAnim = 'salt-abduct';
+        slot.charGroup.visible = true;
+        slot.charGroup.position.set(slot.x, 2.4, slot.z + 0.1);
+        slot.charGroup.rotation.set(0, 0, 0);
+        slot.hinge.rotation.x = 0;
+
+        const container = new THREE.Group();
+        const abdA = buildMaskedAbductor3D('bag');
+        const abdB = buildMaskedAbductor3D('rope');
+        const boat = buildSaltBoat3D();
+
+        const shoreX = Math.max(-12, Math.min(12, slot.x));
+        const shoreZ = -10.5;
+        const spawnX = slot.x >= 0 ? 32 : -32;
+        const spawnZ = 12.5;
+        boat.position.set(shoreX, 0.22, shoreZ);
+
+        abdA.group.position.set(spawnX - 0.9, 0.35, spawnZ);
+        abdB.group.position.set(spawnX + 0.9, 0.35, spawnZ + 0.6);
+
+        container.add(boat);
+        container.add(abdA.group);
+        container.add(abdB.group);
+        scene.add(container);
+
+        const victimParent = slot.avatarMeshes ? slot.avatarMeshes.group : slot.charGroup;
+        const { bagGroup, ropeGroup } = buildVictimBindRigs3D();
+        victimParent.add(bagGroup);
+        victimParent.add(ropeGroup);
+
+        activeSaltAnims.push({
+            mode: 'abduct',
+            slot,
+            container,
+            abdA,
+            abdB,
+            boat,
+            victimBag: bagGroup,
+            victimRope: ropeGroup,
+            victimParent,
+            elapsed: 0,
+            total: 5.4,
+            spawnX,
+            spawnZ,
+            shoreX,
+            shoreZ,
+            islandX: -10,
+            islandZ: -128,
+            wakeAccum: 0,
+            finished: false,
+            callback: onArrived
+        });
+    }
+
+    function triggerSaltReturn(playerId, onReturned) {
+        if (!isInitialized || !isVisible) {
+            if (typeof onReturned === 'function') setTimeout(onReturned, 2200);
+            return;
+        }
+        const slot = chairSlots.find(s => s.player && s.player.id === playerId);
+        if (!slot) {
+            if (typeof onReturned === 'function') setTimeout(onReturned, 2200);
+            return;
+        }
+        for (let i = activeSaltAnims.length - 1; i >= 0; i--) {
+            if (activeSaltAnims[i].slot === slot) {
+                finishSaltAnimImmediate(activeSaltAnims[i]);
+                activeSaltAnims.splice(i, 1);
+            }
+        }
+
+        slot.currentAnim = 'salt-return';
+        slot.charGroup.visible = true;
+        slot.hinge.rotation.x = 0;
+
+        const container = new THREE.Group();
+        const boat = buildSaltBoat3D();
+        // White salt harvest sack on the return boat
+        const sack = new THREE.Mesh(new THREE.SphereGeometry(0.45, 10, 8), createMat(0xf5f9ff, 0.4));
+        sack.scale.set(1.0, 1.15, 0.95);
+        sack.position.set(0.6, 1.15, 0.3);
+        boat.add(sack);
+
+        const shoreX = Math.max(-12, Math.min(12, slot.x));
+        const shoreZ = -10.5;
+        boat.position.set(-10, 0.22, -128);
+        boat.rotation.y = Math.PI;
+        container.add(boat);
+        scene.add(container);
+
+        activeSaltAnims.push({
+            mode: 'return',
+            slot,
+            container,
+            boat,
+            elapsed: 0,
+            total: 2.6,
+            shoreX,
+            shoreZ,
+            islandX: -10,
+            islandZ: -128,
+            wakeAccum: 0,
+            finished: false,
+            callback: onReturned
+        });
+    }
+
+    function updateActiveSaltAnims(time, delta) {
+        const clamp01 = v => Math.max(0, Math.min(1, v));
+        for (let i = activeSaltAnims.length - 1; i >= 0; i--) {
+            const anim = activeSaltAnims[i];
+            if (anim.finished) {
+                activeSaltAnims.splice(i, 1);
+                continue;
+            }
+            anim.elapsed += delta;
+            const t = anim.elapsed;
+            const { slot, boat } = anim;
+
+            if (anim.mode === 'abduct') {
+                const { abdA, abdB, victimBag, victimRope } = anim;
+                if (t < 1.4) {
+                    // Phase 1: Two masked abductors sprint from afar carrying black bag & rope
+                    const p = clamp01(t / 1.4);
+                    const ease = 1 - Math.pow(1 - p, 2);
+                    const ax = THREE.MathUtils.lerp(anim.spawnX - 0.9, slot.x - 0.95, ease);
+                    const az = THREE.MathUtils.lerp(anim.spawnZ, slot.z + 0.35, ease);
+                    const bx = THREE.MathUtils.lerp(anim.spawnX + 0.9, slot.x + 0.95, ease);
+                    const bz = THREE.MathUtils.lerp(anim.spawnZ + 0.6, slot.z + 0.35, ease);
+                    abdA.group.position.set(ax, 0.35, az);
+                    abdB.group.position.set(bx, 0.35, bz);
+                    abdA.group.lookAt(slot.x - 0.95, 0.35, slot.z + 0.35);
+                    abdA.group.rotateY(Math.PI);
+                    abdB.group.lookAt(slot.x + 0.95, 0.35, slot.z + 0.35);
+                    abdB.group.rotateY(Math.PI);
+                    const stride = Math.sin(t * 20) * 0.6;
+                    abdA.leftLeg.rotation.x = stride; abdA.rightLeg.rotation.x = -stride;
+                    abdB.leftLeg.rotation.x = -stride; abdB.rightLeg.rotation.x = stride;
+                    boat.position.y = 0.22 + Math.sin(time * 2.5) * 0.08;
+                } else if (t < 2.5) {
+                    // Phase 2: Bag over head + rope wrapped around victim
+                    const p = clamp01((t - 1.4) / 1.1);
+                    abdA.group.position.set(slot.x - 0.95, 0.35, slot.z + 0.25);
+                    abdB.group.position.set(slot.x + 0.95, 0.35, slot.z + 0.25);
+                    abdA.group.lookAt(slot.x, 0.35, slot.z + 0.1); abdA.group.rotateY(Math.PI);
+                    abdB.group.lookAt(slot.x, 0.35, slot.z + 0.1); abdB.group.rotateY(Math.PI);
+                    abdA.leftLeg.rotation.x = 0; abdA.rightLeg.rotation.x = 0;
+                    abdB.leftLeg.rotation.x = 0; abdB.rightLeg.rotation.x = 0;
+                    if (abdA.prop) abdA.prop.visible = false;
+                    victimBag.visible = true;
+                    victimBag.position.y = THREE.MathUtils.lerp(0.85, 0, Math.min(1, p * 2.5));
+                    if (p >= 0.3) {
+                        if (abdB.prop) abdB.prop.visible = false;
+                        victimRope.visible = true;
+                        const s = THREE.MathUtils.lerp(1.45, 1.0, Math.min(1, (p - 0.3) * 1.8));
+                        victimRope.scale.set(s, 1, s);
+                    }
+                    if (slot.avatarMeshes) {
+                        slot.avatarMeshes.leftArm.rotation.set(0.1, 0, 0.2);
+                        slot.avatarMeshes.rightArm.rotation.set(0.1, 0, -0.2);
+                    }
+                    slot.charGroup.rotation.z = Math.sin(t * 28) * 0.1;
+                } else if (t < 3.5) {
+                    // Phase 3: Haul bagged & tied victim into the boat at shoreline
+                    const p = clamp01((t - 2.5) / 1.0);
+                    const vx = THREE.MathUtils.lerp(slot.x, anim.shoreX, p);
+                    const vy = THREE.MathUtils.lerp(2.4, 1.25, p) + Math.sin(p * Math.PI) * 0.8;
+                    const vz = THREE.MathUtils.lerp(slot.z + 0.1, anim.shoreZ, p);
+                    slot.charGroup.position.set(vx, vy, vz);
+                    slot.charGroup.rotation.set(0, Math.PI, 0);
+                    abdA.group.position.set(vx - 0.9, vy - 0.85, vz + 0.6);
+                    abdB.group.position.set(vx + 0.9, vy - 0.85, vz + 0.6);
+                    abdA.group.rotation.set(0, 0, 0);
+                    abdB.group.rotation.set(0, 0, 0);
+                } else if (t < anim.total) {
+                    // Phase 4: Boat carries captive to the distant Salt Farm Island (-10, -128)
+                    const p = clamp01((t - 3.5) / (anim.total - 3.5));
+                    const ease = p * p * (3 - 2 * p);
+                    const bx = THREE.MathUtils.lerp(anim.shoreX, anim.islandX, ease);
+                    const bz = THREE.MathUtils.lerp(anim.shoreZ, anim.islandZ, ease);
+                    const bob = Math.sin(t * 7.5) * 0.14;
+                    boat.position.set(bx, 0.22 + bob, bz);
+                    boat.lookAt(anim.islandX, 0.22, anim.islandZ);
+                    boat.rotateY(Math.PI);
+                    slot.charGroup.position.set(bx, 1.25 + bob, bz - 0.3);
+                    slot.charGroup.rotation.set(-0.08, 0, 0);
+                    abdA.group.position.set(bx - 0.65, 0.55 + bob, bz + 1.0);
+                    abdB.group.position.set(bx + 0.65, 0.55 + bob, bz + 1.0);
+
+                    anim.wakeAccum += delta;
+                    if (anim.wakeAccum >= 0.08) {
+                        anim.wakeAccum = 0;
+                        if (!sharedSmokeGeo) sharedSmokeGeo = new THREE.SphereGeometry(0.22, 6, 6);
+                        const wake = new THREE.Mesh(
+                            sharedSmokeGeo,
+                            new THREE.MeshBasicMaterial({ color: 0xe8f8ff, transparent: true, opacity: 0.75 })
+                        );
+                        wake.position.set(bx + (Math.random() - 0.5) * 1.1, 0.25, bz + 2.5);
+                        wake.velocity = new THREE.Vector3((Math.random() - 0.5) * 0.4, 0.25, 1.2);
+                        wake.gravity = 0.2;
+                        wake.life = 0.65;
+                        wake.maxLife = 0.65;
+                        wake.growRate = 2.0;
+                        scene.add(wake);
+                        activeParticles.push(wake);
+                    }
+                } else {
+                    finishSaltAnimImmediate(anim);
+                    activeSaltAnims.splice(i, 1);
+                }
+            } else if (anim.mode === 'return') {
+                if (t < 1.9) {
+                    const p = clamp01(t / 1.9);
+                    const ease = 1 - Math.pow(1 - p, 2);
+                    const bx = THREE.MathUtils.lerp(anim.islandX, anim.shoreX, ease);
+                    const bz = THREE.MathUtils.lerp(anim.islandZ, anim.shoreZ, ease);
+                    const bob = Math.sin(t * 7.5) * 0.14;
+                    boat.position.set(bx, 0.22 + bob, bz);
+                    boat.lookAt(anim.shoreX, 0.22, anim.shoreZ);
+                    boat.rotateY(Math.PI);
+                    slot.charGroup.position.set(bx, 1.25 + bob, bz);
+                    slot.charGroup.rotation.set(0, Math.PI, 0);
+                } else if (t < anim.total) {
+                    const p = clamp01((t - 1.9) / (anim.total - 1.9));
+                    const vx = THREE.MathUtils.lerp(anim.shoreX, slot.x, p);
+                    const vy = THREE.MathUtils.lerp(1.25, 2.4, p) + Math.sin(p * Math.PI) * 1.15;
+                    const vz = THREE.MathUtils.lerp(anim.shoreZ, slot.z + 0.1, p);
+                    slot.charGroup.position.set(vx, vy, vz);
+                    slot.charGroup.rotation.set(0, THREE.MathUtils.lerp(Math.PI, 0, p), 0);
+                } else {
+                    finishSaltAnimImmediate(anim);
+                    activeSaltAnims.splice(i, 1);
+                }
+            }
+        }
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -3154,6 +3776,9 @@
                     if (m.onHit) m.onHit();
                 }
             }
+            while (activeSaltAnims.length > 0) {
+                finishSaltAnimImmediate(activeSaltAnims.pop());
+            }
         }
     }
 
@@ -3164,9 +3789,20 @@
         triggerFly: triggerFly,
         triggerMissile: triggerMissile,
         triggerBombExplosion: triggerBombExplosion,
+        triggerSaltAbduction: triggerSaltAbduction,
+        triggerSaltReturn: triggerSaltReturn,
         showSpeechBubble: showSpeechBubble,
         updateRoamingAnimal: updateRoamingAnimal,
         handleResize: onResize,
+        getCameraState: () => ({
+            fov: camera ? camera.fov : BASE_FOV,
+            aspect: camera ? camera.aspect : 1,
+            radius: spherical.radius,
+            targetRadius: targetSpherical.radius,
+            baselineW: baselineW,
+            baselineH: baselineH,
+            userHasZoomed: userHasZoomed
+        }),
         getSlots: () => chairSlots,
         isInitialized: () => isInitialized,
         isVisible: () => isVisible
