@@ -287,7 +287,7 @@
             </p>
             <ul style="list-style: none; display: flex; flex-direction: column; gap: 10px; margin: 14px 0 18px 10px;">
                 <li style="color: var(--toss-text-sub); font-size: 0.95rem;">• <strong>자동 타이머 리셋:</strong> 정상적인 채팅 메시지를 전송하거나 의자에서 발사될 때마다 해당 플레이어의 침묵 타이머가 초기화됩니다.</li>
-                <li style="color: var(--toss-text-sub); font-size: 0.95rem;">• <strong>기절 및 이탈 중 일시 유예:</strong> 상어, 악어, 부산갈매기, 유도 미사일 피격 등으로 인해 채팅 입력 자체가 불가능한 행동 불능 상태 동안에는 억울한 강제 발사가 일어나지 않도록 침묵 타이머가 자동으로 보류됩니다.</li>
+                <li style="color: var(--toss-text-sub); font-size: 0.95rem;">• <strong>기절 및 이탈 중 일시 유예:</strong> 상어, 악어, 부산갈매기, 유도 미사일 피격, 폭탄 폭발(10초 침묵) 등으로 인해 채팅 입력 자체가 불가능한 행동 불능 상태 동안에는 억울한 강제 발사가 일어나지 않도록 침묵 타이머가 자동으로 보류됩니다.</li>
                 <li style="color: var(--toss-text-sub); font-size: 0.95rem;">• <strong>강제 발사 페널티:</strong> 정상 착석 상태에서 방장이 설정한 제한 시간(기본 60초, 최소 30초) 동안 한 번도 채팅을 입력하지 않으면 <code>[침묵 페널티]</code> 알림과 함께 즉시 수영장으로 발사됩니다.</li>
             </ul>
         </article>
@@ -320,7 +320,7 @@
                 </div>
                 <div style="background: var(--toss-card-sub); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--toss-border);">
                     <h4 style="font-size: 0.95rem; margin-bottom: 6px; color: #fff;">🎁 아이템 모드 On/Off</h4>
-                    <p style="font-size: 0.85rem; color: var(--toss-text-sub); margin-bottom: 0;">정기 보급되는 8종 특수 아이템(미사일, 방패, 동물 소환 등)으로 판을 뒤흔듭니다.</p>
+                    <p style="font-size: 0.85rem; color: var(--toss-text-sub); margin-bottom: 0;">정기 보급되는 9종 특수 아이템(미사일, 폭탄해체하기, 방패, 동물 소환 등)으로 판을 뒤흔듭니다.</p>
                 </div>
                 <div style="background: var(--toss-card-sub); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--toss-border);">
                     <h4 style="font-size: 0.95rem; margin-bottom: 6px; color: #fff;">🤖 인공지능 봇 추가</h4>
@@ -360,6 +360,13 @@
                     <div class="penalty-info">
                         <h4>부산갈매기 납치 (2% 이스터에그 / 소환 아이템)</h4>
                         <p>상공을 날던 거대한 부산갈매기가 허공에서 플레이어를 낚아채 화면 밖으로 납치하며 60초간 채팅을 전면 봉쇄합니다.</p>
+                    </div>
+                </div>
+                <div class="penalty-card">
+                    <div class="penalty-icon">💣</div>
+                    <div class="penalty-info">
+                        <h4>폭탄 폭발 (폭탄해체하기 실패)</h4>
+                        <p>잘못된 선을 자르거나 15초 내 해체에 실패하면 머리 위에서 폭탄이 펑 터져 머리가 삐죽삐죽 솟고 얼굴이 까맣게 변하며 10초간 말할 수 없습니다.</p>
                     </div>
                 </div>
             </div>

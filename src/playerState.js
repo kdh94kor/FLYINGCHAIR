@@ -9,7 +9,8 @@ const PlayerState = {
         DEAD_SHARK: 'dead',           // 상어에게 물림 (30초 심해 침수 기절)
         DEAD_GATOR: 'dead-gator',     // 악어 떼에게 물림 (15초 수영장 기절)
         SNATCHED_GULL: 'snatched',    // 부산갈매기에게 납치됨 (1분 상공 기절/채팅불가)
-        DEAD_MISSILE: 'dead-missile'  // 미사일 피격 (30초 의자 반전 기절)
+        DEAD_MISSILE: 'dead-missile', // 미사일 피격 (30초 의자 반전 기절)
+        DEAD_BOMB: 'dead-bomb'        // 폭탄 폭발 피격 (10초 그을림/머리 삐죽 기절)
     },
 
     // 1. 좌석 이탈 상태 목록 (의자에서 튕겨나가 공중, 물속, 심해, 납치 등 자리를 벗어난 상태)
@@ -18,8 +19,8 @@ const PlayerState = {
     // 2. 동물 3종(상어/악어/부산갈매기)에게 잡힌 상태 목록
     ANIMAL_CAUGHT_STATUSES: ['dead', 'dead-gator', 'snatched'],
 
-    // 3. 행동 불능/기절 상태 목록 (상어, 악어, 갈매기, 미사일 피격으로 행동/채팅 불가)
-    INCAPACITATED_STATUSES: ['dead', 'dead-gator', 'snatched', 'dead-missile'],
+    // 3. 행동 불능/기절 상태 목록 (상어, 악어, 갈매기, 미사일, 폭탄 피격으로 행동/채팅 불가)
+    INCAPACITATED_STATUSES: ['dead', 'dead-gator', 'snatched', 'dead-missile', 'dead-bomb'],
 
     // 상태 문자열 안전 추출 헬퍼 (플레이어 객체 또는 문자열 수용)
     _toStatus(p) {
@@ -28,10 +29,10 @@ const PlayerState = {
     },
 
     // [1. 착석 상태 체크]
-    // 물리적으로 의자 자리에 위치해 있는가? (정상 idle 착석 또는 미사일 피격으로 의자에 거꾸로 매달린 상태)
+    // 물리적으로 의자 자리에 위치해 있는가? (정상 idle 착석 또는 미사일/폭탄 피격으로 자리에 남아 있는 상태)
     isSeated(p) {
         const s = this._toStatus(p);
-        return s === this.STATUS.IDLE || s === this.STATUS.DEAD_MISSILE;
+        return s === this.STATUS.IDLE || s === this.STATUS.DEAD_MISSILE || s === this.STATUS.DEAD_BOMB;
     },
 
     // 정상적으로 건강하게 착석해 있는가? (디버프 없이 채팅 및 아이템 조준 타깃이 가능한 완전한 idle 상태)
@@ -81,6 +82,11 @@ const PlayerState = {
         return this._toStatus(p) === this.STATUS.SNATCHED_GULL;
     },
 
+    // 폭탄 폭발에 맞아 그을림 기절 중인가?
+    isHitByBomb(p) {
+        return this._toStatus(p) === this.STATUS.DEAD_BOMB;
+    },
+
     // [4. 기절 / 행동 불능 상태 체크]
     // 공격을 받거나 동물에게 잡혀 기절 중(채팅/일반행동 불가)인가?
     isIncapacitated(p) {
@@ -91,6 +97,11 @@ const PlayerState = {
     // 미사일의 공격 타깃이 될 수 있는가? (물리적으로 의자 자리에 착석 중인 플레이어만 조준 가능 — 미사일 기절 중첩 허용)
     canBeTargetedByMissile(p) {
         return this.isSeated(p);
+    },
+
+    // 폭탄해체하기 아이템의 타깃이 될 수 있는가? (건강하게 착석 중이며 현재 진행 중인 폭탄이 없는 대상)
+    canBeTargetedByBomb(p) {
+        return this.isHealthySeated(p) && !(p && typeof p === 'object' && p.activeBomb);
     },
 
     // 채팅을 전송할 수 있는 상태인가? (기절하지 않았고 좌석을 이탈하지 않은 상태)
@@ -115,6 +126,7 @@ const PlayerState = {
             case this.STATUS.DEAD_GATOR: return '이탈 (악어에게 물림)';
             case this.STATUS.SNATCHED_GULL: return '이탈 (갈매기에게 납치됨)';
             case this.STATUS.DEAD_MISSILE: return '착석 (미사일 기절)';
+            case this.STATUS.DEAD_BOMB: return '착석 (폭탄 피격)';
             default: return '알 수 없음';
         }
     }

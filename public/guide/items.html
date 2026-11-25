@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>아이템 도감 & 밸런스 분석 - 위험한 초대 (플라잉 체어)</title>
-    <meta name="description" content="'위험한 초대 - 실시간 플라잉 체어'의 8종 전략 특수 아이템(유도 미사일, 방패, 단어 변경/추가/삭제, 상어/악어/부산갈매기 소환)의 스펙, 기절 시간 누적, 예약 타격 및 카운터 상성 전략 완벽 가이드.">
-    <meta name="keywords" content="플라잉체어아이템, 위험한초대아이템, 웹게임아이템, 게임도감, 유도미사일, 방패, 금기어변경, 상어부르기, 악어부르기, 부산갈매기부르기, 게임공략">
+    <meta name="description" content="'위험한 초대 - 실시간 플라잉 체어'의 9종 전략 특수 아이템(유도 미사일, 폭탄해체하기, 방패, 단어 변경/추가/삭제, 상어/악어/부산갈매기 소환)의 스펙, 기절 시간 누적, 예약 타격 및 카운터 상성 전략 완벽 가이드.">
+    <meta name="keywords" content="플라잉체어아이템, 위험한초대아이템, 웹게임아이템, 게임도감, 유도미사일, 폭탄해체하기, 방패, 금기어변경, 상어부르기, 악어부르기, 부산갈매기부르기, 게임공략">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://flying-chair.com/guide/items">
 
@@ -14,7 +14,7 @@
     <!-- Open Graph -->
     <meta property="og:type" content="article">
     <meta property="og:title" content="아이템 도감 & 밸런스 분석 - 위험한 초대">
-    <meta property="og:description" content="전세를 단숨에 뒤집는 8가지 특수 아이템의 상세 스펙과 카운터 전략 완벽 분석.">
+    <meta property="og:description" content="전세를 단숨에 뒤집는 9가지 특수 아이템의 상세 스펙과 카운터 전략 완벽 분석.">
     <meta property="og:url" content="https://flying-chair.com/guide/items">
 
     <!-- Pretendard Font -->
@@ -25,8 +25,8 @@
     {
       "@context": "https://schema.org",
       "@type": "Article",
-      "headline": "전략 특수 아이템 8종 도감 & 밸런스 분석 - 위험한 초대",
-      "description": "유도 미사일, 이지스 방패, 금기어 조작권 및 3종 동물 소환 트랩의 상세 메커니즘과 상성 분석.",
+      "headline": "전략 특수 아이템 9종 도감 & 밸런스 분석 - 위험한 초대",
+      "description": "유도 미사일, 폭탄해체하기, 이지스 방패, 금기어 조작권 및 3종 동물 소환 트랩의 상세 메커니즘과 상성 분석.",
       "author": {
         "@type": "Organization",
         "name": "Flying Chair Team"
@@ -103,6 +103,7 @@
         .item-icon-circle.cyan { background: rgba(9, 132, 227, 0.15); }
         .item-icon-circle.teal { background: rgba(0, 184, 148, 0.15); }
         .item-icon-circle.sky { background: rgba(116, 185, 255, 0.15); }
+        .item-icon-circle.amber { background: rgba(255, 107, 53, 0.16); }
         .item-title-group h2 { font-size: 1.4rem; font-weight: 800; color: #fff; margin-bottom: 4px; }
         .item-badge-row { display: flex; gap: 8px; }
         .badge { font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
@@ -112,6 +113,7 @@
         .badge.curse { background: rgba(156, 136, 255, 0.2); color: #9c88ff; }
         .badge.buff { background: rgba(255, 159, 67, 0.2); color: #ffa502; }
         .badge.summon { background: rgba(9, 132, 227, 0.2); color: #0984e3; }
+        .badge.mindgame { background: rgba(255, 107, 53, 0.22); color: #ff7f50; }
 
         /* Specs table */
         .specs-table { width: 100%; border-collapse: collapse; margin: 18px 0; background: var(--toss-card-sub); border-radius: var(--radius-sm); overflow: hidden; }
@@ -184,9 +186,9 @@
         <!-- Doc Header -->
         <section class="doc-header">
             <span class="doc-badge">🎒 ITEM COMPENDIUM</span>
-            <h1 class="doc-title">전략 특수 아이템 8종 도감 & 밸런스 분석</h1>
+            <h1 class="doc-title">전략 특수 아이템 9종 도감 & 밸런스 분석</h1>
             <p class="doc-desc">
-                아이템 모드 활성화 시 주기적으로 인벤토리에 보급되는 8가지 특수 아이템의 상세 스펙과 발동 조건,
+                아이템 모드 활성화 시 주기적으로 인벤토리에 보급되는 9가지 특수 아이템의 상세 스펙과 발동 조건,
                 기절 시간 누적 메커니즘, 그리고 상대를 카운터치기 위한 실전 밸런스 분석을 제공합니다.
             </p>
         </section>
@@ -406,6 +408,35 @@
             </div>
         </article>
 
+        <!-- Item 9: 폭탄해체하기 -->
+        <article class="item-detail-card">
+            <div class="item-top">
+                <div class="item-icon-circle amber">💣</div>
+                <div class="item-title-group">
+                    <h2>폭탄해체하기 (Bomb Defuse)</h2>
+                    <div class="item-badge-row">
+                        <span class="badge mindgame">심리 공격형</span>
+                        <span class="badge" style="background: rgba(255,255,255,0.1); color:#ccc;">액티브 양자택일</span>
+                    </div>
+                </div>
+            </div>
+            <p style="color: var(--toss-text-sub); font-size: 0.95rem;">
+                사용자가 빨간선과 파란선 중 살아남는 <strong>해제선</strong>을 직접 지정한 뒤 상대방 1명을 지목해 폭탄을 보냅니다.
+                상대방 화면에는 빨간선·파란선이 연결된 폭탄 해체 UI가 나타나며, 선을 선택하면 양손으로 니퍼를 쥐고 벌벌 떨며 조이다가 콱 자르는 긴박한 연출이 펼쳐집니다!
+            </p>
+            <table class="specs-table">
+                <tr><th>발동 방식</th><td>정상 착석(`idle`) 상태에서 사용 → 해제선(🔴 빨간선 또는 🔵 파란선) 선택 → 건강한 착석 상대 1명 지목</td></tr>
+                <tr><th>제한 시간</th><td>15초 카운트다운 (제한 시간 내 선을 자르지 못하면 즉시 폭발 판정)</td></tr>
+                <tr><th>해제 성공</th><td>지정된 해제선을 자르면 <code>SAFE</code> 판정과 함께 폭탄이 안전하게 해체되어 생존</td></tr>
+                <tr><th>실패 폭발 효과</th><td>상대 머리 위에서 폭탄이 <strong>펑!</strong> 터지며 폭발 효과음, <strong>머리는 삐죽삐죽 솟구치고 얼굴은 까맣게 그을린 상태(<code>dead-bomb</code>)</strong>로 변화 + <strong>10초간 채팅·행동 불가</strong></td></tr>
+                <tr><th>방패 관통 판정</th><td>이지스 방패(Shield)로 자동 방어되지 않으며, 오직 올바른 선을 골라 해체해야만 생존 가능</td></tr>
+            </table>
+            <div class="strategy-block">
+                <h4>💣 실전 운용 전략</h4>
+                <p>디스코드 보이스나 채팅으로 "무조건 파란선이 정답이야~"처럼 역심리 블러핑을 던져 상대의 손이 떨리게 만드세요. 방패를 여러 개 쌓아둔 상대도 폭탄해체하기 앞에서는 50% 확률 심리전에 직면하게 됩니다!</p>
+            </div>
+        </article>
+
         <!-- Balance Matrix Section -->
         <article class="matrix-section">
             <h3>⚖️ 아이템 상성 및 밸런스 매트릭스</h3>
@@ -415,7 +446,8 @@
                 </thead>
                 <tbody>
                     <tr><td>🚀 유도 미사일</td><td>독주자 제압, 연속 발사로 기절 시간(+30초) 중첩 누적</td><td>이지스 방패 보유자에게 차단당함</td></tr>
-                    <tr><td>🛡️ 이지스 방패</td><td>적의 미사일 직격/예약 타격 및 3종 맹수 습격 자동 방어</td><td>금기어 추가/변경 등 간접 공격에는 반응하지 않음</td></tr>
+                    <tr><td>💣 폭탄해체하기</td><td>방패 보유자 압박, 심리전 블러핑으로 10초 침묵·그을림 유발</td><td>50% 확률로 상대가 해제선을 맞추면 무효화됨</td></tr>
+                    <tr><td>🛡️ 이지스 방패</td><td>적의 미사일 직격/예약 타격 및 3종 맹수 습격 자동 방어</td><td>금기어 추가/변경 및 폭탄해체하기에는 반응하지 않음</td></tr>
                     <tr><td>🔀 금기어 변경권</td><td>상대가 내 단어 패턴을 완전히 읽었을 때 기습 교체</td><td>동일 슬롯 15초 쿨다운 및 WordValidator 제약 준수 필요</td></tr>
                     <tr><td>➕ 금기어 추가권</td><td>생존자들의 어휘 선택지를 좁히는 광역 지뢰 매설</td><td>금기어 삭제권에 의해 정화될 수 있음</td></tr>
                     <tr><td>➖ 금기어 삭제권</td><td>다수의 참가자가 나에게 금기어를 중첩시켰을 때 즉시 정화</td><td>나에게 남은 금기어가 0개일 때는 사용 불가</td></tr>

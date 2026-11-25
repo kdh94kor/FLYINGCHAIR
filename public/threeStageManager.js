@@ -708,12 +708,15 @@
         group.add(headGroup);
 
         // Head
-        const skinMat = createMat(0xffdbac, 0.55, 0.02);
+        const originalSkinHex = 0xffdbac;
+        const skinMat = createMat(originalSkinHex, 0.55, 0.02);
         const head = new THREE.Mesh(new THREE.SphereGeometry(0.58, 22, 20), skinMat);
         head.castShadow = true;
         headGroup.add(head);
 
         // Styled Hair (Top/back cap tilted slightly back so +Z face is open + front bangs)
+        const normalHairGroup = new THREE.Group();
+        headGroup.add(normalHairGroup);
         const hairColor = isFemale ? 0x5c3d99 : 0x2d3436;
         const hairMat = createMat(hairColor, 0.78);
         const hairCap = new THREE.Mesh(
@@ -723,7 +726,7 @@
         hairCap.position.set(0, 0.04, -0.04);
         hairCap.rotation.x = -0.24;
         hairCap.castShadow = true;
-        headGroup.add(hairCap);
+        normalHairGroup.add(hairCap);
 
         // Front Bangs / Fringe (+Z forehead)
         const bangOffsets = [
@@ -736,20 +739,89 @@
             bang.scale.set(b.s[0], b.s[1], b.s[2]);
             bang.position.set(b.x, b.y, b.z);
             bang.rotation.set(b.rx, 0, b.rz);
-            headGroup.add(bang);
+            normalHairGroup.add(bang);
         });
 
         if (isFemale) {
             [-0.51, 0.51].forEach(sx => {
                 const sideLock = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.08, 0.65, 10), hairMat);
                 sideLock.position.set(sx, -0.15, 0.05);
-                headGroup.add(sideLock);
+                normalHairGroup.add(sideLock);
             });
             const ponytail = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 10), hairMat);
             ponytail.scale.set(0.9, 1.4, 0.9);
             ponytail.position.set(0, -0.05, -0.64);
-            headGroup.add(ponytail);
+            normalHairGroup.add(ponytail);
         }
+
+        // Bomb-Blasted Spiky Hair ("삐죽삐죽 솟구친 머리")
+        const bombCharredHairGroup = new THREE.Group();
+        bombCharredHairGroup.visible = false;
+        const charredHairMat = createMat(0x161616, 0.9, 0.02);
+        const charredCap = new THREE.Mesh(
+            new THREE.SphereGeometry(0.60, 14, 12, 0, Math.PI * 2, 0, Math.PI * 0.55),
+            charredHairMat
+        );
+        charredCap.position.set(0, 0.04, -0.02);
+        bombCharredHairGroup.add(charredCap);
+        const spikeGeo = new THREE.ConeGeometry(0.11, 0.52, 6);
+        const spikeSpecs = [
+            { x: 0, y: 0.72, z: 0.02, rx: 0, rz: 0, s: 1.15 },
+            { x: -0.28, y: 0.66, z: 0.12, rx: 0.18, rz: 0.42, s: 1.0 },
+            { x: 0.28, y: 0.66, z: 0.12, rx: 0.18, rz: -0.42, s: 1.0 },
+            { x: -0.48, y: 0.45, z: 0.08, rx: 0.15, rz: 0.85, s: 0.95 },
+            { x: 0.48, y: 0.45, z: 0.08, rx: 0.15, rz: -0.85, s: 0.95 },
+            { x: -0.56, y: 0.20, z: 0.0, rx: 0.05, rz: 1.25, s: 0.85 },
+            { x: 0.56, y: 0.20, z: 0.0, rx: 0.05, rz: -1.25, s: 0.85 },
+            { x: -0.18, y: 0.62, z: 0.34, rx: 0.58, rz: 0.28, s: 0.9 },
+            { x: 0.18, y: 0.62, z: 0.34, rx: 0.58, rz: -0.28, s: 0.9 },
+            { x: 0, y: 0.66, z: 0.32, rx: 0.5, rz: 0, s: 1.05 },
+            { x: -0.24, y: 0.62, z: -0.26, rx: -0.52, rz: 0.32, s: 0.95 },
+            { x: 0.24, y: 0.62, z: -0.26, rx: -0.52, rz: -0.32, s: 0.95 },
+            { x: 0, y: 0.65, z: -0.34, rx: -0.62, rz: 0, s: 1.0 },
+            { x: -0.42, y: 0.35, z: -0.28, rx: -0.45, rz: 0.78, s: 0.85 },
+            { x: 0.42, y: 0.35, z: -0.28, rx: -0.45, rz: -0.78, s: 0.85 },
+            { x: 0, y: 0.45, z: -0.48, rx: -0.95, rz: 0, s: 0.9 }
+        ];
+        spikeSpecs.forEach(sp => {
+            const spike = new THREE.Mesh(spikeGeo, charredHairMat);
+            spike.position.set(sp.x, sp.y, sp.z);
+            spike.rotation.set(sp.rx, 0, sp.rz);
+            spike.scale.setScalar(sp.s);
+            bombCharredHairGroup.add(spike);
+        });
+        headGroup.add(bombCharredHairGroup);
+
+        // Floating Ticking Bomb Above Head (visible while target is defusing)
+        const headBombGroup = new THREE.Group();
+        headBombGroup.position.set(0, 1.08, 0);
+        headBombGroup.visible = false;
+        const bombBody = new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 14), createMat(0x222222, 0.35, 0.55));
+        headBombGroup.add(bombBody);
+        const bombCollar = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.12, 10), createMat(0x7f8c8d, 0.3, 0.7));
+        bombCollar.position.set(0, 0.27, 0);
+        headBombGroup.add(bombCollar);
+        const headBombLed = new THREE.Mesh(
+            new THREE.SphereGeometry(0.065, 10, 10),
+            new THREE.MeshBasicMaterial({ color: 0xff2e43 })
+        );
+        headBombLed.position.set(0, 0.08, 0.27);
+        headBombGroup.add(headBombLed);
+        const wireRedLoop = new THREE.Mesh(
+            new THREE.TorusGeometry(0.14, 0.025, 8, 14, Math.PI * 1.1),
+            new THREE.MeshBasicMaterial({ color: 0xff4757 })
+        );
+        wireRedLoop.position.set(-0.14, 0.24, 0.08);
+        wireRedLoop.rotation.set(0.3, 0.3, 0.7);
+        headBombGroup.add(wireRedLoop);
+        const wireBlueLoop = new THREE.Mesh(
+            new THREE.TorusGeometry(0.14, 0.025, 8, 14, Math.PI * 1.1),
+            new THREE.MeshBasicMaterial({ color: 0x3182f6 })
+        );
+        wireBlueLoop.position.set(0.14, 0.24, 0.08);
+        wireBlueLoop.rotation.set(0.3, -0.3, -0.7);
+        headBombGroup.add(wireBlueLoop);
+        headGroup.add(headBombGroup);
 
         // Expressive Face on +Z (facing camera)
         const scleraMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
@@ -761,9 +833,13 @@
 
         const normalFaceGroup = new THREE.Group();
         const deadFaceGroup = new THREE.Group();
+        const bombFaceGroup = new THREE.Group();
         deadFaceGroup.visible = false;
+        bombFaceGroup.visible = false;
         headGroup.add(normalFaceGroup);
         headGroup.add(deadFaceGroup);
+        headGroup.add(bombFaceGroup);
+        const cheeks = [];
 
         [-1, 1].forEach(side => {
             const ex = side * 0.205;
@@ -796,6 +872,7 @@
             cheek.scale.set(1.25, 0.72, 0.4);
             cheek.position.set(side * 0.34, -0.11, 0.455);
             headGroup.add(cheek);
+            cheeks.push(cheek);
 
             // Dead / Knocked-out X_X Eye
             const xBar1 = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.036, 0.03), pupilMat);
@@ -813,6 +890,22 @@
             deadBrow.position.set(ex, 0.185, 0.535);
             deadBrow.rotation.z = side * 0.25;
             deadFaceGroup.add(deadBrow);
+
+            // Bomb-Stunned Wide White Eyes + Pinpoint Pupils (pop on soot-black face)
+            const bombSclera = new THREE.Mesh(new THREE.SphereGeometry(0.135, 12, 12), scleraMat);
+            bombSclera.scale.set(1.05, 1.15, 0.5);
+            bombSclera.position.set(ex, 0.035, 0.525);
+            bombFaceGroup.add(bombSclera);
+
+            const bombPupil = new THREE.Mesh(new THREE.SphereGeometry(0.036, 8, 8), pupilMat);
+            bombPupil.scale.set(1.0, 1.0, 0.6);
+            bombPupil.position.set(ex, 0.035, 0.585);
+            bombFaceGroup.add(bombPupil);
+
+            const bombBrow = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.032, 0.035), scleraMat);
+            bombBrow.position.set(ex, 0.22, 0.535);
+            bombBrow.rotation.z = side * 0.22;
+            bombFaceGroup.add(bombBrow);
         });
 
         // Nose (shared)
@@ -838,6 +931,16 @@
         deadTongue.position.set(0.042, -0.185, 0.582);
         deadTongue.rotation.z = -0.35;
         deadFaceGroup.add(deadTongue);
+
+        // Bomb-Stunned Open O-Mouth (light outline so it reads clearly against dark soot)
+        const bombMouth = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 8), scleraMat);
+        bombMouth.scale.set(1.1, 0.85, 0.35);
+        bombMouth.position.set(0, -0.155, 0.565);
+        bombFaceGroup.add(bombMouth);
+        const bombMouthInner = new THREE.Mesh(new THREE.SphereGeometry(0.052, 8, 8), pupilMat);
+        bombMouthInner.scale.set(1.05, 0.8, 0.4);
+        bombMouthInner.position.set(0, -0.155, 0.578);
+        bombFaceGroup.add(bombMouthInner);
 
         // Torso
         const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.48, 0.95, 16), createMat(bodyColor, 0.6));
@@ -901,8 +1004,16 @@
             group: group,
             head: head,
             headGroup: headGroup,
+            skinMat: skinMat,
+            originalSkinHex: originalSkinHex,
+            cheeks: cheeks,
+            normalHairGroup: normalHairGroup,
+            bombCharredHairGroup: bombCharredHairGroup,
             normalFaceGroup: normalFaceGroup,
             deadFaceGroup: deadFaceGroup,
+            bombFaceGroup: bombFaceGroup,
+            headBombGroup: headBombGroup,
+            headBombLed: headBombLed,
             torso: torso,
             leftArm: leftArm,
             rightArm: rightArm,
@@ -1889,6 +2000,9 @@
                 }
                 slot.player = player;
                 slot.charGroup.visible = true;
+                if (slot.avatarMeshes && slot.avatarMeshes.headBombGroup) {
+                    slot.avatarMeshes.headBombGroup.visible = !!player.activeBomb;
+                }
 
                 if (player.status === 'idle') {
                     resetSlotToSeat(slot);
@@ -1907,32 +2021,61 @@
         const { hinge, charGroup } = slot;
         if (!charGroup) return;
 
+        const m = slot.avatarMeshes;
+        const setNormalSkinAndHair = () => {
+            if (!m) return;
+            if (m.skinMat) m.skinMat.color.setHex(m.originalSkinHex || 0xffdbac);
+            if (m.cheeks) m.cheeks.forEach(c => { c.visible = true; });
+            if (m.normalHairGroup) m.normalHairGroup.visible = true;
+            if (m.bombCharredHairGroup) m.bombCharredHairGroup.visible = false;
+            if (m.bombFaceGroup) m.bombFaceGroup.visible = false;
+        };
+
         if (status === 'flying') {
+            setNormalSkinAndHair();
             charGroup.visible = true;
             hinge.rotation.x = -1.3;
             charGroup.rotation.set(0, 0, 0);
         } else if (status === 'dead' || status === 'dead-gator') {
+            setNormalSkinAndHair();
             charGroup.visible = true;
             hinge.rotation.x = -1.3;
             charGroup.position.set(slot.x, -0.45, -11.0);
             charGroup.rotation.set(0, 0, Math.PI / 2);
-            if (slot.avatarMeshes) {
-                slot.avatarMeshes.headGroup.rotation.set(0, 0, 0);
-                slot.avatarMeshes.normalFaceGroup.visible = false;
-                slot.avatarMeshes.deadFaceGroup.visible = true;
+            if (m) {
+                m.headGroup.rotation.set(0, 0, 0);
+                m.normalFaceGroup.visible = false;
+                m.deadFaceGroup.visible = true;
             }
         } else if (status === 'snatched') {
+            setNormalSkinAndHair();
             hinge.rotation.x = -1.3;
             charGroup.visible = false;
         } else if (status === 'dead-missile') {
+            setNormalSkinAndHair();
             charGroup.visible = true;
             hinge.rotation.x = -0.65;
             charGroup.position.set(slot.x, 2.55, slot.z + 0.1);
             charGroup.rotation.set(-0.85, 0, 0);
-            if (slot.avatarMeshes) {
-                slot.avatarMeshes.headGroup.rotation.set(0.15, 0.82, -0.22);
-                slot.avatarMeshes.normalFaceGroup.visible = false;
-                slot.avatarMeshes.deadFaceGroup.visible = true;
+            if (m) {
+                m.headGroup.rotation.set(0.15, 0.82, -0.22);
+                m.normalFaceGroup.visible = false;
+                m.deadFaceGroup.visible = true;
+            }
+        } else if (status === 'dead-bomb') {
+            charGroup.visible = true;
+            hinge.rotation.x = 0;
+            charGroup.position.set(slot.x, 2.4, slot.z + 0.1);
+            charGroup.rotation.set(0, 0, 0);
+            if (m) {
+                if (m.skinMat) m.skinMat.color.setHex(0x1e1e1e);
+                if (m.cheeks) m.cheeks.forEach(c => { c.visible = false; });
+                if (m.normalHairGroup) m.normalHairGroup.visible = false;
+                if (m.bombCharredHairGroup) m.bombCharredHairGroup.visible = true;
+                m.headGroup.rotation.set(0, 0, 0);
+                m.normalFaceGroup.visible = false;
+                m.deadFaceGroup.visible = false;
+                if (m.bombFaceGroup) m.bombFaceGroup.visible = true;
             }
         } else {
             resetSlotToSeat(slot);
@@ -1946,13 +2089,19 @@
         slot.charGroup.position.set(slot.x, 2.4, slot.z + 0.1);
         slot.charGroup.rotation.set(0, 0, 0);
         if (slot.avatarMeshes) {
-            slot.avatarMeshes.headGroup.rotation.set(0, 0, 0);
-            slot.avatarMeshes.normalFaceGroup.visible = true;
-            slot.avatarMeshes.deadFaceGroup.visible = false;
-            slot.avatarMeshes.leftLeg.rotation.set(-Math.PI / 2, 0, 0);
-            slot.avatarMeshes.rightLeg.rotation.set(-Math.PI / 2, 0, 0);
-            slot.avatarMeshes.leftArm.rotation.set(-Math.PI / 3.5, 0, 0);
-            slot.avatarMeshes.rightArm.rotation.set(-Math.PI / 3.5, 0, 0);
+            const m = slot.avatarMeshes;
+            if (m.skinMat) m.skinMat.color.setHex(m.originalSkinHex || 0xffdbac);
+            if (m.cheeks) m.cheeks.forEach(c => { c.visible = true; });
+            if (m.normalHairGroup) m.normalHairGroup.visible = true;
+            if (m.bombCharredHairGroup) m.bombCharredHairGroup.visible = false;
+            m.headGroup.rotation.set(0, 0, 0);
+            m.normalFaceGroup.visible = true;
+            m.deadFaceGroup.visible = false;
+            if (m.bombFaceGroup) m.bombFaceGroup.visible = false;
+            m.leftLeg.rotation.set(-Math.PI / 2, 0, 0);
+            m.rightLeg.rotation.set(-Math.PI / 2, 0, 0);
+            m.leftArm.rotation.set(-Math.PI / 3.5, 0, 0);
+            m.rightArm.rotation.set(-Math.PI / 3.5, 0, 0);
         }
         slot.currentAnim = null;
     }
@@ -2354,6 +2503,29 @@
         }
     }
 
+    function triggerBombExplosion(playerId) {
+        if (!isInitialized) return;
+        const slot = chairSlots.find(s => s.player && s.player.id === playerId);
+        if (!slot) return;
+        const pos = slot.charGroup.position.clone().add(new THREE.Vector3(0, 2.35, 0));
+        createExplosion3D(pos.x, pos.y, pos.z);
+        if (!sharedSmokeGeo) sharedSmokeGeo = new THREE.SphereGeometry(0.22, 6, 6);
+        for (let i = 0; i < 18; i++) {
+            const soot = new THREE.Mesh(
+                sharedSmokeGeo,
+                new THREE.MeshBasicMaterial({ color: i % 2 === 0 ? 0x1b1b1b : 0x3d3d3d, transparent: true, opacity: 0.9 })
+            );
+            soot.position.set(pos.x + (Math.random() - 0.5) * 0.5, pos.y, pos.z + (Math.random() - 0.5) * 0.5);
+            soot.velocity = new THREE.Vector3((Math.random() - 0.5) * 3.5, 1.8 + Math.random() * 3.2, (Math.random() - 0.5) * 3.5);
+            soot.gravity = 1.5;
+            soot.life = 1.0 + Math.random() * 0.5;
+            soot.maxLife = soot.life;
+            soot.growRate = 2.4;
+            scene.add(soot);
+            activeParticles.push(soot);
+        }
+    }
+
     function getSpiralPoint(t) {
         const angle = t * Math.PI * 5.5; // Fast 2.75 loops over the ocean and shoreline
         return new THREE.Vector3(
@@ -2730,6 +2902,30 @@
             if (slot.currentAnim && slot.currentAnim.update) {
                 slot.currentAnim.update(time);
             }
+            if (slot.player && slot.avatarMeshes) {
+                if (slot.player.activeBomb && slot.avatarMeshes.headBombGroup && slot.avatarMeshes.headBombGroup.visible) {
+                    slot.avatarMeshes.headBombGroup.position.y = 1.08 + Math.sin(time * 8) * 0.08;
+                    if (slot.avatarMeshes.headBombLed) {
+                        slot.avatarMeshes.headBombLed.material.color.setHex(Math.sin(time * 16) > 0 ? 0xff2e43 : 0x550000);
+                    }
+                }
+                if (slot.player.status === 'dead-bomb' && Math.random() < delta * 6) {
+                    if (!sharedSmokeGeo) sharedSmokeGeo = new THREE.SphereGeometry(0.22, 6, 6);
+                    const puff = new THREE.Mesh(
+                        sharedSmokeGeo,
+                        new THREE.MeshBasicMaterial({ color: 0x353b48, transparent: true, opacity: 0.55 })
+                    );
+                    const headPos = slot.charGroup.position;
+                    puff.position.set(headPos.x + (Math.random() - 0.5) * 0.5, headPos.y + 2.0, headPos.z + (Math.random() - 0.5) * 0.3);
+                    puff.velocity = new THREE.Vector3((Math.random() - 0.5) * 0.4, 1.1 + Math.random() * 0.6, (Math.random() - 0.5) * 0.4);
+                    puff.gravity = 0;
+                    puff.life = 0.85;
+                    puff.maxLife = 0.85;
+                    puff.growRate = 1.3;
+                    scene.add(puff);
+                    activeParticles.push(puff);
+                }
+            }
         });
 
         updateActiveMissiles(time, delta);
@@ -2791,6 +2987,7 @@
         syncPlayers: syncPlayers,
         triggerFly: triggerFly,
         triggerMissile: triggerMissile,
+        triggerBombExplosion: triggerBombExplosion,
         showSpeechBubble: showSpeechBubble,
         updateRoamingAnimal: updateRoamingAnimal,
         handleResize: onResize,

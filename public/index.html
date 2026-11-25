@@ -215,12 +215,38 @@
         .speech-bubble::after { content: ''; position: absolute; bottom: -6px; left: 50%; margin-left: calc(-6px - var(--bubble-shift, 0px)); border-width: 6px 6px 0; border-style: solid; border-color: #fff transparent transparent transparent; }
         .speech-bubble.show { opacity: 1; }
 
-        .avatar-svg { width: 100%; height: 100%; drop-shadow: 2px 2px 2px rgba(0,0,0,0.3); }
-        .exp-idle, .exp-fly, .exp-water, .exp-dead { display: none; }
+        .avatar-svg { width: 100%; height: 100%; drop-shadow: 2px 2px 2px rgba(0,0,0,0.3); overflow: visible; }
+        .exp-idle, .exp-fly, .exp-water, .exp-dead, .exp-bomb, .avatar-bomb-hair { display: none; }
         .status-idle .exp-idle, .status-walking .exp-idle { display: block; }
         .status-flying .exp-fly { display: block; }
         .status-swimming .exp-water { display: block; }
         .status-dead .exp-dead, .status-dead-gator .exp-dead, .status-dead-missile .exp-dead, .status-snatched .exp-dead { display: block; }
+        .status-dead-bomb .avatar-normal-hair { display: none; }
+        .status-dead-bomb .avatar-bomb-hair { display: block; }
+        .status-dead-bomb .avatar-face-skin { fill: #202020 !important; }
+        .status-dead-bomb .exp-bomb { display: block; }
+        .status-dead-bomb .bomb-smoke-wisp { animation: bomb-smoke-rise 1.6s infinite ease-out; transform-origin: center bottom; }
+        .status-dead-bomb .bomb-smoke-wisp.w2 { animation-delay: 0.5s; }
+        .status-dead-bomb .bomb-smoke-wisp.w3 { animation-delay: 1.0s; }
+        @keyframes bomb-smoke-rise {
+            0% { opacity: 0.85; transform: translateY(0) scale(0.8); }
+            100% { opacity: 0; transform: translateY(-24px) scale(1.4); }
+        }
+        .floating-head-bomb {
+            position: absolute;
+            top: -54px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.4rem;
+            z-index: 28;
+            pointer-events: none;
+            filter: drop-shadow(0 2px 6px rgba(255, 71, 87, 0.75));
+            animation: bomb-head-bob 0.45s infinite alternate ease-in-out;
+        }
+        @keyframes bomb-head-bob {
+            0% { transform: translateX(-50%) translateY(0) scale(1); }
+            100% { transform: translateX(-50%) translateY(-5px) scale(1.12); }
+        }
 
         @keyframes fly-parabola {
             0% { transform: translateY(0) rotate(0) scale(1); animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
@@ -378,6 +404,7 @@
         .item-btn.call_shark { background: rgba(75, 101, 132, 0.25); border-color: rgba(75, 101, 132, 0.6); color: #778ca3; }
         .item-btn.call_gator { background: rgba(46, 204, 113, 0.25); border-color: rgba(46, 204, 113, 0.6); color: #2ecc71; }
         .item-btn.call_gull { background: rgba(241, 196, 15, 0.25); border-color: rgba(241, 196, 15, 0.6); color: #f1c40f; }
+        .item-btn.bomb_defuse { background: rgba(255, 107, 53, 0.25); border-color: rgba(255, 107, 53, 0.65); color: #ff7f50; }
 
         /* Roaming Waiting Animals Layers & Elements */
         #waiting-animals-sky-layer,
@@ -549,6 +576,56 @@
         .modal > div[id$="-list"] { overflow-y: auto; overflow-x: hidden; flex: 1; max-height: 52vh; padding-right: 5px; margin-bottom: 10px; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
         .modal-buttons { display: flex; gap: 10px; margin-top: 10px; flex-shrink: 0; }
         .modal > button { flex-shrink: 0; }
+
+        /* Bomb Setup & Defuse Modal Styles */
+        .bomb-modal { width: 440px; max-width: 94vw; max-height: 90vh; overflow-y: auto; position: relative; box-sizing: border-box; }
+        .bomb-wire-pick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; flex-shrink: 0; }
+        .bomb-wire-pick-btn {
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+            padding: 12px 10px; border-radius: 10px; border: 2px solid #444; background: #222630;
+            color: #eee; font-weight: 700; font-size: 0.92rem; cursor: pointer; transition: all 0.18s ease;
+        }
+        .bomb-wire-pick-btn:hover { transform: translateY(-1px); border-color: #777; }
+        .bomb-wire-pick-btn .wire-bar { width: 72%; height: 8px; border-radius: 999px; }
+        .bomb-wire-pick-btn.red .wire-bar { background: linear-gradient(90deg, #ff4757, #ff6b81); box-shadow: 0 0 8px rgba(255,71,87,0.5); }
+        .bomb-wire-pick-btn.blue .wire-bar { background: linear-gradient(90deg, #1e90ff, #54a0ff); box-shadow: 0 0 8px rgba(30,144,255,0.5); }
+        .bomb-wire-pick-btn.red.selected { border-color: #ff4757; background: rgba(255,71,87,0.18); color: #fff; box-shadow: 0 0 14px rgba(255,71,87,0.35); }
+        .bomb-wire-pick-btn.blue.selected { border-color: #3182f6; background: rgba(49,130,246,0.18); color: #fff; box-shadow: 0 0 14px rgba(49,130,246,0.35); }
+        .bomb-target-list-scroll { overflow-y: auto; max-height: 34vh; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; margin-bottom: 12px; }
+        .bomb-stage-wrap {
+            background: radial-gradient(circle at 50% 35%, #2a2e39 0%, #16181f 100%);
+            border: 1px solid #3c4252; border-radius: 12px; padding: 8px; margin-bottom: 12px;
+            position: relative; overflow: hidden; flex-shrink: 0;
+        }
+        #bomb-svg-stage { width: 100%; height: auto; max-height: 250px; display: block; user-select: none; }
+        .bomb-wire-hit { cursor: pointer; }
+        .bomb-wire-hit.disabled { cursor: default; pointer-events: none; }
+        .bomb-status-text {
+            text-align: center; font-size: 0.92rem; font-weight: 700; color: #f1f2f6;
+            padding: 8px 10px; border-radius: 8px; background: rgba(255,255,255,0.06);
+            margin-bottom: 10px; min-height: 38px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .bomb-cut-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; flex-shrink: 0; }
+        .bomb-cut-btn { font-weight: 800; padding: 11px 10px; border-radius: 8px; border: 2px solid transparent; cursor: pointer; transition: transform 0.15s, opacity 0.15s; }
+        .bomb-cut-btn.red { background: linear-gradient(135deg, #e84118, #c23616); border-color: #ff6b81; color: #fff; }
+        .bomb-cut-btn.blue { background: linear-gradient(135deg, #0097e6, #0066cc); border-color: #70a1ff; color: #fff; }
+        .bomb-cut-btn:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.08); }
+        .bomb-cut-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+        .bomb-modal-flash {
+            position: absolute; inset: 0; z-index: 30; pointer-events: none; border-radius: 12px;
+            background: radial-gradient(circle, #ffffff 0%, #ffd32a 35%, #ff4757 75%, rgba(0,0,0,0.9) 100%);
+            animation: bomb-flash-pop 0.35s ease-out forwards;
+        }
+        @keyframes bomb-flash-pop {
+            0% { opacity: 0; transform: scale(0.8); }
+            35% { opacity: 1; transform: scale(1.02); }
+            100% { opacity: 0.9; transform: scale(1); }
+        }
+        @media (max-width: 768px) {
+            .bomb-modal { padding: 16px; }
+            #bomb-svg-stage { max-height: 200px; }
+            .bomb-cut-btn { padding: 9px 8px; font-size: 0.85rem; }
+        }
 
         /* Taboo Slot Machine & Recommendation Styles */
         .word-input-row {
@@ -1369,8 +1446,8 @@
                         <div class="card-icon-badge">🎒</div>
                         <span class="card-tag">아이템</span>
                     </div>
-                    <h4>8종 특수 아이템 도감</h4>
-                    <p>유도 미사일, 방패, 금기어 조작 및 상어/악어/부산갈매기 소환 스펙 & 밸런스 분석</p>
+                    <h4>9종 특수 아이템 도감</h4>
+                    <p>유도 미사일, 폭탄해체하기, 방패, 금기어 조작 및 상어/악어/부산갈매기 소환 스펙 & 밸런스 분석</p>
                     <span class="card-action">자세히 보기 &rarr;</span>
                 </a>
 
@@ -1470,8 +1547,8 @@
                         <p style="font-size:0.88rem; line-height:1.6;">게임 시작 전 서로에게 지정한 비밀 단어! 일상 대화 속에 교묘한 낚시 질문을 던져 상대방이 금기어를 외치게 유도하세요. 발화 즉시 의자가 격발되어 시원한 수영장으로 날아갑니다.</p>
                     </div>
                     <div style="background:rgba(255,255,255,0.03); padding:18px; border-radius:14px; border:1px solid rgba(255,255,255,0.06);">
-                        <h3 style="font-size:1.05rem; font-weight:700; color:var(--toss-blue); margin-bottom:8px;">⚡ 8종 전략 특수 아이템</h3>
-                        <p style="font-size:0.88rem; line-height:1.6;">유도 미사일(30초 기절 및 시간 중첩), 이지스 방패, 금기어 변경/추가/삭제, 죠스 상어/늪지대 악어/부산갈매기 소환 등 전세를 단숨에 뒤집는 전략 아이템으로 짜릿한 역전승을 거두세요.</p>
+                        <h3 style="font-size:1.05rem; font-weight:700; color:var(--toss-blue); margin-bottom:8px;">⚡ 9종 전략 특수 아이템</h3>
+                        <p style="font-size:0.88rem; line-height:1.6;">유도 미사일(30초 기절 및 시간 중첩), 폭탄해체하기(빨간선·파란선 심리전 & 폭발 시 10초 그을림 침묵), 이지스 방패, 금기어 변경/추가/삭제, 상어/악어/부산갈매기 소환 등 전세를 뒤집는 전략 아이템으로 역전승을 거두세요.</p>
                     </div>
                     <div style="background:rgba(255,255,255,0.03); padding:18px; border-radius:14px; border:1px solid rgba(255,255,255,0.06);">
                         <h3 style="font-size:1.05rem; font-weight:700; color:var(--toss-blue); margin-bottom:8px;">📱 모바일 앱 전환 완벽 복구</h3>
@@ -1491,10 +1568,10 @@
                     <li>• <strong>1단계 (대기실 & 맞춤 룰셋 구성):</strong> 방장은 참가자당 금기어 개수(1~3개), 침묵 방지(AFK) 자동 발사 타이머(최소 30초 이상), 특수 아이템 보급 주기를 모임 성격에 맞게 자유롭게 설정할 수 있습니다. 4자리 숫자 방 코드 또는 초대 링크 복사로 친구들을 간편하게 초대하세요.</li>
                     <li>• <strong>2단계 (비밀 금기어 교차 등록):</strong> 게임이 시작되면 본인을 제외한 다른 참가자들에게 부여할 금기어를 직접 입력합니다. 공정한 게임 밸런스를 위해 <strong>2글자 이상 25글자 이하의 단어</strong>로 제한되며, 초성(ㅋㅋ, ㅎㅎ 등) 및 특수기호(?!, ^^ 등)도 자유롭게 설정할 수 있습니다. 단, 띄어쓰기(공백)와 시스템 예약어(???) 및 동일 대상 중복 단어는 단일 검증 엔진(WordValidator)에 의해 자동으로 차단됩니다.</li>
                     <li>• <strong>3단계 (실시간 채팅 & 부분 문자열 격발 판정):</strong> 상단 전광판에는 다른 모든 참가자의 금기어가 투명하게 공개되지만, 정작 <strong>내 머리 위에 걸린 금기어는 나에게만 `?`로 가려져 보이지 않습니다.</strong> 채팅 메시지에 내 금기어가 부분 문자열(Substring)로 포함되는 순간(예: 금기어가 '치킨'일 때 '양념치킨 먹고 싶다' 입력), 서버가 0.05초 내에 감지하여 의자를 수영장으로 발사합니다.</li>
-                    <li>• <strong>4단계 (특수 아이템 공방 & 결과 리포트):</strong> 보급 주기에 따라 지급되는 8종의 아이템으로 상대를 기절시키거나 내 금기어를 정화할 수 있습니다. 라운드 종료 시 총 비행 횟수, 상어/악어/갈매기 조우 횟수, 미사일 피격 횟수 및 금기어별 발동 통계를 한눈에 확인할 수 있습니다.</li>
+                    <li>• <strong>4단계 (특수 아이템 공방 & 결과 리포트):</strong> 보급 주기에 따라 지급되는 9종의 아이템(유도 미사일, 폭탄해체하기 등)으로 상대를 기절시키거나 내 금기어를 정화할 수 있습니다. 라운드 종료 시 총 비행 횟수, 상어/악어/갈매기 조우 횟수, 미사일·폭탄 피격 횟수 및 금기어별 발동 통계를 한눈에 확인할 수 있습니다.</li>
                 </ul>
 
-                <h3 style="font-size:1.15rem; font-weight:700; color:#fff; margin:24px 0 10px;">🌟 승리를 위한 고수들의 4대 심리 대화 & 아이템 전술</h3>
+                <h3 style="font-size:1.15rem; font-weight:700; color:#fff; margin:24px 0 10px;">🌟 승리를 위한 고수들의 5대 심리 대화 & 아이템 전술</h3>
                 <p style="margin-bottom:12px;">
                     플라잉 체어의 진정한 묘미는 고도의 대화 심리전과 아이템 타이밍의 결합입니다. 무작정 질문을 퍼붓기보다 상대방의 성향과 말버릇을 정밀하게 공략해 보세요:
                 </p>
@@ -1503,12 +1580,13 @@
                     <li>• <strong>억울함 자극과 리액션 함정:</strong> 상대방을 장난스럽게 오해하거나 황당한 누명을 씌우면 한국인이 가장 참기 힘든 방어 기제 단어인 "아니", "진짜", "왜", "내가 언제"가 1초 만에 튀어나옵니다.</li>
                     <li>• <strong>침묵 타이머 카운트다운 압박:</strong> 침묵(AFK) 발사 타이머 종료 5초 전 경고음이 울릴 때 대답하기 쉬운 이지선다 질문을 던지세요. 시간 압박에 몰린 상대는 단어 검열을 포기하고 급하게 답하다가 함정에 걸려듭니다.</li>
                     <li>• <strong>유도 미사일 중첩과 공중 예약 타격:</strong> 유도 미사일은 이미 미사일에 맞아 기절 중인 상대에게 연속 발사하여 기절 시간을 누적(+30초)시킬 수 있으며, 금기어 발동으로 날아가는 상대에게 명중할 경우 의자로 복귀하는 즉시 30초 기절이 발동되는 정교한 전투 판정을 지원합니다.</li>
+                    <li>• <strong>폭탄해체하기 양자택일 심리전:</strong> <code>💣 폭탄해체하기</code>는 빨간선/파란선 중 살아남는 해제선을 직접 정한 뒤 상대방에게 폭탄을 보냅니다. 상대가 니퍼를 쥐고 손이 떨리며 잘못된 선을 자르거나 15초 내 해체에 실패하면 머리 위에서 폭탄이 터져 머리가 삐죽삐죽 솟구치고 얼굴이 까맣게 그을리며 10초간 채팅이 봉쇄됩니다(방패로도 방어 불가!).</li>
                 </ul>
 
                 <p style="font-size:0.9rem; color:var(--toss-text-muted); border-top:1px solid var(--toss-card-border); padding-top:16px;">
                     더 깊이 있는 전략과 기술 아카이브가 궁금하신가요?
                     <a href="/guide/rules" style="color:var(--toss-blue); font-weight:600;">게임 규칙 매뉴얼</a>,
-                    <a href="/guide/items" style="color:var(--toss-blue); font-weight:600;">8종 아이템 도감</a>,
+                    <a href="/guide/items" style="color:var(--toss-blue); font-weight:600;">9종 아이템 도감</a>,
                     <a href="/guide/strategy" style="color:var(--toss-blue); font-weight:600;">심리전 공략집</a>,
                     <a href="/words" style="color:var(--toss-blue); font-weight:600;">금기어 백과 100선</a>,
                     <a href="/history" style="color:var(--toss-blue); font-weight:600;">예능의 역사</a>,
@@ -1650,6 +1728,7 @@
                     <li>🦈 상어밥 신세: <strong id="stats-shark" style="color:#fff;">0</strong>회</li>
                     <li>🐊 악어떼 습격: <strong id="stats-gator" style="color:#fff;">0</strong>회</li>
                     <li>🚀 미사일 피격: <strong id="stats-missile" style="color:#fff;">0</strong>회</li>
+                    <li>💣 폭탄 피격: <strong id="stats-bomb" style="color:#fff;">0</strong>회</li>
                 </ul>
                 <div style="margin-top:15px; border-top:1px solid #444; padding-top:15px;">
                     <h4 style="margin-bottom:5px; color:#aaa;">발동된 금기어 횟수</h4>
@@ -1689,6 +1768,182 @@
                 <button class="btn" onclick="submitWordChange()">변경하기</button>
                 <button class="btn btn-secondary" onclick="closeWordChangeModal()">취소</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Bomb Setup Modal (Sender chooses safe wire & target) -->
+    <div id="modal-bomb-setup" class="modal-overlay hidden">
+        <div class="modal bomb-modal">
+            <h2>💣 폭탄해체하기 설치</h2>
+            <p style="font-size:0.86rem; color:#ccc; margin-bottom:12px; text-align:center;">
+                1단계: <strong>살아남는 해제선</strong>을 먼저 선택하세요.
+            </p>
+            <div class="bomb-wire-pick-grid">
+                <button type="button" id="bomb-pick-red" class="bomb-wire-pick-btn red" onclick="selectBombSafeWire('red')">
+                    <span class="wire-bar"></span>
+                    <span>🔴 빨간선 해제</span>
+                </button>
+                <button type="button" id="bomb-pick-blue" class="bomb-wire-pick-btn blue" onclick="selectBombSafeWire('blue')">
+                    <span class="wire-bar"></span>
+                    <span>🔵 파란선 해제</span>
+                </button>
+            </div>
+            <p id="bomb-setup-step2-label" style="font-size:0.86rem; color:#ccc; margin-bottom:10px; text-align:center;">
+                2단계: 폭탄을 보낼 상대방을 선택하세요.
+            </p>
+            <div id="bomb-target-list" class="bomb-target-list-scroll"></div>
+            <button type="button" class="btn btn-secondary" onclick="closeBombSetupModal()">취소</button>
+        </div>
+    </div>
+
+    <!-- Bomb Defuse Modal (Animated Two-Handed Nippers + Wire Cut) -->
+    <div id="modal-bomb-defuse" class="modal-overlay hidden">
+        <div class="modal bomb-modal">
+            <div id="bomb-modal-flash" class="bomb-modal-flash hidden"></div>
+            <h2 id="bomb-defuse-title" style="margin-bottom:10px;">💣 폭탄 해체!</h2>
+            <p id="bomb-defuse-subtitle" style="font-size:0.86rem; color:#ddd; margin-bottom:10px; text-align:center; flex-shrink:0;">
+                빨간선과 파란선 중 해제선을 골라 자르세요! 실패 시 10초간 침묵!
+            </p>
+            <div class="bomb-stage-wrap">
+                <svg id="bomb-svg-stage" viewBox="0 0 360 285" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="bombBodyGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#3c4250"/>
+                            <stop offset="55%" stop-color="#232730"/>
+                            <stop offset="100%" stop-color="#171920"/>
+                        </linearGradient>
+                        <linearGradient id="redWireGrad" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#ff6b81"/>
+                            <stop offset="100%" stop-color="#c0392b"/>
+                        </linearGradient>
+                        <linearGradient id="blueWireGrad" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#54a0ff"/>
+                            <stop offset="100%" stop-color="#1b64da"/>
+                        </linearGradient>
+                        <linearGradient id="steelGrad" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0%" stop-color="#d2dae2"/>
+                            <stop offset="50%" stop-color="#808e9b"/>
+                            <stop offset="100%" stop-color="#d2dae2"/>
+                        </linearGradient>
+                    </defs>
+
+                    <!-- Bomb Main Casing -->
+                    <rect x="74" y="18" width="212" height="106" rx="14" fill="url(#bombBodyGrad)" stroke="#57606f" stroke-width="3"/>
+                    <!-- Hazard Stripe Top -->
+                    <rect x="86" y="25" width="188" height="10" rx="4" fill="#ffa502" opacity="0.9"/>
+                    <path d="M 98 25 L 108 35 M 118 25 L 128 35 M 138 25 L 148 35 M 158 25 L 168 35 M 178 25 L 188 35 M 198 25 L 208 35 M 218 25 L 228 35 M 238 25 L 248 35 M 258 25 L 268 35" stroke="#1e272e" stroke-width="5"/>
+                    <!-- Rivets -->
+                    <circle cx="88" cy="46" r="3" fill="#747d8c"/><circle cx="272" cy="46" r="3" fill="#747d8c"/>
+                    <circle cx="88" cy="112" r="3" fill="#747d8c"/><circle cx="272" cy="112" r="3" fill="#747d8c"/>
+                    <!-- Digital LED Screen -->
+                    <rect x="115" y="45" width="130" height="46" rx="7" fill="#0c0f14" stroke="#2f3542" stroke-width="2.5"/>
+                    <text id="bomb-led-text" x="180" y="76" text-anchor="middle" fill="#ff4757" font-family="monospace" font-size="27" font-weight="bold" letter-spacing="2">00:15</text>
+                    <!-- Status Indicator LED -->
+                    <circle id="bomb-led-light" cx="258" cy="68" r="7" fill="#ff4757" stroke="#111" stroke-width="2"/>
+                    <!-- Terminal Blocks -->
+                    <rect x="92" y="114" width="54" height="16" rx="4" fill="#2f3542" stroke="#57606f" stroke-width="2"/>
+                    <rect x="214" y="114" width="54" height="16" rx="4" fill="#2f3542" stroke="#57606f" stroke-width="2"/>
+                    <circle cx="106" cy="122" r="4" fill="#ff4757"/><circle cx="132" cy="122" r="4" fill="#ff4757"/>
+                    <circle cx="228" cy="122" r="4" fill="#3182f6"/><circle cx="254" cy="122" r="4" fill="#3182f6"/>
+
+                    <!-- RED WIRE (left loop, cut center approx 118, 174) -->
+                    <g id="wire-red-group">
+                        <g id="wire-red-intact">
+                            <path d="M 106 128 C 82 178, 152 190, 132 128" fill="none" stroke="rgba(0,0,0,0.45)" stroke-width="14" stroke-linecap="round"/>
+                            <path d="M 106 128 C 82 178, 152 190, 132 128" fill="none" stroke="url(#redWireGrad)" stroke-width="10" stroke-linecap="round"/>
+                            <path d="M 106 128 C 82 178, 152 190, 132 128" fill="none" stroke="rgba(255,255,255,0.32)" stroke-width="2.5" stroke-linecap="round"/>
+                            <path id="wire-red-hit" class="bomb-wire-hit" d="M 106 128 C 82 178, 152 190, 132 128" fill="none" stroke="transparent" stroke-width="30" onclick="submitBombWireCut('red')"/>
+                        </g>
+                        <g id="wire-red-cut" class="hidden">
+                            <path d="M 106 128 Q 95 162 104 176" fill="none" stroke="url(#redWireGrad)" stroke-width="10" stroke-linecap="round"/>
+                            <circle cx="104" cy="176" r="4" fill="#e1b12c"/>
+                            <path d="M 132 128 Q 140 162 132 176" fill="none" stroke="url(#redWireGrad)" stroke-width="10" stroke-linecap="round"/>
+                            <circle cx="132" cy="176" r="4" fill="#e1b12c"/>
+                        </g>
+                    </g>
+
+                    <!-- BLUE WIRE (right loop, cut center approx 242, 174) -->
+                    <g id="wire-blue-group">
+                        <g id="wire-blue-intact">
+                            <path d="M 228 128 C 204 190, 278 178, 254 128" fill="none" stroke="rgba(0,0,0,0.45)" stroke-width="14" stroke-linecap="round"/>
+                            <path d="M 228 128 C 204 190, 278 178, 254 128" fill="none" stroke="url(#blueWireGrad)" stroke-width="10" stroke-linecap="round"/>
+                            <path d="M 228 128 C 204 190, 278 178, 254 128" fill="none" stroke="rgba(255,255,255,0.32)" stroke-width="2.5" stroke-linecap="round"/>
+                            <path id="wire-blue-hit" class="bomb-wire-hit" d="M 228 128 C 204 190, 278 178, 254 128" fill="none" stroke="transparent" stroke-width="30" onclick="submitBombWireCut('blue')"/>
+                        </g>
+                        <g id="wire-blue-cut" class="hidden">
+                            <path d="M 228 128 Q 220 162 228 176" fill="none" stroke="url(#blueWireGrad)" stroke-width="10" stroke-linecap="round"/>
+                            <circle cx="228" cy="176" r="4" fill="#e1b12c"/>
+                            <path d="M 254 128 Q 266 162 256 176" fill="none" stroke="url(#blueWireGrad)" stroke-width="10" stroke-linecap="round"/>
+                            <circle cx="256" cy="176" r="4" fill="#e1b12c"/>
+                        </g>
+                    </g>
+
+                    <!-- Cut Spark Flash -->
+                    <g id="wire-cut-spark" class="hidden" transform="translate(118, 168)">
+                        <polygon points="0,-20 5,-6 19,-10 8,1 20,12 5,8 0,22 -5,8 -20,12 -8,1 -19,-10 -5,-6" fill="#ffd32a" stroke="#ff6b35" stroke-width="2"/>
+                        <circle cx="0" cy="0" r="6" fill="#ffffff"/>
+                    </g>
+
+                    <!-- Two Human Hands Gripping Nippers (origin 0,0 = blade tip!) -->
+                    <g id="bomb-hands-nipper" class="hidden" transform="translate(180, 275)">
+                        <!-- Left Nipper Jaw + Handle -->
+                        <g id="nipper-left-arm" transform="rotate(-14, 0, 22)">
+                            <!-- Steel Jaw -->
+                            <path d="M 0 0 L -9 14 L -6 24 L 2 22 L -1 12 Z" fill="url(#steelGrad)" stroke="#485460" stroke-width="1.5"/>
+                            <!-- Insulated Handle -->
+                            <path d="M -4 23 C -16 42, -22 65, -24 94" fill="none" stroke="#ff6b35" stroke-width="10" stroke-linecap="round"/>
+                            <path d="M -4 23 C -16 42, -22 65, -24 94" fill="none" stroke="#d35400" stroke-width="3" stroke-linecap="round"/>
+                        </g>
+                        <!-- Right Nipper Jaw + Handle -->
+                        <g id="nipper-right-arm" transform="rotate(14, 0, 22)">
+                            <!-- Steel Jaw -->
+                            <path d="M 0 0 L 9 14 L 6 24 L -2 22 L 1 12 Z" fill="url(#steelGrad)" stroke="#485460" stroke-width="1.5"/>
+                            <!-- Insulated Handle -->
+                            <path d="M 4 23 C 16 42, 22 65, 24 94" fill="none" stroke="#ff6b35" stroke-width="10" stroke-linecap="round"/>
+                            <path d="M 4 23 C 16 42, 22 65, 24 94" fill="none" stroke="#d35400" stroke-width="3" stroke-linecap="round"/>
+                        </g>
+                        <!-- Nipper Pivot Bolt -->
+                        <circle cx="0" cy="22" r="4.5" fill="#7f8c8d" stroke="#2f3640" stroke-width="1.5"/>
+
+                        <!-- Left Human Hand & Forearm gripping left handle -->
+                        <g id="bomb-left-hand">
+                            <path d="M -52 115 L -44 68 C -42 54, -26 48, -16 54 L -10 82 L -20 115 Z" fill="#f5c6a5" stroke="#c8906b" stroke-width="2"/>
+                            <!-- Curled Fingers wrapping handle -->
+                            <rect x="-26" y="48" width="22" height="10" rx="5" fill="#fadcce" stroke="#c8906b" stroke-width="1.5"/>
+                            <rect x="-28" y="59" width="23" height="10" rx="5" fill="#fadcce" stroke="#c8906b" stroke-width="1.5"/>
+                            <rect x="-29" y="70" width="22" height="10" rx="5" fill="#fadcce" stroke="#c8906b" stroke-width="1.5"/>
+                            <rect x="-28" y="81" width="19" height="9" rx="4.5" fill="#fadcce" stroke="#c8906b" stroke-width="1.5"/>
+                            <!-- Thumb -->
+                            <ellipse cx="-14" cy="46" rx="7" ry="11" transform="rotate(-25, -14, 46)" fill="#fadcce" stroke="#c8906b" stroke-width="1.5"/>
+                        </g>
+
+                        <!-- Right Human Hand & Forearm gripping right handle -->
+                        <g id="bomb-right-hand">
+                            <path d="M 52 115 L 44 68 C 42 54, 26 48, 16 54 L 10 82 L 20 115 Z" fill="#f5c6a5" stroke="#c8906b" stroke-width="2"/>
+                            <!-- Curled Fingers wrapping handle -->
+                            <rect x="4" y="48" width="22" height="10" rx="5" fill="#fadcce" stroke="#c8906b" stroke-width="1.5"/>
+                            <rect x="5" y="59" width="23" height="10" rx="5" fill="#fadcce" stroke="#c8906b" stroke-width="1.5"/>
+                            <rect x="7" y="70" width="22" height="10" rx="5" fill="#fadcce" stroke="#c8906b" stroke-width="1.5"/>
+                            <rect x="9" y="81" width="19" height="9" rx="4.5" fill="#fadcce" stroke="#c8906b" stroke-width="1.5"/>
+                            <!-- Thumb -->
+                            <ellipse cx="14" cy="46" rx="7" ry="11" transform="rotate(25, 14, 46)" fill="#fadcce" stroke="#c8906b" stroke-width="1.5"/>
+                        </g>
+
+                        <!-- Nervous Sweat Drops -->
+                        <g id="bomb-sweat-drops" class="hidden">
+                            <path d="M -46 38 Q -52 48 -46 53 Q -40 48 -46 38 Z" fill="#54a0ff"/>
+                            <path d="M 48 34 Q 54 44 48 49 Q 42 44 48 34 Z" fill="#54a0ff"/>
+                            <path d="M -56 62 Q -61 70 -56 74 Q -51 70 -56 62 Z" fill="#70a1ff"/>
+                        </g>
+                    </g>
+                </svg>
+            </div>
+            <div id="bomb-status-text" class="bomb-status-text">어느 선을 자를지 선택하세요!</div>
+            <div id="bomb-cut-actions" class="bomb-cut-actions">
+                <button type="button" id="btn-cut-red" class="btn bomb-cut-btn red" onclick="submitBombWireCut('red')">✂️ 빨간선 자르기</button>
+                <button type="button" id="btn-cut-blue" class="btn bomb-cut-btn blue" onclick="submitBombWireCut('blue')">✂️ 파란선 자르기</button>
+            </div>
+            <button type="button" id="btn-bomb-spectator-close" class="btn btn-secondary hidden" style="margin-top:8px;" onclick="closeBombDefuseModal()">닫기 (배경 관전)</button>
         </div>
     </div>
 
@@ -1742,7 +1997,8 @@
                 DEAD_SHARK: 'dead',           // 상어에게 물림 (30초 심해 침수 기절)
                 DEAD_GATOR: 'dead-gator',     // 악어 떼에게 물림 (15초 수영장 기절)
                 SNATCHED_GULL: 'snatched',    // 부산갈매기에게 납치됨 (1분 상공 기절/채팅불가)
-                DEAD_MISSILE: 'dead-missile'  // 미사일 피격 (30초 의자 반전 기절)
+                DEAD_MISSILE: 'dead-missile', // 미사일 피격 (30초 의자 반전 기절)
+                DEAD_BOMB: 'dead-bomb'        // 폭탄 폭발 피격 (10초 그을림/머리 삐죽 기절)
             },
 
             // 1. 좌석 이탈 상태 목록 (의자에서 튕겨나가 공중, 물속, 심해, 납치 등 자리를 벗어난 상태)
@@ -1751,8 +2007,8 @@
             // 2. 동물 3종(상어/악어/부산갈매기)에게 잡힌 상태 목록
             ANIMAL_CAUGHT_STATUSES: ['dead', 'dead-gator', 'snatched'],
 
-            // 3. 행동 불능/기절 상태 목록 (상어, 악어, 갈매기, 미사일 피격으로 행동/채팅 불가)
-            INCAPACITATED_STATUSES: ['dead', 'dead-gator', 'snatched', 'dead-missile'],
+            // 3. 행동 불능/기절 상태 목록 (상어, 악어, 갈매기, 미사일, 폭탄 피격으로 행동/채팅 불가)
+            INCAPACITATED_STATUSES: ['dead', 'dead-gator', 'snatched', 'dead-missile', 'dead-bomb'],
 
             // 상태 문자열 안전 추출 헬퍼 (플레이어 객체 또는 문자열 수용)
             _toStatus(p) {
@@ -1761,10 +2017,10 @@
             },
 
             // [1. 착석 상태 체크]
-            // 물리적으로 의자 자리에 위치해 있는가? (정상 idle 착석 또는 미사일 피격으로 의자에 거꾸로 매달린 상태)
+            // 물리적으로 의자 자리에 위치해 있는가? (정상 idle 착석 또는 미사일/폭탄 피격으로 자리에 남아 있는 상태)
             isSeated(p) {
                 const s = this._toStatus(p);
-                return s === this.STATUS.IDLE || s === this.STATUS.DEAD_MISSILE;
+                return s === this.STATUS.IDLE || s === this.STATUS.DEAD_MISSILE || s === this.STATUS.DEAD_BOMB;
             },
 
             // 정상적으로 건강하게 착석해 있는가? (디버프 없이 채팅 및 아이템 조준 타깃이 가능한 완전한 idle 상태)
@@ -1814,6 +2070,11 @@
                 return this._toStatus(p) === this.STATUS.SNATCHED_GULL;
             },
 
+            // 폭탄 폭발에 맞아 그을림 기절 중인가?
+            isHitByBomb(p) {
+                return this._toStatus(p) === this.STATUS.DEAD_BOMB;
+            },
+
             // [4. 기절 / 행동 불능 상태 체크]
             // 공격을 받거나 동물에게 잡혀 기절 중(채팅/일반행동 불가)인가?
             isIncapacitated(p) {
@@ -1824,6 +2085,11 @@
             // 미사일의 공격 타깃이 될 수 있는가? (물리적으로 의자 자리에 착석 중인 플레이어만 조준 가능 — 미사일 기절 중첩 허용)
             canBeTargetedByMissile(p) {
                 return this.isSeated(p);
+            },
+
+            // 폭탄해체하기 아이템의 타깃이 될 수 있는가? (건강하게 착석 중이며 현재 진행 중인 폭탄이 없는 대상)
+            canBeTargetedByBomb(p) {
+                return this.isHealthySeated(p) && !(p && typeof p === 'object' && p.activeBomb);
             },
 
             // 채팅을 전송할 수 있는 상태인가? (기절하지 않았고 좌석을 이탈하지 않은 상태)
@@ -1848,6 +2114,7 @@
                     case this.STATUS.DEAD_GATOR: return '이탈 (악어에게 물림)';
                     case this.STATUS.SNATCHED_GULL: return '이탈 (갈매기에게 납치됨)';
                     case this.STATUS.DEAD_MISSILE: return '착석 (미사일 기절)';
+                    case this.STATUS.DEAD_BOMB: return '착석 (폭탄 피격)';
                     default: return '알 수 없음';
                 }
             }
@@ -1865,9 +2132,11 @@
                 isAway: PlayerState.isAway(p),
                 isCaughtByAnimal: PlayerState.isCaughtByAnimal(p),
                 caughtAnimal: PlayerState.getCaughtAnimal(p),
+                isHitByBomb: PlayerState.isHitByBomb(p),
                 isIncapacitated: PlayerState.isIncapacitated(p),
                 canChat: PlayerState.canChat(p),
                 canBeTargetedByMissile: PlayerState.canBeTargetedByMissile(p),
+                canBeTargetedByBomb: PlayerState.canBeTargetedByBomb(p),
                 label: PlayerState.getKoreanLabel(p)
             };
         }
@@ -1952,6 +2221,55 @@
         function playSplashSound() { playTone(150, 'sawtooth', 0.3, 0.3); playTone(100, 'square', 0.4, 0.2); }
         function playWarningSound() { playTone(800, 'square', 0.2, 0.1); setTimeout(() => playTone(600, 'square', 0.2, 0.1), 200); }
         function playSharkSound() { playTone(100, 'sawtooth', 0.5, 0.4); setTimeout(() => playTone(70, 'sawtooth', 2.0, 0.5), 300); }
+        function playBombPlantSound() { playTone(520, 'square', 0.08, 0.14); setTimeout(() => playTone(780, 'square', 0.12, 0.14), 100); }
+        function playBombTickSound(urgent = false) { playTone(urgent ? 1250 : 920, 'square', 0.04, urgent ? 0.12 : 0.07); }
+        function playBombTensionSound() { playTone(180, 'sawtooth', 0.35, 0.07); }
+        function playNipperSnipSound() { playTone(1800, 'triangle', 0.045, 0.28); setTimeout(() => playTone(950, 'square', 0.05, 0.2), 25); }
+        function playBombDefuseSuccessSound() {
+            playTone(523.25, 'sine', 0.14, 0.18);
+            setTimeout(() => playTone(659.25, 'sine', 0.14, 0.18), 110);
+            setTimeout(() => playTone(783.99, 'sine', 0.28, 0.22), 220);
+        }
+        function playBombExplosionSound() {
+            try {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const now = audioCtx.currentTime;
+                // White-noise blast shaped by sweeping low-pass filter
+                const dur = 0.95;
+                const bufferSize = Math.floor(audioCtx.sampleRate * dur);
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 1.35);
+                }
+                const noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(1600, now);
+                filter.frequency.exponentialRampToValueAtTime(110, now + dur);
+                const nGain = audioCtx.createGain();
+                nGain.gain.setValueAtTime(0.7, now);
+                nGain.gain.exponentialRampToValueAtTime(0.01, now + dur);
+                noise.connect(filter);
+                filter.connect(nGain);
+                nGain.connect(audioCtx.destination);
+                noise.start(now);
+
+                // Sub-bass boom thump
+                const sub = audioCtx.createOscillator();
+                const subGain = audioCtx.createGain();
+                sub.type = 'sawtooth';
+                sub.frequency.setValueAtTime(145, now);
+                sub.frequency.exponentialRampToValueAtTime(26, now + 0.65);
+                subGain.gain.setValueAtTime(0.55, now);
+                subGain.gain.exponentialRampToValueAtTime(0.01, now + 0.65);
+                sub.connect(subGain);
+                subGain.connect(audioCtx.destination);
+                sub.start(now);
+                sub.stop(now + 0.68);
+            } catch (e) {}
+        }
 
         // --- UI Utils & Browser Events ---
         window.addEventListener('popstate', function(event) {
@@ -2166,6 +2484,9 @@
             document.getElementById('modal-target-selection').classList.add('hidden');
             document.getElementById('modal-word-add').classList.add('hidden');
             document.getElementById('modal-word-change').classList.add('hidden');
+            document.getElementById('modal-bomb-setup').classList.add('hidden');
+            document.getElementById('modal-bomb-defuse').classList.add('hidden');
+            if (typeof clearAllActiveBombs === 'function') clearAllActiveBombs();
             pendingItemUse = null;
         }
 
@@ -2176,6 +2497,19 @@
             const deptName = departed.name;
             if (departed.flyTimeouts) { departed.flyTimeouts.forEach(clearTimeout); departed.flyTimeouts = []; }
             if (departed.reviveTimeout) { clearTimeout(departed.reviveTimeout); departed.reviveTimeout = null; }
+            if (typeof activeBombs === 'object' && activeBombs) {
+                Object.keys(activeBombs).forEach(bId => {
+                    const b = activeBombs[bId];
+                    if (b && (b.targetId === actualId || b.targetId === guestId)) {
+                        if (b.timeoutId) clearTimeout(b.timeoutId);
+                        if (b.botTimerId) clearTimeout(b.botTimerId);
+                        delete activeBombs[bId];
+                        if (typeof currentBombModal === 'object' && currentBombModal && currentBombModal.bombId === bId) {
+                            closeBombDefuseModal();
+                        }
+                    }
+                });
+            }
             if (state.disconnectTimeouts[guestId]) {
                 clearTimeout(state.disconnectTimeouts[guestId]);
                 delete state.disconnectTimeouts[guestId];
@@ -2278,7 +2612,7 @@
                         state.myId = 'host';
                         state.room = { status: 'waiting', title: '멀티플레이 방', wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds };
                         updateBodyState();
-                        state.players = [{ id: state.myId, name: myName, gender: myGender, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0 } }];
+                        state.players = [{ id: state.myId, name: myName, gender: myGender, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0 } }];
                         
                         switchView('room-view');
                         updateRoomUI();
@@ -2496,7 +2830,7 @@
                 
                 if (state.room.status !== 'waiting') return socket.emit('SEND_TO_GUEST', { roomCode, guestId, type: 'REJECT_JOIN', payload: { reason: '이미 게임이 시작되어 입장할 수 없습니다.' } });
                 if (state.players.length >= 6) return socket.emit('SEND_TO_GUEST', { roomCode, guestId, type: 'REJECT_JOIN', payload: { reason: '방이 꽉 찼습니다.' } });
-                state.players.push({ ...data.payload, id: guestId, previousIds: [], isBot: false, isReady: false, hasSubmittedWords: false, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0 } });
+                state.players.push({ ...data.payload, id: guestId, previousIds: [], isBot: false, isReady: false, hasSubmittedWords: false, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0 } });
                 broadcastState();
                 updateRoomUI();
                 renderStage();
@@ -2514,6 +2848,10 @@
                 renderStage();
             } else if (data.type === 'USE_ITEM') {
                 executeItem(guestId, data.payload.item, data.payload.index, data.payload.targetId, data.payload.extraData);
+            } else if (data.type === 'BOMB_CUT_WIRE') {
+                if (data.payload && typeof resolveBombChoice === 'function') {
+                    resolveBombChoice(data.payload.bombId, guestId, data.payload.chosenWire, false);
+                }
             } else if (data.type === 'LEAVE') {
                 removeGuestPlayer(guestId);
             }
@@ -2590,6 +2928,8 @@
                 sysChat(data.payload.text);
             } else if (data.type === 'EVENT_ITEM') {
                 playItemEvent(data.payload.senderId, data.payload.item, data.payload.targetId, data.payload.extraData);
+            } else if (data.type === 'EVENT_BOMB_RESULT') {
+                if (typeof handleBombResult === 'function') handleBombResult(data.payload);
             } else if (data.type === 'START_WORD_SETTING') {
                 openWordSettingModal();
             } else if (data.type === 'START_PLAYING') {
@@ -2607,7 +2947,7 @@
             const { wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds } = options;
             state.room = { status: 'waiting', title: '시뮬레이션 방', wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds };
             updateBodyState();
-            state.players = [{ id: state.myId, name: sanitizeNickname(els.nickname.value.trim(), '게스트'), gender: document.querySelector('input[name="gender"]:checked').value, isBot: false, isReady: true, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0 } }];
+            state.players = [{ id: state.myId, name: sanitizeNickname(els.nickname.value.trim(), '게스트'), gender: document.querySelector('input[name="gender"]:checked').value, isBot: false, isReady: true, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0 } }];
             
             switchView('room-view');
             document.getElementById('guest-controls').classList.add('hidden');
@@ -2626,7 +2966,7 @@
             const botGender = r < 0.33 ? 'M' : (r < 0.66 ? 'F' : 'A');
             state.players.push({
                 id: botId, name: `봇 ${botNum}호`, gender: botGender,
-                isBot: true, isReady: true, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0 }
+                isBot: true, isReady: true, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0 }
             });
             updateRoomUI();
             renderStage();
@@ -2684,18 +3024,22 @@
                         clearCharacterPose(p.id);
                         finalizeIdle(p.id);
                         stateChanged = true;
-                    } else if (p.status === PlayerState.STATUS.DEAD_MISSILE) {
+                    } else if (p.status === PlayerState.STATUS.DEAD_MISSILE || p.status === PlayerState.STATUS.DEAD_BOMB) {
                         const remainMs = p.penaltyEndTime - now;
+                        const wasBomb = p.status === PlayerState.STATUS.DEAD_BOMB;
                         if (p.reviveTimeout) clearTimeout(p.reviveTimeout);
                         p.reviveTimeout = setTimeout(() => {
                             if (state.room.status !== 'playing') return;
                             clearCharacterPose(p.id);
                             p.penaltyEndTime = null;
                             p.reviveTimeout = null;
+                            const recoverMsg = wasBomb
+                                ? `✨ ${p.name}님이 폭탄 충격에서 회복했습니다!`
+                                : `✨ ${p.name}님이 미사일 기절에서 회복했습니다!`;
                             if (currentMode === MODE_HOST) {
-                                broadcast({ type: 'EVENT_SYS', payload: { text: `✨ ${p.name}님이 미사일 기절에서 회복했습니다!` } });
+                                broadcast({ type: 'EVENT_SYS', payload: { text: recoverMsg } });
                             }
-                            sysChat(`✨ ${p.name}님이 미사일 기절에서 회복했습니다!`);
+                            sysChat(recoverMsg);
                             updateStatus(p.id, PlayerState.STATUS.IDLE);
                         }, remainMs);
                         stateChanged = true;
@@ -2954,15 +3298,35 @@
                 
             return `
             <svg viewBox="0 0 100 100" class="avatar-svg">
-                ${backHair}
-                ${antennas}
-                <circle cx="50" cy="45" r="28" fill="${skin}"/>
-                ${frontHair}
+                <g class="avatar-normal-hair">
+                    ${backHair}
+                    ${antennas}
+                </g>
+                <circle class="avatar-face-skin" cx="50" cy="45" r="28" fill="${skin}"/>
+                <g class="avatar-normal-hair">
+                    ${frontHair}
+                </g>
+                <g class="avatar-bomb-hair">
+                    <path d="M 16 46 L 2 24 L 22 31 L 16 4 L 36 22 L 48 -8 L 57 20 L 74 0 L 70 25 L 94 14 L 80 37 L 98 44 L 80 50 Q 50 26 20 50 Z" fill="#151515" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/>
+                    <path d="M 28 24 L 34 6 L 44 21 L 52 2 L 60 22 L 71 9 L 71 27" fill="none" stroke="#2c2c2c" stroke-width="2" stroke-linecap="round"/>
+                    <path class="bomb-smoke-wisp w1" d="M 32 8 Q 25 -4 34 -12" stroke="rgba(160,160,160,0.8)" stroke-width="3" fill="none" stroke-linecap="round"/>
+                    <path class="bomb-smoke-wisp w2" d="M 52 -4 Q 60 -16 50 -24" stroke="rgba(180,180,180,0.75)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+                    <path class="bomb-smoke-wisp w3" d="M 72 6 Q 80 -6 71 -14" stroke="rgba(150,150,150,0.7)" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+                </g>
                 <rect x="25" y="70" width="50" height="40" rx="10" fill="${body}"/>
                 <g class="exp-idle"><circle cx="40" cy="45" r="3" fill="#000"/><circle cx="60" cy="45" r="3" fill="#000"/><path d="M 45 55 Q 50 60 55 55" stroke="#000" stroke-width="2" fill="none"/></g>
                 <g class="exp-fly"><circle cx="40" cy="45" r="4" fill="#000"/><circle cx="60" cy="45" r="4" fill="#000"/><ellipse cx="50" cy="58" rx="4" ry="6" fill="#000"/><path d="M 25 35 L 25 45" stroke="#87CEEB" stroke-width="3" stroke-linecap="round"/><path d="M 75 35 L 75 45" stroke="#87CEEB" stroke-width="3" stroke-linecap="round"/></g>
                 <g class="exp-water"><path d="M 32 45 L 48 45" stroke="#000" stroke-width="2"/><path d="M 52 45 L 68 45" stroke="#000" stroke-width="2"/><path d="M 45 58 Q 50 54 55 58" stroke="#000" stroke-width="2" fill="none"/></g>
                 <g class="exp-dead"><path d="M 36 41 L 44 49 M 44 41 L 36 49" stroke="#000" stroke-width="2"/><path d="M 56 41 L 64 49 M 64 41 L 56 49" stroke="#000" stroke-width="2"/><path d="M 45 57 Q 50 52 55 57" stroke="#000" stroke-width="2" fill="none"/></g>
+                <g class="exp-bomb">
+                    <path d="M 34 34 L 44 37" stroke="#dcdde1" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M 66 34 L 56 37" stroke="#dcdde1" stroke-width="2" stroke-linecap="round"/>
+                    <circle cx="39" cy="45" r="6.2" fill="#ffffff"/>
+                    <circle cx="61" cy="45" r="6.2" fill="#ffffff"/>
+                    <circle cx="39" cy="45" r="2.1" fill="#000"/>
+                    <circle cx="61" cy="45" r="2.1" fill="#000"/>
+                    <ellipse cx="50" cy="59" rx="5.5" ry="4" fill="#111" stroke="#dcdde1" stroke-width="1.5"/>
+                </g>
             </svg>`;
         }
 
@@ -3020,8 +3384,13 @@
             wrap.className = `character-wrapper status-${p.status}`;
             if (p.status === PlayerState.STATUS.DEAD_MISSILE) {
                 applyMissileStunPose(p.id, opts.animate !== false, false);
-            } else if (PlayerState.isHealthySeated(p)) {
+            } else if (PlayerState.isHealthySeated(p) || p.status === PlayerState.STATUS.DEAD_BOMB) {
                 clearCharacterPose(p.id);
+            }
+            if (p.activeBomb) {
+                if (typeof showFloatingHeadBomb === 'function') showFloatingHeadBomb(p.id);
+            } else {
+                if (typeof removeFloatingHeadBomb === 'function') removeFloatingHeadBomb(p.id);
             }
         }
 
@@ -3577,7 +3946,7 @@
                 return;
             }
             
-            const itemTypes = ['missile', 'shield', 'word_change', 'word_add', 'word_delete', 'call_shark', 'call_gator', 'call_gull'];
+            const itemTypes = ['missile', 'shield', 'word_change', 'word_add', 'word_delete', 'call_shark', 'call_gator', 'call_gull', 'bomb_defuse'];
             state.players.forEach(p => {
                 const randomItem = itemTypes[Math.floor(Math.random() * itemTypes.length)];
                 if (!p.items) p.items = [];
@@ -3662,7 +4031,8 @@
                 'word_delete': '✂️ 삭제권',
                 'call_shark': '🦈 상어부르기',
                 'call_gator': '🐊 악어부르기',
-                'call_gull': '🦅 부산갈매기부르기'
+                'call_gull': '🦅 부산갈매기부르기',
+                'bomb_defuse': '💣 폭탄해체하기'
             };
             
             const grouped = {};
@@ -3708,6 +4078,9 @@
             } else if (item === 'missile' || item === 'word_change') {
                 pendingItemUse = { item, index };
                 openTargetModal();
+            } else if (item === 'bomb_defuse') {
+                pendingItemUse = { item, index };
+                openBombSetupModal();
             } else if (item === 'word_add') {
                 pendingItemUse = { item, index };
                 openWordAddModal();
@@ -3898,6 +4271,8 @@
             document.getElementById('stats-shark').textContent = me.stats.shark || 0;
             document.getElementById('stats-gator').textContent = me.stats.gator || 0;
             document.getElementById('stats-missile').textContent = me.stats.missile || 0;
+            const bombStatEl = document.getElementById('stats-bomb');
+            if (bombStatEl) bombStatEl.textContent = me.stats.bomb || 0;
             
             // Word counts
             const countsDiv = document.getElementById('stats-word-counts');
@@ -4181,6 +4556,20 @@
                     if (targetId === state.myId) renderInventory();
                 }
                 extraData = { ...(extraData || {}), blockedByShield };
+            } else if (item === 'bomb_defuse') {
+                const safeWire = extraData && extraData.safeWire;
+                if (safeWire !== 'red' && safeWire !== 'blue') return;
+                const target = findPlayerById(targetId);
+                if (!target || target.id === actualSenderId || !PlayerState.canBeTargetedByBomb(target)) {
+                    const msg = '해당 플레이어가 자리에 없거나 이미 폭탄이 설치되어 있어 사용할 수 없습니다.';
+                    if (actualSenderId === state.myId) {
+                        sysChat(msg);
+                    } else if (currentMode === MODE_HOST) {
+                        socket.emit('SEND_TO_GUEST', { guestId: actualSenderId, type: 'EVENT_SYS', payload: { text: msg } });
+                    }
+                    return; // Abort without consuming item!
+                }
+                targetId = target.id;
             } else if (item === 'call_shark' || item === 'call_gator' || item === 'call_gull') {
                 const animal = item.replace('call_', '');
                 if (!state.room.waitingAnimals) state.room.waitingAnimals = [];
@@ -4222,6 +4611,36 @@
                 } else {
                     extraData = { deletedWord: null };
                 }
+            } else if (item === 'bomb_defuse') {
+                const target = findPlayerById(targetId);
+                const bombId = 'bomb-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+                const expiresAt = Date.now() + 15000;
+                const secretSafeWire = extraData.safeWire;
+                target.activeBomb = { bombId, senderId: actualSenderId, expiresAt };
+                const timeoutId = setTimeout(() => {
+                    resolveBombChoice(bombId, target.id, null, true);
+                }, 15000);
+                let botTimerId = null;
+                if (target.isBot) {
+                    botTimerId = setTimeout(() => {
+                        if (state.room.status !== 'playing') return;
+                        const botWire = Math.random() < 0.5 ? 'red' : 'blue';
+                        resolveBombChoice(bombId, target.id, botWire, false);
+                    }, 1300 + Math.floor(Math.random() * 700));
+                }
+                activeBombs[bombId] = {
+                    bombId,
+                    senderId: actualSenderId,
+                    targetId: target.id,
+                    safeWire: secretSafeWire,
+                    expiresAt,
+                    resolved: false,
+                    timeoutId,
+                    botTimerId
+                };
+                // Never include safeWire in broadcast payload
+                extraData = { bombId, expiresAt };
+                if (currentMode === MODE_HOST) broadcastState();
             } else if (item === 'call_shark' || item === 'call_gator' || item === 'call_gull') {
                 const animal = item.replace('call_', '');
                 if (!state.room.waitingAnimals) state.room.waitingAnimals = [];
@@ -4478,6 +4897,589 @@
                 const info = nameMap[animal] || { name: animal, icon: '⚠️', desc: '소환되었습니다!' };
                 sysChat(`${info.icon} ${sender.name}님이 [${animal === 'shark' ? '🦈 상어부르기' : (animal === 'gator' ? '🐊 악어부르기' : '🦅 부산갈매기부르기')}]를 사용하여 ${info.desc}`);
                 spawnWaitingAnimal(animal);
+            } else if (item === 'bomb_defuse') {
+                if (!target || !extraData) return;
+                target.activeBomb = {
+                    bombId: extraData.bombId,
+                    senderId: sender.id,
+                    expiresAt: extraData.expiresAt
+                };
+                showFloatingHeadBomb(target.id);
+                if (window.ThreeStageManager) window.ThreeStageManager.syncPlayers(state.players);
+                playBombPlantSound();
+                sysChat(`💣 ${sender.name}님이 ${target.name}님에게 [💣 폭탄해체하기]를 설치했습니다!`);
+
+                if (target.id === state.myId) {
+                    openBombDefuseModal({
+                        bombId: extraData.bombId,
+                        senderId: sender.id,
+                        targetId: target.id,
+                        expiresAt: extraData.expiresAt,
+                        isDefuser: true
+                    });
+                } else if (sender.id === state.myId || target.isBot) {
+                    openBombDefuseModal({
+                        bombId: extraData.bombId,
+                        senderId: sender.id,
+                        targetId: target.id,
+                        expiresAt: extraData.expiresAt,
+                        isDefuser: false
+                    });
+                }
+            }
+        }
+
+        // ─── Bomb Defuse Item ("폭탄해체하기") System ──────────────────────────
+        const activeBombs = {};
+        let selectedBombSafeWire = null;
+        let currentBombModal = null;
+        let bombCountdownInterval = null;
+        let bombAnimRaf = null;
+        let bombFallbackTimer = null;
+
+        function clearAllActiveBombs() {
+            Object.keys(activeBombs).forEach(bId => {
+                const b = activeBombs[bId];
+                if (b) {
+                    if (b.timeoutId) clearTimeout(b.timeoutId);
+                    if (b.botTimerId) clearTimeout(b.botTimerId);
+                }
+                delete activeBombs[bId];
+            });
+            if (Array.isArray(state.players)) {
+                state.players.forEach(p => {
+                    if (p.activeBomb) delete p.activeBomb;
+                    removeFloatingHeadBomb(p.id);
+                });
+            }
+            closeBombSetupModal();
+            closeBombDefuseModal();
+        }
+
+        function showFloatingHeadBomb(playerId) {
+            const wrap = document.getElementById(`char-wrap-${playerId}`);
+            if (!wrap) return;
+            if (!document.getElementById(`head-bomb-${playerId}`)) {
+                const el = document.createElement('div');
+                el.id = `head-bomb-${playerId}`;
+                el.className = 'floating-head-bomb';
+                el.textContent = '💣';
+                wrap.appendChild(el);
+            }
+        }
+
+        function removeFloatingHeadBomb(playerId) {
+            const el = document.getElementById(`head-bomb-${playerId}`);
+            if (el && el.parentNode) el.parentNode.removeChild(el);
+        }
+
+        function openBombSetupModal() {
+            selectedBombSafeWire = null;
+            document.getElementById('bomb-pick-red').classList.remove('selected');
+            document.getElementById('bomb-pick-blue').classList.remove('selected');
+            renderBombTargetList();
+            document.getElementById('modal-bomb-setup').classList.remove('hidden');
+        }
+
+        function selectBombSafeWire(wire) {
+            selectedBombSafeWire = wire;
+            document.getElementById('bomb-pick-red').classList.toggle('selected', wire === 'red');
+            document.getElementById('bomb-pick-blue').classList.toggle('selected', wire === 'blue');
+            renderBombTargetList();
+        }
+
+        function renderBombTargetList() {
+            const list = document.getElementById('bomb-target-list');
+            const label = document.getElementById('bomb-setup-step2-label');
+            list.innerHTML = '';
+
+            if (!selectedBombSafeWire) {
+                label.innerHTML = '2단계: 먼저 위에서 <strong>해제선</strong>을 선택하세요.';
+                const hint = document.createElement('div');
+                hint.style.cssText = 'color:#999; text-align:center; font-size:0.85rem; padding:10px 0;';
+                hint.textContent = '빨간선 또는 파란선을 고르면 대상 목록이 활성화됩니다.';
+                list.appendChild(hint);
+                return;
+            }
+
+            const wireLabel = selectedBombSafeWire === 'red' ? '🔴 빨간선' : '🔵 파란선';
+            label.innerHTML = `2단계: <strong>${wireLabel}</strong>이 해제선! 보낼 상대방을 선택하세요.`;
+
+            const targets = state.players.filter(p => p.id !== state.myId && PlayerState.canBeTargetedByBomb(p));
+            if (targets.length === 0) {
+                list.innerHTML = '<span style="color:#aaa; text-align:center; padding: 10px 0;">현재 폭탄을 보낼 수 있는 건강한 착석 상대가 없습니다.</span>';
+                return;
+            }
+            targets.forEach(p => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn';
+                btn.style.background = '#383d4a';
+                btn.textContent = `💣 ${p.name}${p.isBot ? ' 🤖' : ''}`;
+                btn.onclick = () => submitBombSetupTarget(p.id);
+                list.appendChild(btn);
+            });
+        }
+
+        function submitBombSetupTarget(targetId) {
+            if (!pendingItemUse || pendingItemUse.item !== 'bomb_defuse') return;
+            if (selectedBombSafeWire !== 'red' && selectedBombSafeWire !== 'blue') {
+                alert('먼저 해제할 선(빨간선 또는 파란선)을 선택해주세요.');
+                return;
+            }
+            const target = findPlayerById(targetId);
+            if (!target || !PlayerState.canBeTargetedByBomb(target)) {
+                alert('해당 플레이어에게 폭탄을 설치할 수 없습니다.');
+                renderBombTargetList();
+                return;
+            }
+            const { item, index } = pendingItemUse;
+            const safeWire = selectedBombSafeWire;
+            closeBombSetupModal();
+
+            const extraData = { safeWire };
+            if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
+                executeItem(state.myId, item, index, target.id, extraData);
+            } else {
+                socket.emit('SEND_TO_HOST', { roomCode, type: 'USE_ITEM', payload: { item, index, targetId: target.id, extraData } });
+            }
+        }
+
+        function closeBombSetupModal() {
+            const modal = document.getElementById('modal-bomb-setup');
+            if (modal) modal.classList.add('hidden');
+            selectedBombSafeWire = null;
+            if (pendingItemUse && pendingItemUse.item === 'bomb_defuse') {
+                pendingItemUse = null;
+            }
+        }
+
+        function resetBombSvgVisuals() {
+            document.getElementById('bomb-modal-flash').classList.add('hidden');
+            document.getElementById('wire-red-intact').classList.remove('hidden');
+            document.getElementById('wire-red-cut').classList.add('hidden');
+            document.getElementById('wire-blue-intact').classList.remove('hidden');
+            document.getElementById('wire-blue-cut').classList.add('hidden');
+            document.getElementById('wire-cut-spark').classList.add('hidden');
+
+            const hands = document.getElementById('bomb-hands-nipper');
+            hands.classList.add('hidden');
+            hands.setAttribute('transform', 'translate(180, 275)');
+            document.getElementById('nipper-left-arm').setAttribute('transform', 'rotate(-20, 0, 22)');
+            document.getElementById('nipper-right-arm').setAttribute('transform', 'rotate(20, 0, 22)');
+            document.getElementById('bomb-sweat-drops').classList.add('hidden');
+
+            const ledText = document.getElementById('bomb-led-text');
+            ledText.setAttribute('fill', '#ff4757');
+            ledText.textContent = '00:15';
+            document.getElementById('bomb-led-light').setAttribute('fill', '#ff4757');
+        }
+
+        function openBombDefuseModal(cfg) {
+            if (bombCountdownInterval) { clearInterval(bombCountdownInterval); bombCountdownInterval = null; }
+            if (bombAnimRaf) { cancelAnimationFrame(bombAnimRaf); bombAnimRaf = null; }
+            if (bombFallbackTimer) { clearTimeout(bombFallbackTimer); bombFallbackTimer = null; }
+
+            currentBombModal = { ...cfg, chosen: false, animating: false };
+            resetBombSvgVisuals();
+
+            const sender = findPlayerById(cfg.senderId);
+            const target = findPlayerById(cfg.targetId);
+            const titleEl = document.getElementById('bomb-defuse-title');
+            const subEl = document.getElementById('bomb-defuse-subtitle');
+            const statusEl = document.getElementById('bomb-status-text');
+            const actionsEl = document.getElementById('bomb-cut-actions');
+            const specCloseEl = document.getElementById('btn-bomb-spectator-close');
+            const redHit = document.getElementById('wire-red-hit');
+            const blueHit = document.getElementById('wire-blue-hit');
+            const btnRed = document.getElementById('btn-cut-red');
+            const btnBlue = document.getElementById('btn-cut-blue');
+
+            if (cfg.isDefuser) {
+                titleEl.textContent = '💣 폭탄 해체!';
+                subEl.textContent = `${sender ? sender.name : '상대'}님이 보낸 폭탄! 해제선을 잘라 살아남으세요! (실패 시 10초 침묵)`;
+                statusEl.textContent = '😰 빨간선과 파란선 중 하나를 선택하세요!';
+                actionsEl.classList.remove('hidden');
+                specCloseEl.classList.add('hidden');
+                btnRed.disabled = false;
+                btnBlue.disabled = false;
+                redHit.classList.remove('disabled');
+                blueHit.classList.remove('disabled');
+            } else {
+                titleEl.textContent = `💣 ${target ? target.name : '상대'}님 폭탄 해체 관전`;
+                subEl.textContent = `${target ? target.name : '상대'}님이 어느 선을 자를지 숨죽여 지켜보는 중...`;
+                statusEl.textContent = `👀 ${target ? target.name : '상대'}님이 선을 고르고 있습니다...`;
+                actionsEl.classList.add('hidden');
+                specCloseEl.classList.remove('hidden');
+                redHit.classList.add('disabled');
+                blueHit.classList.add('disabled');
+            }
+
+            let lastTickSec = -1;
+            const updateTimer = () => {
+                if (!currentBombModal || currentBombModal.bombId !== cfg.bombId) return;
+                const remSec = Math.max(0, Math.ceil((cfg.expiresAt - Date.now()) / 1000));
+                const ledText = document.getElementById('bomb-led-text');
+                const ledLight = document.getElementById('bomb-led-light');
+                if (ledText) ledText.textContent = `00:${String(remSec).padStart(2, '0')}`;
+                if (ledLight) ledLight.setAttribute('fill', remSec % 2 === 0 ? '#ff4757' : '#550000');
+                if (remSec !== lastTickSec && remSec > 0) {
+                    lastTickSec = remSec;
+                    if (cfg.isDefuser) playBombTickSound(remSec <= 5);
+                }
+            };
+            updateTimer();
+            bombCountdownInterval = setInterval(updateTimer, 250);
+
+            document.getElementById('modal-bomb-defuse').classList.remove('hidden');
+        }
+
+        function closeBombDefuseModal() {
+            if (bombCountdownInterval) { clearInterval(bombCountdownInterval); bombCountdownInterval = null; }
+            if (bombAnimRaf) { cancelAnimationFrame(bombAnimRaf); bombAnimRaf = null; }
+            if (bombFallbackTimer) { clearTimeout(bombFallbackTimer); bombFallbackTimer = null; }
+            currentBombModal = null;
+            const modal = document.getElementById('modal-bomb-defuse');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function submitBombWireCut(chosenWire) {
+            if (!currentBombModal || !currentBombModal.isDefuser || currentBombModal.chosen) return;
+            if (chosenWire !== 'red' && chosenWire !== 'blue') return;
+            currentBombModal.chosen = true;
+
+            document.getElementById('btn-cut-red').disabled = true;
+            document.getElementById('btn-cut-blue').disabled = true;
+            document.getElementById('wire-red-hit').classList.add('disabled');
+            document.getElementById('wire-blue-hit').classList.add('disabled');
+            document.getElementById('bomb-status-text').textContent = '😬 선택 완료! 니퍼를 쥐고 선으로 향합니다...';
+
+            if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
+                resolveBombChoice(currentBombModal.bombId, state.myId, chosenWire, false);
+            } else {
+                socket.emit('SEND_TO_HOST', {
+                    roomCode,
+                    type: 'BOMB_CUT_WIRE',
+                    payload: { bombId: currentBombModal.bombId, chosenWire }
+                });
+            }
+        }
+
+        function resolveBombChoice(bombId, actorId, chosenWire, timedOut = false) {
+            if (currentMode !== MODE_HOST && currentMode !== MODE_BOT) return;
+            const bomb = activeBombs[bombId];
+            if (!bomb || bomb.resolved) return;
+
+            const actor = findPlayerById(actorId);
+            if (!timedOut) {
+                if (!actor || actor.id !== bomb.targetId) return;
+                if (chosenWire !== 'red' && chosenWire !== 'blue') return;
+            }
+
+            bomb.resolved = true;
+            if (bomb.timeoutId) { clearTimeout(bomb.timeoutId); bomb.timeoutId = null; }
+            if (bomb.botTimerId) { clearTimeout(bomb.botTimerId); bomb.botTimerId = null; }
+
+            const defused = !timedOut && (chosenWire === bomb.safeWire);
+            const payload = {
+                bombId,
+                senderId: bomb.senderId,
+                targetId: bomb.targetId,
+                chosenWire: timedOut ? null : chosenWire,
+                safeWire: bomb.safeWire,
+                defused,
+                timedOut
+            };
+
+            if (currentMode === MODE_HOST) {
+                broadcast({ type: 'EVENT_BOMB_RESULT', payload });
+            }
+            handleBombResult(payload);
+        }
+
+        function playNipperCutAnimation(chosenWire, defused, onComplete) {
+            const hands = document.getElementById('bomb-hands-nipper');
+            const leftArm = document.getElementById('nipper-left-arm');
+            const rightArm = document.getElementById('nipper-right-arm');
+            const sweat = document.getElementById('bomb-sweat-drops');
+            const spark = document.getElementById('wire-cut-spark');
+            const statusEl = document.getElementById('bomb-status-text');
+            const ledText = document.getElementById('bomb-led-text');
+
+            if (!hands || !leftArm || !rightArm) {
+                if (onComplete) onComplete();
+                return;
+            }
+
+            if (bombCountdownInterval) { clearInterval(bombCountdownInterval); bombCountdownInterval = null; }
+            if (bombAnimRaf) { cancelAnimationFrame(bombAnimRaf); bombAnimRaf = null; }
+            if (bombFallbackTimer) { clearTimeout(bombFallbackTimer); bombFallbackTimer = null; }
+
+            document.getElementById('btn-cut-red').disabled = true;
+            document.getElementById('btn-cut-blue').disabled = true;
+            document.getElementById('wire-red-hit').classList.add('disabled');
+            document.getElementById('wire-blue-hit').classList.add('disabled');
+
+            const startX = 180, startY = 275;
+            const targetX = chosenWire === 'red' ? 118 : 242;
+            const targetY = 172;
+            const wireKo = chosenWire === 'red' ? '빨간선' : '파란선';
+
+            hands.classList.remove('hidden');
+            sweat.classList.add('hidden');
+            spark.classList.add('hidden');
+
+            let finished = false;
+            let snapped = false;
+            let tensionPlayed = false;
+            const startTime = Date.now();
+
+            function done() {
+                if (finished) return;
+                finished = true;
+                if (bombAnimRaf) { cancelAnimationFrame(bombAnimRaf); bombAnimRaf = null; }
+                if (bombFallbackTimer) { clearTimeout(bombFallbackTimer); bombFallbackTimer = null; }
+                if (onComplete) onComplete();
+            }
+
+            // Wall-clock guarantee in case browser throttles rAF in background tab
+            bombFallbackTimer = setTimeout(done, 3300);
+
+            function step() {
+                if (finished) return;
+                const dt = Date.now() - startTime;
+
+                if (dt < 900) {
+                    // Phase 1: Hands grip nipper & approach wire while trembling ("벌벌 떨리며 선으로 향하고")
+                    const p = Math.min(1, dt / 900);
+                    const ease = 1 - Math.pow(1 - p, 2);
+                    const trembleX = Math.sin(dt * 0.055) * (2.5 + p * 2.0);
+                    const trembleY = Math.cos(dt * 0.043) * (1.8 + p * 1.4);
+                    const rot = Math.sin(dt * 0.06) * 3.5;
+                    const cx = startX + (targetX - startX) * ease + trembleX;
+                    const cy = startY + (targetY - startY) * ease + trembleY;
+                    hands.setAttribute('transform', `translate(${cx.toFixed(1)}, ${cy.toFixed(1)}) rotate(${rot.toFixed(1)})`);
+                    leftArm.setAttribute('transform', 'rotate(-20, 0, 22)');
+                    rightArm.setAttribute('transform', 'rotate(20, 0, 22)');
+                    statusEl.textContent = `😰 양손으로 니퍼를 잡고 벌벌 떨며 ${wireKo}으로 향하는 중...`;
+                    if (dt > 450) sweat.classList.remove('hidden');
+                } else if (dt < 2150) {
+                    // Phase 2: Trembling hard while slowly clamping nipper jaws ("손을 덜덜 떨며 천천히 니퍼를 조이다가")
+                    if (!tensionPlayed) {
+                        tensionPlayed = true;
+                        playBombTensionSound();
+                    }
+                    const p = Math.min(1, (dt - 900) / 1250);
+                    const trembleX = Math.sin(dt * 0.085) * 4.6;
+                    const trembleY = Math.cos(dt * 0.072) * 3.0;
+                    const rot = Math.sin(dt * 0.095) * 5.2;
+                    hands.setAttribute('transform', `translate(${(targetX + trembleX).toFixed(1)}, ${(targetY + trembleY).toFixed(1)}) rotate(${rot.toFixed(1)})`);
+                    const jawAngle = 20 - p * 13; // slowly squeezes from 20deg down to 7deg
+                    leftArm.setAttribute('transform', `rotate(${(-jawAngle).toFixed(1)}, 0, 22)`);
+                    rightArm.setAttribute('transform', `rotate(${jawAngle.toFixed(1)}, 0, 22)`);
+                    statusEl.textContent = `💦 손을 덜덜 떨며 천천히 니퍼를 조이는 중...`;
+                } else if (dt < 2450) {
+                    // Phase 3a: Deep breath before decisive cut ("큰맘먹고...")
+                    const trembleX = Math.sin(dt * 0.11) * 2.2;
+                    hands.setAttribute('transform', `translate(${(targetX + trembleX).toFixed(1)}, ${targetY})`);
+                    leftArm.setAttribute('transform', 'rotate(-7, 0, 22)');
+                    rightArm.setAttribute('transform', 'rotate(7, 0, 22)');
+                    statusEl.textContent = '😬 큰맘 먹고...';
+                } else if (dt < 2950) {
+                    // Phase 3b: SNAP! ("콱! 잘랐을때")
+                    if (!snapped) {
+                        snapped = true;
+                        playNipperSnipSound();
+                        leftArm.setAttribute('transform', 'rotate(0, 0, 22)');
+                        rightArm.setAttribute('transform', 'rotate(0, 0, 22)');
+                        document.getElementById(`wire-${chosenWire}-intact`).classList.add('hidden');
+                        document.getElementById(`wire-${chosenWire}-cut`).classList.remove('hidden');
+                        spark.setAttribute('transform', `translate(${targetX}, ${targetY})`);
+                        spark.classList.remove('hidden');
+                        statusEl.textContent = '✂️ 콱!! 선을 잘랐습니다!';
+                        if (defused) {
+                            ledText.setAttribute('fill', '#2ed573');
+                            ledText.textContent = 'SAFE';
+                            document.getElementById('bomb-led-light').setAttribute('fill', '#2ed573');
+                        } else {
+                            ledText.textContent = 'BOOM!';
+                            document.getElementById('bomb-modal-flash').classList.remove('hidden');
+                        }
+                    }
+                    const p = Math.min(1, (dt - 2450) / 500);
+                    const recoilY = targetY + p * 14;
+                    hands.setAttribute('transform', `translate(${targetX}, ${recoilY.toFixed(1)})`);
+                    if (p > 0.45) spark.classList.add('hidden');
+                } else {
+                    done();
+                    return;
+                }
+
+                bombAnimRaf = requestAnimationFrame(step);
+            }
+
+            bombAnimRaf = requestAnimationFrame(step);
+        }
+
+        function handleBombResult(payload) {
+            if (!payload) return;
+            const { bombId, targetId, chosenWire, defused, timedOut } = payload;
+            const target = findPlayerById(targetId);
+            if (!target) return;
+
+            const wireKo = chosenWire === 'red' ? '빨간선' : '파란선';
+            let finished = false;
+
+            function finishOutcome() {
+                if (finished) return;
+                finished = true;
+                delete activeBombs[bombId];
+                delete target.activeBomb;
+                removeFloatingHeadBomb(target.id);
+
+                if (defused) {
+                    if (currentBombModal && currentBombModal.bombId === bombId) {
+                        const statusEl = document.getElementById('bomb-status-text');
+                        if (statusEl) statusEl.textContent = `✅ 휴... ${wireKo}이 해제선이었습니다! 살아남았습니다!`;
+                        setTimeout(() => {
+                            if (currentBombModal && currentBombModal.bombId === bombId) {
+                                closeBombDefuseModal();
+                            }
+                        }, 900);
+                    }
+                    playBombDefuseSuccessSound();
+                    sysChat(`✅ ${target.name}님이 ${wireKo}을 잘라 폭탄 해체에 성공했습니다!`);
+                    if (window.ThreeStageManager) window.ThreeStageManager.syncPlayers(state.players);
+                    if ((currentMode === MODE_HOST || currentMode === MODE_BOT) && typeof handleBotBombReaction === 'function') {
+                        handleBotBombReaction(target.id, true);
+                    }
+                    if (currentMode === MODE_HOST) broadcastState();
+                } else {
+                    if (currentBombModal && currentBombModal.bombId === bombId) {
+                        closeBombDefuseModal();
+                    }
+                    playBombExplosionSound();
+                    createBombExplosionEffect(target.id);
+                    if (window.ThreeStageManager && window.ThreeStageManager.isInitialized() && typeof window.ThreeStageManager.triggerBombExplosion === 'function') {
+                        window.ThreeStageManager.triggerBombExplosion(target.id);
+                    }
+                    showSubtitle(`💥 펑!! ${target.name} 폭탄 폭발! (10초 침묵)`);
+                    const failMsg = timedOut
+                        ? `💥 시간 초과! ${target.name}님 머리 위에서 폭탄이 펑 터졌습니다! (10초간 말할 수 없음)`
+                        : `💥 펑!! ${target.name}님이 잘못된 선(${wireKo})을 잘라 폭탄이 터졌습니다! (10초간 말할 수 없음)`;
+                    sysChat(failMsg);
+
+                    if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
+                        if (target.stats) target.stats.bomb = (target.stats.bomb || 0) + 1;
+                        applyBombStun(target.id, 10000);
+                        if (typeof handleBotBombReaction === 'function') {
+                            handleBotBombReaction(target.id, false);
+                        }
+                    } else {
+                        target.status = PlayerState.STATUS.DEAD_BOMB;
+                        target.penaltyEndTime = Date.now() + 10000;
+                        syncPlayerStatusVisual(target);
+                        if (target.id === state.myId) updateChatUI();
+                        if (window.ThreeStageManager) window.ThreeStageManager.syncPlayers(state.players);
+                    }
+                }
+            }
+
+            if (timedOut || !chosenWire) {
+                finishOutcome();
+                return;
+            }
+
+            if (currentBombModal && currentBombModal.bombId === bombId) {
+                playNipperCutAnimation(chosenWire, defused, finishOutcome);
+            } else {
+                // Spectators who closed/didn't open the modal wait ~3.0s so stage explosion aligns with defuser's cut
+                setTimeout(finishOutcome, 3000);
+            }
+        }
+
+        function applyBombStun(targetId, stunMs = 10000) {
+            const target = findPlayerById(targetId);
+            if (!target) return;
+
+            target.flySequenceId = (target.flySequenceId || 0) + 1;
+            if (target.flyTimeouts) { target.flyTimeouts.forEach(clearTimeout); target.flyTimeouts = []; }
+            if (target.reviveTimeout) { clearTimeout(target.reviveTimeout); target.reviveTimeout = null; }
+            target.pendingMissileStunMs = 0;
+
+            clearCharacterPose(target.id);
+            target.penaltyEndTime = Date.now() + stunMs;
+            updateStatus(target.id, PlayerState.STATUS.DEAD_BOMB);
+
+            target.reviveTimeout = setTimeout(() => {
+                if (state.room.status !== 'playing') return;
+                clearCharacterPose(target.id);
+                target.penaltyEndTime = null;
+                target.reviveTimeout = null;
+                if (currentMode === MODE_HOST) {
+                    broadcast({ type: 'EVENT_SYS', payload: { text: `✨ ${target.name}님이 폭탄 충격에서 회복했습니다!` } });
+                }
+                sysChat(`✨ ${target.name}님이 폭탄 충격에서 회복했습니다!`);
+                updateStatus(target.id, PlayerState.STATUS.IDLE);
+            }, stunMs);
+        }
+
+        function createBombExplosionEffect(playerId) {
+            if (currentViewMode === '3D') return;
+            const wrap = document.getElementById(`char-wrap-${playerId}`);
+            const stage = document.getElementById('stage');
+            if (!wrap || !stage) return;
+            const sRect = stage.getBoundingClientRect();
+            const wRect = wrap.getBoundingClientRect();
+            const x = wRect.left - sRect.left + wRect.width / 2;
+            const y = Math.max(24, wRect.top - sRect.top - 18); // Directly above target's head
+
+            const boom = document.createElement('div');
+            boom.style.cssText = `position:absolute; left:${x}px; top:${y}px; width:12px; height:12px; border-radius:50%; z-index:62; pointer-events:none; animation: boom 0.65s ease-out forwards;`;
+            stage.appendChild(boom);
+
+            const ring = document.createElement('div');
+            ring.style.cssText = `position:absolute; left:${x}px; top:${y}px; width:12px; height:12px; border-radius:50%; border:solid; z-index:61; pointer-events:none; animation: boom-ring 0.65s ease-out forwards;`;
+            stage.appendChild(ring);
+
+            const soot = document.createElement('div');
+            soot.style.cssText = `position:absolute; left:${x}px; top:${y}px; width:95px; height:95px; border-radius:50%; background: radial-gradient(circle, rgba(20,20,20,0.88) 0%, rgba(50,50,50,0.5) 55%, rgba(0,0,0,0) 75%); transform:translate(-50%,-50%) scale(0.4); transition: transform 0.9s ease-out, opacity 1.1s ease-out; z-index:60; pointer-events:none;`;
+            stage.appendChild(soot);
+            requestAnimationFrame(() => {
+                soot.style.transform = 'translate(-50%, -65%) scale(1.6)';
+                soot.style.opacity = '0';
+            });
+
+            setTimeout(() => { boom.remove(); ring.remove(); }, 650);
+            setTimeout(() => { soot.remove(); }, 1150);
+        }
+
+        function handleBotBombReaction(targetId, defused) {
+            const victim = findPlayerById(targetId);
+            if (!victim) return;
+            if (defused) {
+                if (victim.isBot) {
+                    setTimeout(() => {
+                        if (state.room.status === 'playing' && PlayerState.isHealthySeated(victim)) {
+                            sendChat(victim.id, '휴... 손 덜덜 떨렸는데 해제선 맞췄다!! 살았다 ㅋㅋㅋ ✂️');
+                        }
+                    }, 700);
+                }
+            } else {
+                const idleBots = state.players.filter(p => p.isBot && p.id !== victim.id && PlayerState.isHealthySeated(p));
+                if (idleBots.length > 0 && Math.random() < 0.85) {
+                    const bot = idleBots[Math.floor(Math.random() * idleBots.length)];
+                    const msgs = [
+                        `푸하하하!! ${victim.name}님 머리 삐죽삐죽에 얼굴 시꺼매진 거 봐요 ㅋㅋㅋㅋ`,
+                        `아이고 ${victim.name}님 10초 동안 묵언수행 들어가셨네 💣ㅋㅋㅋ`,
+                        `와 폭발음 개커!! ${victim.name}님 표정 완전 까맣게 탔는데요? ㅋㅋㅋ`
+                    ];
+                    setTimeout(() => {
+                        if (state.room.status === 'playing' && PlayerState.isHealthySeated(bot)) {
+                            sendChat(bot.id, msgs[Math.floor(Math.random() * msgs.length)]);
+                        }
+                    }, 900);
+                }
             }
         }
 
@@ -5670,6 +6672,8 @@
                     els.chatInput.placeholder = `🐊 악어 떼의 습격으로 기절 중...${remainText}`;
                 } else if (me.status === PlayerState.STATUS.DEAD_MISSILE) {
                     els.chatInput.placeholder = `🚀 미사일에 격추되어 기절 중...${remainText}`;
+                } else if (me.status === PlayerState.STATUS.DEAD_BOMB) {
+                    els.chatInput.placeholder = `💣 폭탄에 맞아 그을려 말할 수 없습니다...${remainText}`;
                 }
             } else if (PlayerState.isAway(me)) {
                 els.chatInput.disabled = true; els.chatSend.disabled = true;
@@ -5705,7 +6709,7 @@
             const wrap = document.getElementById(`char-wrap-${actualId}`);
             if (wrap) {
                 wrap.className = `character-wrapper status-${newStatus}`;
-                if (PlayerState.isHealthySeated(newStatus)) {
+                if (PlayerState.isHealthySeated(newStatus) || newStatus === PlayerState.STATUS.DEAD_BOMB) {
                     // Force clear any lingering inline styles from interrupted animations
                     clearCharacterPose(actualId);
                 } else if (newStatus === PlayerState.STATUS.DEAD_MISSILE) {
@@ -6165,6 +7169,7 @@
         window.leaveRoom = leaveRoom;
         window.setViewMode = setViewMode;
         window.toggleOption = toggleOption;
+        window.validateMinTime = validateMinTime;
         window.changeWords = changeWords;
         window.createMultiplayerRoom = createMultiplayerRoom;
         window.showJoinInput = showJoinInput;
@@ -6175,6 +7180,10 @@
         window.toggleReady = toggleReady;
         window.submitWords = submitWords;
         window.closeTargetModal = closeTargetModal;
+        window.selectBombSafeWire = selectBombSafeWire;
+        window.closeBombSetupModal = closeBombSetupModal;
+        window.submitBombWireCut = submitBombWireCut;
+        window.closeBombDefuseModal = closeBombDefuseModal;
         window.closeWordAddModal = closeWordAddModal;
         window.submitWordAdd = submitWordAdd;
         window.closeWordChangeModal = closeWordChangeModal;

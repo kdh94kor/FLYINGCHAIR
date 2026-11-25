@@ -165,12 +165,28 @@
             </p>
         </header>
 
-        <!-- Latest Patch: v1.4.0 -->
+        <!-- Latest Patch: v1.5.0 -->
         <article class="patch-card latest">
             <div class="patch-top">
                 <div class="patch-ver">
-                    <span>v1.4.0</span>
+                    <span>v1.5.0</span>
                     <span class="patch-badge-latest">LATEST RELEASE</span>
+                </div>
+                <div class="patch-date">2026. 11. 25</div>
+            </div>
+            <div class="patch-highlight">💣 신규 전략 심리전 아이템 '폭탄해체하기' 전격 출시 (2D & 3D 동시 지원)</div>
+            <ul class="patch-list">
+                <li><strong>9번째 특수 아이템 '폭탄해체하기(Bomb Defuse)' 추가:</strong> 아이템 사용자가 빨간선·파란선 중 살아남는 해제선을 먼저 지정한 뒤 상대방 1명에게 폭탄을 보냅니다.</li>
+                <li><strong>긴장감 넘치는 양손 니퍼 해체 연출:</strong> 대상 화면에 폭탄 해체 UI/UX가 등장하며, 선을 선택하면 양손으로 니퍼를 잡고 벌벌 떨며 다가가 천천히 조이다가 큰맘 먹고 콱! 자르는 애니메이션이 재생됩니다.</li>
+                <li><strong>머리 위 폭발 및 10초 그을림 침묵 디버프(<code>dead-bomb</code>):</strong> 잘못된 선을 자르거나 15초 내 해체에 실패하면 머리 위에서 폭탄이 펑 터지는 효과음·파티클과 함께 2D/3D 캐릭터의 머리가 삐죽삐죽 솟구치고 얼굴이 까맣게 그을리며 10초간 말할 수 없게 됩니다.</li>
+            </ul>
+        </article>
+
+        <!-- Patch: v1.4.0 -->
+        <article class="patch-card">
+            <div class="patch-top">
+                <div class="patch-ver">
+                    <span>v1.4.0</span>
                 </div>
                 <div class="patch-date">2026. 10. 27</div>
             </div>
@@ -303,7 +319,7 @@
             </p>
             <ul class="patch-list">
                 <li><strong>68개 시나리오 자동화 E2E & 카오스 시뮬레이션 검증:</strong> 방 생성부터 금기어 설정, 0ms 동시 다발 미사일 타격, 3종 동물 FIFO 큐 소진, 방장 강제 종료 및 권한 승계, 모바일 백그라운드 복귀까지 총 68개의 자동화된 멀티 소켓 통합 테스트 스위트를 통과해야만 프로덕션 서버에 배포됩니다.</li>
-                <li><strong>단일 상태 머신(PlayerState SSOT) 아키텍처:</strong> 플레이어의 8가지 물리·전투 상태(<code>idle</code>, <code>flying</code>, <code>swimming</code>, <code>walking</code>, <code>dead</code>, <code>dead-gator</code>, <code>snatched</code>, <code>dead-missile</code>)를 단일 상태 머신으로 관리하여, 기절 중 아이템 오작동이나 중복 비행 버그를 원천 차단합니다.</li>
+                <li><strong>단일 상태 머신(PlayerState SSOT) 아키텍처:</strong> 플레이어의 9가지 물리·전투 상태(<code>idle</code>, <code>flying</code>, <code>swimming</code>, <code>walking</code>, <code>dead</code>, <code>dead-gator</code>, <code>snatched</code>, <code>dead-missile</code>, <code>dead-bomb</code>)를 단일 상태 머신으로 관리하여, 기절 중 아이템 오작동이나 중복 비행 버그를 원천 차단합니다.</li>
             </ul>
         </section>
 
