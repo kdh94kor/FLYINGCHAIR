@@ -501,7 +501,7 @@
         .item-btn.salt_farm { background: rgba(56, 189, 248, 0.22); border-color: rgba(56, 189, 248, 0.65); color: #7dd3fc; }
         .item-btn.duel { background: rgba(244, 63, 94, 0.24); border-color: rgba(244, 63, 94, 0.7); color: #fda4af; }
 
-        /* Duel Arena Ring Modal (fits safely within 90vh mobile & desktop) */
+        /* Duel Arena 3D POV Ring Modal (fits safely within 90vh mobile & desktop) */
         .duel-modal {
             width: min(94vw, 540px);
             max-width: 94vw;
@@ -531,6 +531,12 @@
             padding: 3px 10px;
             border-radius: 999px;
             letter-spacing: 0.4px;
+        }
+        .duel-round-pill.final-mode {
+            background: linear-gradient(90deg, rgba(245, 158, 11, 0.3), rgba(225, 29, 72, 0.32));
+            border-color: #facc15;
+            color: #fef08a;
+            box-shadow: 0 0 12px rgba(250, 204, 21, 0.45);
         }
         .duel-timer-pill {
             background: rgba(250, 204, 21, 0.16);
@@ -574,19 +580,37 @@
             flex: 1;
             min-width: 0;
         }
+        .duel-score-head {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            max-width: 100%;
+        }
         .duel-score-name {
             font-size: 0.82rem;
             font-weight: 800;
             color: #f8fafc;
-            max-width: 100%;
+            max-width: 120px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
+        .duel-role-tag {
+            font-size: 0.65rem;
+            font-weight: 800;
+            padding: 1px 6px;
+            border-radius: 8px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .duel-role-tag.atk { background: #e11d48; color: #fff; }
+        .duel-role-tag.def { background: #0284c7; color: #fff; }
+        .duel-role-tag.coin { background: #d97706; color: #fff; }
         .duel-score-pips {
             display: flex;
             gap: 5px;
-            margin-top: 3px;
+            margin-top: 4px;
         }
         .duel-pip {
             width: 12px;
@@ -604,16 +628,43 @@
         .duel-ring-stage {
             position: relative;
             width: 100%;
-            height: 186px;
+            height: 214px;
             border-radius: 12px;
             overflow: hidden;
-            background: radial-gradient(circle at 50% 18%, #3b2654 0%, #161829 68%, #0d0f1a 100%);
+            background: radial-gradient(circle at 50% 18%, #1e1b4b 0%, #0b0e1c 100%);
             border: 2px solid #475569;
             margin-bottom: 10px;
             user-select: none;
         }
+        .duel-three-container {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+        }
+        .duel-three-container canvas {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
+        }
+        .duel-pov-badge {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: rgba(15, 23, 42, 0.82);
+            border: 1px solid rgba(148, 163, 184, 0.45);
+            color: #e2e8f0;
+            font-size: 0.7rem;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 999px;
+            z-index: 18;
+            pointer-events: none;
+            backdrop-filter: blur(4px);
+        }
         .duel-ring-stage.slowmo-mode {
-            box-shadow: inset 0 0 38px rgba(56, 189, 248, 0.42);
+            box-shadow: inset 0 0 38px rgba(56, 189, 248, 0.48);
             border-color: #38bdf8;
         }
         @keyframes duel-ring-shake {
@@ -626,153 +677,76 @@
         .duel-ring-stage.hit-shake {
             animation: duel-ring-shake 0.42s ease-out;
         }
-        .duel-ring-mat {
+        .duel-screen-flash {
             position: absolute;
-            bottom: 0;
-            left: -4%;
-            width: 108%;
-            height: 58px;
-            background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 72%, #1e3a8a 100%);
-            border-top: 4px solid #f8fafc;
+            inset: 0;
+            z-index: 15;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.28s ease-out;
         }
-        .duel-post {
-            position: absolute;
-            bottom: 36px;
-            width: 12px;
-            height: 112px;
-            border-radius: 4px;
-            z-index: 3;
+        .duel-screen-flash.hit {
+            opacity: 1;
+            background: radial-gradient(circle, rgba(254, 240, 138, 0.15) 20%, rgba(239, 68, 68, 0.55) 100%);
         }
-        .duel-post.left { left: 10px; background: linear-gradient(90deg, #dc2626, #ef4444); }
-        .duel-post.right { right: 10px; background: linear-gradient(90deg, #2563eb, #3b82f6); }
-        .duel-rope {
-            position: absolute;
-            left: 16px;
-            right: 16px;
-            height: 3px;
-            z-index: 2;
-            border-radius: 2px;
+        .duel-screen-flash.dodge {
+            opacity: 1;
+            background: radial-gradient(circle, transparent 35%, rgba(56, 189, 248, 0.36) 100%);
         }
-        .duel-rope.r1 { bottom: 122px; background: #ef4444; }
-        .duel-rope.r2 { bottom: 94px; background: #f8fafc; }
-        .duel-rope.r3 { bottom: 66px; background: #3b82f6; }
         .duel-slowmo-badge {
             position: absolute;
             top: 8px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(14, 165, 233, 0.9);
+            right: 8px;
+            background: rgba(14, 165, 233, 0.92);
             color: #fff;
-            font-size: 0.72rem;
+            font-size: 0.7rem;
             font-weight: 900;
-            padding: 2px 10px;
+            padding: 2px 9px;
             border-radius: 999px;
-            letter-spacing: 1.2px;
+            letter-spacing: 1px;
             z-index: 20;
             box-shadow: 0 0 14px rgba(56, 189, 248, 0.9);
+            pointer-events: none;
         }
-        .duel-fighter {
-            position: absolute;
-            bottom: 18px;
-            width: 88px;
-            height: 102px;
-            z-index: 8;
-            transition: transform 0.25s ease, left 0.25s ease, right 0.25s ease;
-        }
-        .duel-fighter.left-corner { left: 18%; }
-        .duel-fighter.right-corner { right: 18%; }
-        @keyframes duel-guard-bob {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-4px); }
-        }
-        .duel-fighter.idle-bob .duel-avatar-holder {
-            animation: duel-guard-bob 0.65s infinite ease-in-out;
-        }
-        .duel-fighter.slowmo-anim {
-            transition: transform 0.85s cubic-bezier(0.16, 0.84, 0.28, 1);
-        }
-        .duel-avatar-holder {
-            width: 78px;
-            height: 78px;
-            margin: 0 auto;
-            position: relative;
-        }
-        .duel-avatar-holder .exp-idle { display: block; }
-        .duel-fighter.hit-stunned .duel-avatar-holder .exp-idle { display: none; }
-        .duel-fighter.hit-stunned .duel-avatar-holder .exp-duel { display: block; }
-        .duel-role-tag {
-            position: absolute;
-            top: -18px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 0.68rem;
-            font-weight: 800;
-            padding: 1px 7px;
-            border-radius: 8px;
-            white-space: nowrap;
-            z-index: 12;
-        }
-        .duel-role-tag.atk { background: #e11d48; color: #fff; }
-        .duel-role-tag.def { background: #0284c7; color: #fff; }
-        .duel-glove {
-            position: absolute;
-            top: 44px;
-            width: 22px;
-            height: 20px;
-            border-radius: 50% 50% 44% 44%;
-            background: radial-gradient(circle at 35% 30%, #fb7185, #be123c);
-            border: 1.5px solid #4c0519;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.45);
-            z-index: 11;
-            transition: transform 0.82s cubic-bezier(0.16, 0.84, 0.28, 1);
-        }
-        .duel-fighter.right-corner .duel-glove {
-            background: radial-gradient(circle at 35% 30%, #60a5fa, #1d4ed8);
-            border-color: #172554;
-        }
-        .duel-glove.g-left { left: 2px; }
-        .duel-glove.g-right { right: 2px; }
         .duel-fx-banner {
             position: absolute;
-            top: 40%;
+            bottom: 12px;
             left: 50%;
-            transform: translate(-50%, -50%) scale(0.5);
-            font-size: 1.35rem;
+            transform: translateX(-50%) scale(0.6);
+            font-size: 1.08rem;
             font-weight: 900;
             padding: 5px 14px;
             border-radius: 12px;
             z-index: 25;
             pointer-events: none;
             opacity: 0;
-            transition: transform 0.28s cubic-bezier(0.18, 1.3, 0.4, 1), opacity 0.2s;
+            transition: transform 0.26s cubic-bezier(0.18, 1.3, 0.4, 1), opacity 0.2s;
             white-space: nowrap;
+            max-width: 94%;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .duel-fx-banner.show {
             opacity: 1;
-            transform: translate(-50%, -50%) scale(1);
+            transform: translateX(-50%) scale(1);
         }
         .duel-fx-banner.hit {
-            background: radial-gradient(circle, #fef08a 0%, #f97316 60%, #dc2626 100%);
+            background: radial-gradient(circle, #fef08a 0%, #f97316 55%, #dc2626 100%);
             color: #fff;
             text-shadow: 0 2px 6px rgba(0,0,0,0.85);
             box-shadow: 0 0 24px rgba(249, 115, 22, 0.95);
         }
         .duel-fx-banner.dodge {
-            background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+            background: linear-gradient(135deg, #0ea5e9, #2563eb);
             color: #fff;
             text-shadow: 0 2px 4px rgba(0,0,0,0.65);
             box-shadow: 0 0 18px rgba(56, 189, 248, 0.85);
         }
-        .duel-spark {
-            position: absolute;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #fde047;
-            box-shadow: 0 0 8px #f97316;
-            z-index: 24;
-            pointer-events: none;
-            transition: transform 0.55s ease-out, opacity 0.55s ease-out;
+        .duel-fx-banner.coin {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #fff;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.8);
+            box-shadow: 0 0 22px rgba(250, 204, 21, 0.9);
         }
         .duel-status-box {
             margin-bottom: 8px;
@@ -819,9 +793,9 @@
         }
         @media (max-width: 480px) {
             .duel-modal { padding: 12px; }
-            .duel-ring-stage { height: 164px; }
-            .duel-fighter.left-corner { left: 10%; }
-            .duel-fighter.right-corner { right: 10%; }
+            .duel-ring-stage { height: 180px; }
+            .duel-score-name { max-width: 86px; font-size: 0.76rem; }
+            .duel-fx-banner { font-size: 0.92rem; padding: 4px 10px; }
             .duel-choice-btn { padding: 10px 6px; font-size: 0.82rem; }
         }
 
@@ -2648,7 +2622,7 @@
         </div>
     </div>
 
-    <!-- Duel Arena Ring Modal -->
+    <!-- Duel Arena 3D POV Ring Modal -->
     <div id="modal-duel-arena" class="modal-overlay hidden">
         <div class="modal duel-modal">
             <div class="duel-top-bar">
@@ -2660,14 +2634,20 @@
             </div>
             <div class="duel-scoreboard">
                 <div class="duel-score-side">
-                    <div id="duel-p1-name" class="duel-score-name">도전자</div>
+                    <div class="duel-score-head">
+                        <span id="duel-p1-name" class="duel-score-name">도전자</span>
+                        <span id="duel-role-p1" class="duel-role-tag atk">🔥 공격</span>
+                    </div>
                     <div id="duel-p1-pips" class="duel-score-pips">
                         <span class="duel-pip"></span><span class="duel-pip"></span>
                     </div>
                 </div>
                 <div style="font-size:0.85rem; font-weight:900; color:#f43f5e; padding:0 6px;">VS</div>
                 <div class="duel-score-side">
-                    <div id="duel-p2-name" class="duel-score-name">상대</div>
+                    <div class="duel-score-head">
+                        <span id="duel-p2-name" class="duel-score-name">상대</span>
+                        <span id="duel-role-p2" class="duel-role-tag def">💨 회피</span>
+                    </div>
                     <div id="duel-p2-pips" class="duel-score-pips">
                         <span class="duel-pip"></span><span class="duel-pip"></span>
                     </div>
@@ -2675,28 +2655,10 @@
             </div>
 
             <div id="duel-ring-stage" class="duel-ring-stage">
+                <div id="duel-three-container" class="duel-three-container"></div>
+                <div id="duel-pov-badge" class="duel-pov-badge">🎥 공격자 시야</div>
                 <div id="duel-slowmo-badge" class="duel-slowmo-badge hidden">🎬 SLOW MOTION</div>
-                <div class="duel-post left"></div>
-                <div class="duel-post right"></div>
-                <div class="duel-rope r1"></div>
-                <div class="duel-rope r2"></div>
-                <div class="duel-rope r3"></div>
-                <div class="duel-ring-mat"></div>
-
-                <div id="duel-fighter-p1" class="duel-fighter left-corner idle-bob">
-                    <div id="duel-role-p1" class="duel-role-tag atk">선공</div>
-                    <div id="duel-avatar-p1" class="duel-avatar-holder"></div>
-                    <div class="duel-glove g-left"></div>
-                    <div class="duel-glove g-right"></div>
-                </div>
-
-                <div id="duel-fighter-p2" class="duel-fighter right-corner idle-bob">
-                    <div id="duel-role-p2" class="duel-role-tag def">회피</div>
-                    <div id="duel-avatar-p2" class="duel-avatar-holder"></div>
-                    <div class="duel-glove g-left"></div>
-                    <div class="duel-glove g-right"></div>
-                </div>
-
+                <div id="duel-screen-flash" class="duel-screen-flash"></div>
                 <div id="duel-fx-banner" class="duel-fx-banner"></div>
             </div>
 
@@ -3062,6 +3024,11 @@
         function playDuelWhooshSound() {
             playTone(460, 'sine', 0.12, 0.12);
             setTimeout(() => playTone(680, 'sine', 0.12, 0.10), 60);
+        }
+        function playDuelCoinFlipSound() {
+            playTone(1760, 'sine', 0.28, 0.18);
+            setTimeout(() => playTone(2637, 'sine', 0.36, 0.16), 45);
+            setTimeout(() => playTone(3520, 'triangle', 0.24, 0.10), 95);
         }
         function playBombExplosionSound() {
             try {
@@ -5856,7 +5823,7 @@
                 if (typeof handleSaltReturnEvent === 'function') handleSaltReturnEvent(targetId, extraData);
                 return;
             }
-            if (item === 'duel_start' || item === 'duel_round_resolve' || item === 'duel_next_round' || item === 'duel_finish' || item === 'duel_abort') {
+            if (typeof item === 'string' && item.startsWith('duel_')) {
                 if (typeof handleDuelNetworkEvent === 'function') handleDuelNetworkEvent(item, extraData);
                 return;
             }
@@ -7724,16 +7691,23 @@
         }
         // ────────────────────────────────────────────────────────────────────────
 
-        // ─── Duel Arena ("결투신청") 3-Round Best-of-3 System ──────────────────
+        // ─── Duel Arena ("결투신청") 3D POV + Hit-Only Scoring + Referee Coin Toss Final Match ──
         const DUEL_ROUND_MS = 5000;
         const DUEL_SLOWMO_TOTAL_MS = 2400;
-        const DUEL_IMPACT_AT_MS = 780;
+        const DUEL_IMPACT_AT_MS = 900;
+        const DUEL_COIN_TOSS_MS = 3800;
         const DUEL_STUN_MS = 30000;
 
         const activeDuels = {}; // Host-authoritative duel map
         let clientDuelState = null; // Active duel rendered on this client
         let duelTimerRaf = null;
         let duelClientTimeouts = [];
+
+        function getDuelArena3D() {
+            return (window.ThreeStageManager && window.ThreeStageManager.duelArena)
+                ? window.ThreeStageManager.duelArena
+                : null;
+        }
 
         function addDuelClientTimeout(fn, ms) {
             const t = setTimeout(fn, ms);
@@ -7770,6 +7744,8 @@
             });
             clearDuelClientTimers();
             clientDuelState = null;
+            const arena3D = getDuelArena3D();
+            if (arena3D) arena3D.setVisible(false);
             const modal = document.getElementById('modal-duel-arena');
             if (modal) modal.classList.add('hidden');
         }
@@ -7821,12 +7797,14 @@
                 challengerGender: d.challengerGender,
                 targetGender: d.targetGender,
                 round: d.round,
+                isFinalMatch: !!d.isFinalMatch,
+                coinResult: d.coinResult || null,
                 challengerWins: d.challengerWins,
                 targetWins: d.targetWins,
                 attackerId: d.attackerId,
                 defenderId: d.defenderId,
                 phase: d.phase,
-                durationMs: DUEL_ROUND_MS
+                durationMs: d.phase === 'coin_toss' ? DUEL_COIN_TOSS_MS : DUEL_ROUND_MS
             };
         }
 
@@ -7868,6 +7846,8 @@
                 challengerGender: challenger.gender,
                 targetGender: target.gender,
                 round: 1,
+                isFinalMatch: false,
+                coinResult: null,
                 challengerWins: 0,
                 targetWins: 0,
                 attackerId: challenger.id, // Item user attacks first in Round 1
@@ -7932,26 +7912,60 @@
                 ? d.dodgeChoice
                 : (Math.random() < 0.5 ? 'left' : 'right');
 
-            // Same direction = defender leaned right into the incoming punch -> HIT!
-            // Opposite direction = defender slipped away from the incoming punch -> DODGE!
+            // Same direction = defender moved their face right into the incoming punch -> HIT!
+            // Opposite direction = defender moved their face away from the incoming punch -> DODGE!
             const hit = (attackDir === dodgeDir);
-            const roundWinnerId = hit ? d.attackerId : d.defenderId;
-            if (roundWinnerId === d.challengerId) d.challengerWins++;
-            else d.targetWins++;
-
+            let roundWinnerId = null;
             let matchWinnerId = null;
             let matchLoserId = null;
-            if (d.challengerWins >= 2) {
-                matchWinnerId = d.challengerId;
-                matchLoserId = d.targetId;
-            } else if (d.targetWins >= 2) {
-                matchWinnerId = d.targetId;
-                matchLoserId = d.challengerId;
+            let triggerFinalMatch = false;
+
+            if (d.isFinalMatch) {
+                // FINAL MATCH sudden-death rule:
+                // Attack lands -> Attacker wins! Attack misses (dodged) -> Defender wins!
+                if (hit) {
+                    roundWinnerId = d.attackerId;
+                    matchWinnerId = d.attackerId;
+                    matchLoserId = d.defenderId;
+                    if (roundWinnerId === d.challengerId) d.challengerWins++;
+                    else d.targetWins++;
+                } else {
+                    roundWinnerId = d.defenderId;
+                    matchWinnerId = d.defenderId;
+                    matchLoserId = d.attackerId;
+                }
+            } else {
+                // Regular Rounds 1~3: ONLY a hit stacks a win! Dodging has NO winner (0 points, no counter-KO).
+                if (hit) {
+                    roundWinnerId = d.attackerId;
+                    if (roundWinnerId === d.challengerId) d.challengerWins++;
+                    else d.targetWins++;
+                }
+
+                if (d.challengerWins >= 2) {
+                    matchWinnerId = d.challengerId;
+                    matchLoserId = d.targetId;
+                } else if (d.targetWins >= 2) {
+                    matchWinnerId = d.targetId;
+                    matchLoserId = d.challengerId;
+                } else if (d.round >= 3) {
+                    if (d.challengerWins > d.targetWins) {
+                        matchWinnerId = d.challengerId;
+                        matchLoserId = d.targetId;
+                    } else if (d.targetWins > d.challengerWins) {
+                        matchWinnerId = d.targetId;
+                        matchLoserId = d.challengerId;
+                    } else {
+                        // Tied after 3 rounds (0:0 three draws in a row, or 1:1 tie) -> Referee Sky Coin Toss Final Match!
+                        triggerFinalMatch = true;
+                    }
+                }
             }
 
             const resolvePayload = {
                 duelId: d.duelId,
                 round: d.round,
+                isFinalMatch: !!d.isFinalMatch,
                 attackerId: d.attackerId,
                 defenderId: d.defenderId,
                 attackDir,
@@ -7961,7 +7975,8 @@
                 challengerWins: d.challengerWins,
                 targetWins: d.targetWins,
                 matchWinnerId,
-                matchLoserId
+                matchLoserId,
+                triggerFinalMatch
             };
 
             const ch = findPlayerById(d.challengerId);
@@ -7979,12 +7994,76 @@
             if (matchWinnerId) {
                 d.transitionTimerId = setTimeout(() => {
                     finishDuelOnHost(duelId, matchWinnerId, matchLoserId);
-                }, DUEL_SLOWMO_TOTAL_MS + 700);
+                }, DUEL_SLOWMO_TOTAL_MS + 650);
+            } else if (triggerFinalMatch) {
+                d.transitionTimerId = setTimeout(() => {
+                    startDuelFinalMatchCoinTossOnHost(duelId);
+                }, DUEL_SLOWMO_TOTAL_MS + 300);
             } else {
                 d.transitionTimerId = setTimeout(() => {
                     advanceDuelRoundOnHost(duelId);
                 }, DUEL_SLOWMO_TOTAL_MS + 250);
             }
+        }
+
+        function startDuelFinalMatchCoinTossOnHost(duelId) {
+            const d = activeDuels[duelId];
+            if (!d || !state.room || state.room.status !== 'playing') return;
+
+            // Heads (앞면) = item user (challenger) attacks; Tails (뒷면) = targeted player attacks
+            const forced = window.__TEST_FORCE_DUEL_COIN;
+            const coinResult = (forced === 'heads' || forced === 'tails')
+                ? forced
+                : (Math.random() < 0.5 ? 'heads' : 'tails');
+
+            d.round = 4;
+            d.isFinalMatch = true;
+            d.coinResult = coinResult;
+            d.attackerId = coinResult === 'heads' ? d.challengerId : d.targetId;
+            d.defenderId = coinResult === 'heads' ? d.targetId : d.challengerId;
+            d.attackChoice = null;
+            d.dodgeChoice = null;
+            d.phase = 'coin_toss';
+
+            const snap = buildPublicDuelSnapshot(d);
+            const ch = findPlayerById(d.challengerId);
+            const tg = findPlayerById(d.targetId);
+            if (ch) ch.activeDuel = snap;
+            if (tg) tg.activeDuel = snap;
+
+            if (currentMode === MODE_HOST) {
+                broadcast({ type: 'EVENT_ITEM', payload: { senderId: d.challengerId, item: 'duel_coin_toss', targetId: d.targetId, extraData: snap } });
+                broadcastState();
+            }
+            handleDuelNetworkEvent('duel_coin_toss', snap);
+
+            d.transitionTimerId = setTimeout(() => {
+                advanceToFinalMatchChoosingOnHost(duelId);
+            }, DUEL_COIN_TOSS_MS);
+        }
+
+        function advanceToFinalMatchChoosingOnHost(duelId) {
+            const d = activeDuels[duelId];
+            if (!d || !state.room || state.room.status !== 'playing') return;
+            d.phase = 'choosing';
+            d.attackChoice = null;
+            d.dodgeChoice = null;
+
+            const snap = buildPublicDuelSnapshot(d);
+            const ch = findPlayerById(d.challengerId);
+            const tg = findPlayerById(d.targetId);
+            if (ch) ch.activeDuel = snap;
+            if (tg) tg.activeDuel = snap;
+
+            const finalRound = d.round;
+            d.roundTimerId = setTimeout(() => resolveDuelRoundOnHost(duelId, finalRound), DUEL_ROUND_MS);
+            scheduleDuelBotsOnHost(d);
+
+            if (currentMode === MODE_HOST) {
+                broadcast({ type: 'EVENT_ITEM', payload: { senderId: d.challengerId, item: 'duel_next_round', targetId: d.targetId, extraData: snap } });
+                broadcastState();
+            }
+            handleDuelNetworkEvent('duel_next_round', snap);
         }
 
         function advanceDuelRoundOnHost(duelId) {
@@ -8047,7 +8126,8 @@
                 winnerName: winner ? winner.name : d.challengerName,
                 loserName: loser ? loser.name : d.targetName,
                 challengerWins: d.challengerWins,
-                targetWins: d.targetWins
+                targetWins: d.targetWins,
+                wasFinalMatch: !!d.isFinalMatch
             };
 
             if (currentMode === MODE_HOST) {
@@ -8109,7 +8189,7 @@
             }
         }
 
-        // ─── Client Duel Arena UI & Slow-Motion Animation ─────────────────────
+        // ─── Client 3D POV Duel Arena UI, Coin Toss & Slow-Motion Animation ────
         function handleDuelNetworkEvent(eventType, data) {
             if (!data) return;
             if (eventType === 'duel_start') {
@@ -8120,8 +8200,15 @@
                 renderStage();
                 updateChatUI();
                 playDuelBellSound();
-                sysChat(`🥊 [결투장 오픈] ${data.challengerName}님이 ${data.targetName}님에게 1:1 결투를 신청했습니다! (3판 2선승)`);
+                sysChat(`🥊 [결투장 오픈] ${data.challengerName}님이 ${data.targetName}님에게 1:1 결투를 신청했습니다! (3D 시점 · 적중 시 득점)`);
                 openDuelArenaModal(data);
+            } else if (eventType === 'duel_coin_toss') {
+                if (!clientDuelState || clientDuelState.duelId !== data.duelId) {
+                    openDuelArenaModal(data);
+                    return;
+                }
+                sysChat(`🪙 [파이널매치 돌입] 승부가 나지 않아 심판이 동전 던지기로 마지막 선공권을 결정합니다!`);
+                playDuelCoinTossClientUI(data);
             } else if (eventType === 'duel_next_round') {
                 if (!clientDuelState || clientDuelState.duelId !== data.duelId) {
                     openDuelArenaModal(data);
@@ -8132,7 +8219,8 @@
             } else if (eventType === 'duel_round_resolve') {
                 playDuelSlowMoResolution(data);
             } else if (eventType === 'duel_finish') {
-                sysChat(`🥊 [결투 종료] ${data.winnerName}님이 (${Math.max(data.challengerWins, data.targetWins)}-${Math.min(data.challengerWins, data.targetWins)}) 승리를 거두었습니다! 패배한 ${data.loserName}님은 눈탱이 밤탱이가 되어 30초간 기절합니다!`);
+                const modeLabel = data.wasFinalMatch ? '파이널매치 끝에 ' : '';
+                sysChat(`🥊 [결투 종료] ${data.winnerName}님이 ${modeLabel}승리를 거두었습니다! 패배한 ${data.loserName}님은 눈탱이 밤탱이가 되어 30초간 기절합니다!`);
                 closeDuelArenaModal();
                 renderStage();
                 updateChatUI();
@@ -8142,6 +8230,46 @@
                 renderStage();
                 updateChatUI();
             }
+        }
+
+        function computeDuelClientPOV(snap) {
+            const p1IsAtk = snap.attackerId === snap.challengerId;
+            const atkGender = p1IsAtk ? (snap.challengerGender || 'M') : (snap.targetGender || 'M');
+            const defGender = p1IsAtk ? (snap.targetGender || 'M') : (snap.challengerGender || 'M');
+            const atkName = p1IsAtk ? snap.challengerName : snap.targetName;
+            const defName = p1IsAtk ? snap.targetName : snap.challengerName;
+
+            if (state.myId === snap.attackerId) {
+                return {
+                    povRole: 'attacker',
+                    myGender: atkGender,
+                    myIsChallenger: p1IsAtk,
+                    oppName: defName,
+                    oppGender: defGender,
+                    oppIsChallenger: !p1IsAtk,
+                    povLabel: `🎥 공격자 시야 (상대: ${defName})`
+                };
+            }
+            if (state.myId === snap.defenderId) {
+                return {
+                    povRole: 'defender',
+                    myGender: defGender,
+                    myIsChallenger: !p1IsAtk,
+                    oppName: atkName,
+                    oppGender: atkGender,
+                    oppIsChallenger: p1IsAtk,
+                    povLabel: `🎥 수비자 시야 (상대: ${atkName})`
+                };
+            }
+            return {
+                povRole: 'spectator',
+                myGender: atkGender,
+                myIsChallenger: p1IsAtk,
+                oppName: defName,
+                oppGender: defGender,
+                oppIsChallenger: !p1IsAtk,
+                povLabel: `🎥 공격자 시야 관전 (${atkName} ➔ ${defName})`
+            };
         }
 
         function openDuelArenaModal(snap) {
@@ -8157,12 +8285,8 @@
 
             const p1NameEl = document.getElementById('duel-p1-name');
             const p2NameEl = document.getElementById('duel-p2-name');
-            const av1 = document.getElementById('duel-avatar-p1');
-            const av2 = document.getElementById('duel-avatar-p2');
             if (p1NameEl) p1NameEl.textContent = `🥊 ${snap.challengerName}`;
             if (p2NameEl) p2NameEl.textContent = `${snap.targetName} 🥊`;
-            if (av1) av1.innerHTML = getAvatarSvg(snap.challengerGender || 'M');
-            if (av2) av2.innerHTML = getAvatarSvg(snap.targetGender || 'M');
 
             const specCloseBtn = document.getElementById('btn-duel-spectator-close');
             if (specCloseBtn) specCloseBtn.classList.toggle('hidden', isParticipant);
@@ -8170,31 +8294,32 @@
             const modal = document.getElementById('modal-duel-arena');
             if (modal) modal.classList.remove('hidden');
 
-            startDuelRoundClientUI(snap);
+            const arena3D = getDuelArena3D();
+            const threeContainer = document.getElementById('duel-three-container');
+            if (arena3D && threeContainer) {
+                arena3D.init(threeContainer);
+            }
+
+            if (snap.phase === 'coin_toss') {
+                playDuelCoinTossClientUI(snap);
+            } else {
+                startDuelRoundClientUI(snap);
+            }
         }
 
-        function resetDuelRingPositions() {
+        function resetDuelRingOverlays() {
             const stage = document.getElementById('duel-ring-stage');
-            const f1 = document.getElementById('duel-fighter-p1');
-            const f2 = document.getElementById('duel-fighter-p2');
             const slowBadge = document.getElementById('duel-slowmo-badge');
             const fxBanner = document.getElementById('duel-fx-banner');
+            const flash = document.getElementById('duel-screen-flash');
 
-            if (stage) {
-                stage.classList.remove('slowmo-mode', 'hit-shake');
-                stage.querySelectorAll('.duel-spark').forEach(el => el.remove());
-            }
+            if (stage) stage.classList.remove('slowmo-mode', 'hit-shake');
             if (slowBadge) slowBadge.classList.add('hidden');
+            if (flash) flash.className = 'duel-screen-flash';
             if (fxBanner) {
                 fxBanner.className = 'duel-fx-banner';
                 fxBanner.textContent = '';
             }
-            [f1, f2].forEach((f, idx) => {
-                if (!f) return;
-                f.className = `duel-fighter ${idx === 0 ? 'left-corner' : 'right-corner'} idle-bob`;
-                f.style.transform = 'none';
-                f.querySelectorAll('.duel-glove').forEach(g => { g.style.transform = 'none'; });
-            });
         }
 
         function renderDuelScorePips(cWins, tWins) {
@@ -8202,6 +8327,75 @@
             const p2Pips = document.querySelectorAll('#duel-p2-pips .duel-pip');
             p1Pips.forEach((el, i) => el.classList.toggle('won', i < cWins));
             p2Pips.forEach((el, i) => el.classList.toggle('won', i < tWins));
+        }
+
+        function playDuelCoinTossClientUI(snap) {
+            clearDuelClientTimers();
+            if (!clientDuelState) return;
+            const dur = snap.durationMs || DUEL_COIN_TOSS_MS;
+            Object.assign(clientDuelState, snap, {
+                myChoice: null,
+                animating: true,
+                localExpiresAt: Date.now() + dur
+            });
+
+            resetDuelRingOverlays();
+            renderDuelScorePips(snap.challengerWins || 0, snap.targetWins || 0);
+
+            const roundBadge = document.getElementById('duel-round-badge');
+            const timerText = document.getElementById('duel-timer-text');
+            const timerFill = document.getElementById('duel-timer-fill');
+            const povBadge = document.getElementById('duel-pov-badge');
+            const roleP1 = document.getElementById('duel-role-p1');
+            const roleP2 = document.getElementById('duel-role-p2');
+            const controls = document.getElementById('duel-controls-area');
+            const banner = document.getElementById('duel-role-banner');
+            const hint = document.getElementById('duel-sub-hint');
+            const fxBanner = document.getElementById('duel-fx-banner');
+
+            if (roundBadge) {
+                roundBadge.className = 'duel-round-pill final-mode';
+                roundBadge.textContent = '🪙 FINAL MATCH · 심판 동전 던지기';
+            }
+            if (timerText) timerText.textContent = 'COIN TOSS';
+            if (timerFill) timerFill.style.width = '100%';
+            if (povBadge) povBadge.textContent = `🎥 앞면: ${snap.challengerName} / 뒷면: ${snap.targetName}`;
+            if (roleP1) { roleP1.className = 'duel-role-tag coin'; roleP1.textContent = '🪙 앞면'; }
+            if (roleP2) { roleP2.className = 'duel-role-tag coin'; roleP2.textContent = '🪙 뒷면'; }
+            if (controls) controls.classList.add('hidden');
+
+            if (banner) banner.textContent = '⚡ 3라운드 무승부! 파이널매치 선공 결정 동전 던지기!';
+            if (hint) hint.textContent = `심판이 하늘 높이 동전을 튕깁니다! (앞면: ${snap.challengerName} 공격 / 뒷면: ${snap.targetName} 공격)`;
+
+            const arena3D = getDuelArena3D();
+            if (arena3D) {
+                arena3D.playCoinToss({
+                    coinResult: snap.coinResult,
+                    challengerName: snap.challengerName,
+                    targetName: snap.targetName,
+                    challengerGender: snap.challengerGender,
+                    targetGender: snap.targetGender,
+                    durationMs: dur
+                });
+            }
+
+            addDuelClientTimeout(() => {
+                playDuelCoinFlipSound();
+            }, 520);
+
+            addDuelClientTimeout(() => {
+                if (!clientDuelState || clientDuelState.duelId !== snap.duelId) return;
+                const isHeads = snap.coinResult === 'heads';
+                const atkName = isHeads ? snap.challengerName : snap.targetName;
+                const sideKor = isHeads ? '앞면' : '뒷면';
+                playDuelBellSound();
+                if (fxBanner) {
+                    fxBanner.className = 'duel-fx-banner coin show';
+                    fxBanner.textContent = `🪙 [${sideKor}]! ${atkName} 선공 획득!`;
+                }
+                if (banner) banner.textContent = `🪙 동전 [${sideKor}]! 파이널매치 공격권: ${atkName}!`;
+                if (hint) hint.textContent = '파이널매치에서는 공격 적중 시 공격자 승, 회피 성공 시 피한 사람이 즉시 승리합니다!';
+            }, 2500);
         }
 
         function startDuelRoundClientUI(snap) {
@@ -8213,11 +8407,17 @@
                 localExpiresAt: Date.now() + (snap.durationMs || DUEL_ROUND_MS)
             });
 
-            resetDuelRingPositions();
+            resetDuelRingOverlays();
             renderDuelScorePips(snap.challengerWins || 0, snap.targetWins || 0);
 
+            const isFinal = !!snap.isFinalMatch;
             const roundBadge = document.getElementById('duel-round-badge');
-            if (roundBadge) roundBadge.textContent = `🥊 ROUND ${snap.round} / 3 (3판 2선승)`;
+            if (roundBadge) {
+                roundBadge.className = isFinal ? 'duel-round-pill final-mode' : 'duel-round-pill';
+                roundBadge.textContent = isFinal
+                    ? '⚡ FINAL MATCH (단판 승부)'
+                    : `🥊 ROUND ${snap.round} / 3 (3판 2선승)`;
+            }
 
             const p1IsAtk = snap.attackerId === snap.challengerId;
             const roleP1 = document.getElementById('duel-role-p1');
@@ -8231,6 +8431,23 @@
                 roleP2.textContent = !p1IsAtk ? '🔥 공격' : '💨 회피';
             }
 
+            const povInfo = computeDuelClientPOV(snap);
+            const povBadge = document.getElementById('duel-pov-badge');
+            if (povBadge) povBadge.textContent = povInfo.povLabel;
+
+            const arena3D = getDuelArena3D();
+            if (arena3D) {
+                arena3D.setRoundPOV({
+                    povRole: povInfo.povRole,
+                    myGender: povInfo.myGender,
+                    myIsChallenger: povInfo.myIsChallenger,
+                    oppName: povInfo.oppName,
+                    oppGender: povInfo.oppGender,
+                    oppIsChallenger: povInfo.oppIsChallenger,
+                    isFinalMatch: isFinal
+                });
+            }
+
             const controls = document.getElementById('duel-controls-area');
             const btnL = document.getElementById('btn-duel-left');
             const btnR = document.getElementById('btn-duel-right');
@@ -8239,22 +8456,32 @@
 
             if (state.myId === snap.attackerId) {
                 if (controls) controls.classList.remove('hidden');
-                if (banner) banner.textContent = '🔥 나의 공격 차례! (레프트 / 라이트 선택)';
-                if (hint) hint.textContent = '5초 뒤 슬로우모션으로 펀치를 날립니다. 상대가 피할 쪽을 맞추면 직격!';
+                if (banner) banner.textContent = isFinal
+                    ? '⚡ 파이널매치 공격! (레프트 / 라이트 선택)'
+                    : '🔥 나의 공격 차례! (레프트 / 라이트 선택)';
+                if (hint) hint.textContent = isFinal
+                    ? '적중 시 즉시 최종 승리! 상대가 피하면 상대방이 승리합니다!'
+                    : '5초 뒤 내 팔이 슬로우모션으로 뻗습니다! 맞혀야만 승이 쌓입니다.';
                 if (btnL) { btnL.disabled = false; btnL.className = 'btn duel-choice-btn atk-mode'; btnL.textContent = '🥊 레프트'; }
                 if (btnR) { btnR.disabled = false; btnR.className = 'btn duel-choice-btn atk-mode'; btnR.textContent = '🥊 라이트'; }
             } else if (state.myId === snap.defenderId) {
                 if (controls) controls.classList.remove('hidden');
-                if (banner) banner.textContent = '💨 나의 회피 차례! (피하기 레프트 / 라이트 선택)';
-                if (hint) hint.textContent = '5초 뒤 상대의 공격을 예측해 반대 방향으로 피하세요!';
+                if (banner) banner.textContent = isFinal
+                    ? '⚡ 파이널매치 회피! (피하기 레프트 / 라이트 선택)'
+                    : '💨 나의 회피 차례! (피하기 레프트 / 라이트 선택)';
+                if (hint) hint.textContent = isFinal
+                    ? '이번 공격을 피하기만 해도 즉시 최종 승리합니다!'
+                    : '5초 뒤 선택한 방향으로 얼굴을 피해 공격을 흘리세요! (회피 시 무승부)';
                 if (btnL) { btnL.disabled = false; btnL.className = 'btn duel-choice-btn def-mode'; btnL.textContent = '💨 피하기 레프트'; }
-                if (btnR) { btnR.disabled = false; btnR.className = 'btn duel-choice-btn def-mode'; btnR.textContent = '💨 피하기 라이트'; }
+                if (btnR) { btnR.disabled = false; btnL.className = 'btn duel-choice-btn def-mode'; btnL.textContent = '💨 피하기 라이트'; }
             } else {
                 if (controls) controls.classList.add('hidden');
                 const atkName = p1IsAtk ? snap.challengerName : snap.targetName;
                 const defName = p1IsAtk ? snap.targetName : snap.challengerName;
                 if (banner) banner.textContent = `👀 관전 중: ${atkName} 공격 vs ${defName} 회피`;
-                if (hint) hint.textContent = '5초 카운트다운 후 슬로우모션 펀치 & 회피가 펼쳐집니다!';
+                if (hint) hint.textContent = isFinal
+                    ? '⚡ 파이널매치! 적중 시 공격자 승, 회피 시 수비자 승!'
+                    : '5초 카운트다운 후 3D 1인칭 슬로우모션 펀치 & 얼굴 회피가 펼쳐집니다!';
             }
 
             const timerText = document.getElementById('duel-timer-text');
@@ -8281,6 +8508,9 @@
             clientDuelState.myChoice = dir;
             playTone(dir === 'left' ? 620 : 740, 'triangle', 0.06, 0.12);
 
+            const arena3D = getDuelArena3D();
+            if (arena3D) arena3D.setPreChoice(dir);
+
             const btnL = document.getElementById('btn-duel-left');
             const btnR = document.getElementById('btn-duel-right');
             if (btnL) btnL.classList.toggle('selected', dir === 'left');
@@ -8306,27 +8536,6 @@
             }
         }
 
-        function spawnDuelHitSparks(stage, targetFighterEl) {
-            if (!stage || !targetFighterEl) return;
-            const sRect = stage.getBoundingClientRect();
-            const fRect = targetFighterEl.getBoundingClientRect();
-            const cx = fRect.left - sRect.left + fRect.width / 2;
-            const cy = fRect.top - sRect.top + 38;
-            for (let i = 0; i < 10; i++) {
-                const sp = document.createElement('div');
-                sp.className = 'duel-spark';
-                sp.style.left = `${cx - 4}px`;
-                sp.style.top = `${cy - 4}px`;
-                stage.appendChild(sp);
-                const ang = (i / 10) * Math.PI * 2;
-                const dist = 28 + Math.random() * 34;
-                requestAnimationFrame(() => {
-                    sp.style.transform = `translate(${Math.cos(ang) * dist}px, ${Math.sin(ang) * dist}px) scale(0.2)`;
-                    sp.style.opacity = '0';
-                });
-            }
-        }
-
         function playDuelSlowMoResolution(res) {
             if (!clientDuelState || clientDuelState.duelId !== res.duelId) return;
             clearDuelClientTimers();
@@ -8335,6 +8544,7 @@
             const stage = document.getElementById('duel-ring-stage');
             const slowBadge = document.getElementById('duel-slowmo-badge');
             const fxBanner = document.getElementById('duel-fx-banner');
+            const flash = document.getElementById('duel-screen-flash');
             const timerText = document.getElementById('duel-timer-text');
             const timerFill = document.getElementById('duel-timer-fill');
             const btnL = document.getElementById('btn-duel-left');
@@ -8348,8 +8558,6 @@
             if (btnR) btnR.disabled = true;
 
             const p1IsAtk = res.attackerId === clientDuelState.challengerId;
-            const atkEl = document.getElementById(p1IsAtk ? 'duel-fighter-p1' : 'duel-fighter-p2');
-            const defEl = document.getElementById(p1IsAtk ? 'duel-fighter-p2' : 'duel-fighter-p1');
             const atkName = p1IsAtk ? clientDuelState.challengerName : clientDuelState.targetName;
             const defName = p1IsAtk ? clientDuelState.targetName : clientDuelState.challengerName;
             const atkKor = res.attackDir === 'left' ? '레프트' : '라이트';
@@ -8357,28 +8565,22 @@
 
             if (stage) stage.classList.add('slowmo-mode');
             if (slowBadge) slowBadge.classList.remove('hidden');
-            if (banner) banner.textContent = `🎬 ${atkName} [${atkKor} 공격] vs ${defName} [${defKor} 회피]!`;
+            if (banner) banner.textContent = `🎬 ${atkName} [${atkKor} 공격] vs ${defName} [${defKor} 얼굴 이동]!`;
             if (hint) hint.textContent = '슬로우모션 판정 중...';
 
-            if (atkEl && defEl) {
-                atkEl.classList.remove('idle-bob');
-                defEl.classList.remove('idle-bob');
-                atkEl.classList.add('slowmo-anim');
-                defEl.classList.add('slowmo-anim');
-
-                const lungeX = p1IsAtk ? 92 : -92;
-                const laneOffsetY = res.attackDir === 'left' ? -10 : 8;
-                const dodgeShiftX = res.dodgeDir === 'left' ? -28 : 28;
-                const dodgeTilt = res.dodgeDir === 'left' ? -16 : 16;
-
-                const punchGlove = atkEl.querySelector(res.attackDir === 'left' ? '.duel-glove.g-left' : '.duel-glove.g-right');
-                requestAnimationFrame(() => {
-                    atkEl.style.transform = `translate(${lungeX}px, ${laneOffsetY}px) scale(1.08)`;
-                    if (punchGlove) {
-                        const gloveExtendX = (p1IsAtk ? 42 : -42) + (res.attackDir === 'left' ? -12 : 12);
-                        punchGlove.style.transform = `translate(${gloveExtendX}px, -8px) scale(1.65)`;
-                    }
-                    defEl.style.transform = `translate(${dodgeShiftX}px, 4px) rotate(${dodgeTilt}deg)`;
+            const povRole = (state.myId === res.attackerId)
+                ? 'attacker'
+                : (state.myId === res.defenderId ? 'defender' : 'spectator');
+            const arena3D = getDuelArena3D();
+            if (arena3D) {
+                arena3D.playSlowMoRound({
+                    povRole,
+                    attackDir: res.attackDir,
+                    dodgeDir: res.dodgeDir,
+                    hit: res.hit,
+                    isFinalMatch: !!res.isFinalMatch,
+                    durationMs: DUEL_SLOWMO_TOTAL_MS,
+                    impactAtMs: DUEL_IMPACT_AT_MS
                 });
             }
 
@@ -8390,38 +8592,28 @@
                 if (res.hit) {
                     playDuelHitSound();
                     if (stage) stage.classList.add('hit-shake');
-                    if (defEl) {
-                        defEl.classList.add('hit-stunned');
-                        const recoilX = p1IsAtk ? 38 : -38;
-                        defEl.style.transform = `translate(${recoilX}px, -8px) rotate(${p1IsAtk ? 22 : -22}deg)`;
-                        spawnDuelHitSparks(stage, defEl);
-                    }
+                    if (flash) flash.className = 'duel-screen-flash hit';
                     if (fxBanner) {
                         fxBanner.className = 'duel-fx-banner hit show';
-                        fxBanner.textContent = `💥 ${atkKor} 직격 명중!!`;
+                        fxBanner.textContent = res.isFinalMatch
+                            ? `💥 파이널 ${atkKor} 적중!! 최종 승리!`
+                            : `💥 ${atkKor} 직격 명중!! (+1승)`;
                     }
-                    if (banner) banner.textContent = `💥 공격 성공! ${atkName} 라운드 득점!`;
+                    if (banner) banner.textContent = res.isFinalMatch
+                        ? `🏆 파이널매치 공격 성공! ${atkName} 최종 승리!`
+                        : `💥 공격 적중! ${atkName} +1승 획득!`;
                 } else {
                     playDuelWhooshSound();
+                    if (flash) flash.className = 'duel-screen-flash dodge';
                     if (fxBanner) {
                         fxBanner.className = 'duel-fx-banner dodge show';
-                        fxBanner.textContent = `💨 ${defKor} 회피 성공!!`;
+                        fxBanner.textContent = res.isFinalMatch
+                            ? `💨 파이널 ${defKor} 회피 성공!! 최종 승리!`
+                            : `💨 ${defKor} 회피 성공! (무승부)`;
                     }
-                    if (banner) banner.textContent = `💨 완벽한 예측 회피! ${defName} 라운드 득점!`;
-
-                    // If defender clinched match win (2 wins) on a dodge, deliver a crisp counter-jab KO!
-                    if (res.matchWinnerId && res.matchWinnerId === res.defenderId && atkEl) {
-                        addDuelClientTimeout(() => {
-                            playDuelHitSound();
-                            if (stage) stage.classList.add('hit-shake');
-                            atkEl.classList.add('hit-stunned');
-                            spawnDuelHitSparks(stage, atkEl);
-                            if (fxBanner) {
-                                fxBanner.className = 'duel-fx-banner hit show';
-                                fxBanner.textContent = '⚡ 카운터 펀치 KO!!';
-                            }
-                        }, 480);
-                    }
+                    if (banner) banner.textContent = res.isFinalMatch
+                        ? `🏆 파이널매치 회피 성공! ${defName} 최종 승리!`
+                        : `💨 깔끔한 회피! 누구도 승점 없이 무승부!`;
                 }
 
                 if (res.matchWinnerId) {
@@ -8429,6 +8621,8 @@
                         ? clientDuelState.challengerName
                         : clientDuelState.targetName;
                     if (hint) hint.textContent = `🏆 ${winName} 최종 승리! 패배자는 30초 눈탱이 밤탱이 기절!`;
+                } else if (res.triggerFinalMatch) {
+                    if (hint) hint.textContent = '⚡ 승부가 나지 않아 심판 동전 던지기 파이널매치로 돌입합니다!';
                 } else {
                     if (hint) hint.textContent = '잠시 후 공수가 교대되어 다음 라운드가 시작됩니다...';
                 }
@@ -8438,6 +8632,8 @@
         function closeDuelModalSpectator() {
             if (!clientDuelState || clientDuelState.isParticipant) return;
             clientDuelState.spectatorClosed = true;
+            const arena3D = getDuelArena3D();
+            if (arena3D) arena3D.setVisible(false);
             const modal = document.getElementById('modal-duel-arena');
             if (modal) modal.classList.add('hidden');
         }
@@ -8445,6 +8641,8 @@
         function closeDuelArenaModal() {
             clearDuelClientTimers();
             clientDuelState = null;
+            const arena3D = getDuelArena3D();
+            if (arena3D) arena3D.setVisible(false);
             const modal = document.getElementById('modal-duel-arena');
             if (modal) modal.classList.add('hidden');
         }

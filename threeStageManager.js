@@ -3830,6 +3830,942 @@
     }
 
     // ─────────────────────────────────────────────────────────────
+    // 16. 3D First-Person POV Duel Arena & Referee Sky Coin Toss
+    // ─────────────────────────────────────────────────────────────
+    const duelArena = (function () {
+        let dScene = null;
+        let dCamera = null;
+        let dRenderer = null;
+        let dContainer = null;
+        let dResizeObs = null;
+        let dRafId = null;
+        let dClock = null;
+        let dVisible = false;
+        let dInitialized = false;
+
+        let ringGroup = null;
+        let oppRoot = null;
+        let oppChar = null;
+        let oppLeftGlove = null;
+        let oppRightGlove = null;
+
+        let fpRig = null;
+        let fpLeftPivot = null;
+        let fpRightPivot = null;
+
+        let refereeRoot = null;
+        let refereeChar = null;
+        let coinGroup = null;
+        let coinSpinGroup = null;
+        let coinGlowRing = null;
+
+        const dParticles = [];
+
+        const dState = {
+            mode: 'idle',        // 'idle' | 'choosing' | 'slowmo' | 'coin_toss'
+            povRole: 'attacker', // 'attacker' | 'defender' | 'spectator'
+            isFinalMatch: false,
+            preChoice: null,     // 'left' | 'right' | null
+            attackDir: 'left',
+            dodgeDir: 'right',
+            hit: false,
+            animElapsed: 0,
+            animDuration: 2.4,
+            impactAt: 0.9,
+            impactTriggered: false,
+            coinResult: 'heads',
+            coinSoundAt: 0.52,
+            coinLaunched: false,
+            coinPeakY: 0,
+            shakeTime: 0,
+            shakeMag: 0,
+            oppHeadOffsetX: 0,
+            fpPunchProgress: 0
+        };
+
+        function makeGloveMesh(isRed, scale = 1.0) {
+            const g = new THREE.Group();
+            const mainHex = isRed ? 0xe11d48 : 0x2563eb;
+            const darkHex = isRed ? 0x881337 : 0x1e3a8a;
+            const gloveMat = new THREE.MeshStandardMaterial({ color: mainHex, roughness: 0.26, metalness: 0.14 });
+            const cuffMat = new THREE.MeshStandardMaterial({ color: darkHex, roughness: 0.45, metalness: 0.1 });
+            const trimMat = new THREE.MeshBasicMaterial({ color: 0xf8fafc });
+
+            const pad = new THREE.Mesh(new THREE.SphereGeometry(0.23, 16, 14), gloveMat);
+            pad.scale.set(1.05, 1.15, 1.28);
+            g.add(pad);
+
+            const thumb = new THREE.Mesh(new THREE.SphereGeometry(0.105, 10, 10), gloveMat);
+            thumb.position.set(0.16, 0.04, 0.06);
+            thumb.scale.set(0.9, 1.15, 1.05);
+            g.add(thumb);
+
+            const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.155, 0.165, 0.17, 14), cuffMat);
+            cuff.rotation.x = Math.PI / 2;
+            cuff.position.set(0, 0, -0.24);
+            g.add(cuff);
+
+            const stripe = new THREE.Mesh(new THREE.TorusGeometry(0.158, 0.018, 8, 18), trimMat);
+            stripe.position.set(0, 0, -0.17);
+            g.add(stripe);
+
+            g.scale.setScalar(scale);
+            return g;
+        }
+
+        function makeRefereeStripeTexture() {
+            const c = document.createElement('canvas');
+            c.width = 256;
+            c.height = 128;
+            const ctx = c.getContext('2d');
+            const stripes = 12;
+            const sw = c.width / stripes;
+            for (let i = 0; i < stripes; i++) {
+                ctx.fillStyle = (i % 2 === 0) ? '#111827' : '#f8fafc';
+                ctx.fillRect(i * sw, 0, sw, c.height);
+            }
+            const tex = new THREE.CanvasTexture(c);
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.ClampToEdgeWrapping;
+            return tex;
+        }
+
+        function makeCoinFaceTexture(isHeads) {
+            const c = document.createElement('canvas');
+            c.width = 256;
+            c.height = 256;
+            const ctx = c.getContext('2d');
+            const grad = ctx.createRadialGradient(110, 96, 18, 128, 128, 126);
+            if (isHeads) {
+                grad.addColorStop(0, '#fef9c3');
+                grad.addColorStop(0.45, '#facc15');
+                grad.addColorStop(1, '#b45309');
+            } else {
+                grad.addColorStop(0, '#f1f5f9');
+                grad.addColorStop(0.48, '#93c5fd');
+                grad.addColorStop(1, '#1d4ed8');
+            }
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(128, 128, 124, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.lineWidth = 10;
+            ctx.strokeStyle = isHeads ? '#fef08a' : '#dbeafe';
+            ctx.beginPath();
+            ctx.arc(128, 128, 108, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.fillStyle = isHeads ? '#451a03' : '#0f172a';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = 'bold 64px Pretendard, sans-serif';
+            ctx.fillText(isHeads ? '앞면' : '뒷면', 128, 108);
+
+            ctx.font = 'bold 28px Pretendard, sans-serif';
+            ctx.fillText(isHeads ? 'HEADS · 신청자' : 'TAILS · 지목자', 128, 172);
+            return new THREE.CanvasTexture(c);
+        }
+
+        function buildArenaEnvironment() {
+            ringGroup = new THREE.Group();
+            dScene.add(ringGroup);
+
+            // Stadium overhead truss & spotlights (visible when camera tilts up during sky coin toss)
+            const trussMat = createMat(0x334155, 0.4, 0.7);
+            const trussRing = new THREE.Mesh(new THREE.TorusGeometry(4.6, 0.12, 8, 28), trussMat);
+            trussRing.rotation.x = Math.PI / 2;
+            trussRing.position.set(0, 10.6, -0.3);
+            ringGroup.add(trussRing);
+
+            const bulbMat = new THREE.MeshBasicMaterial({ color: 0xfef9c3 });
+            const beamMat = new THREE.MeshBasicMaterial({
+                color: 0xbae6fd,
+                transparent: true,
+                opacity: 0.08,
+                side: THREE.DoubleSide,
+                depthWrite: false
+            });
+            for (let i = 0; i < 6; i++) {
+                const ang = (i / 6) * Math.PI * 2;
+                const lx = Math.cos(ang) * 4.5;
+                const lz = -0.3 + Math.sin(ang) * 4.5;
+                const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.28, 10, 10), bulbMat);
+                lamp.position.set(lx, 10.4, lz);
+                ringGroup.add(lamp);
+
+                const beam = new THREE.Mesh(new THREE.ConeGeometry(2.1, 8.8, 12, 1, true), beamMat);
+                beam.position.set(lx * 0.55, 6.0, lz * 0.55);
+                beam.lookAt(0, 1.0, -0.3);
+                beam.rotateX(Math.PI / 2);
+                ringGroup.add(beam);
+            }
+
+            // Distant crowd silhouette bleachers
+            const crowdMat = createMat(0x161b2e, 0.95, 0.02);
+            const arenaWall = new THREE.Mesh(new THREE.CylinderGeometry(13.5, 11.0, 7.5, 24, 1, true), crowdMat);
+            arenaWall.material.side = THREE.BackSide;
+            arenaWall.position.set(0, 3.4, -0.3);
+            ringGroup.add(arenaWall);
+
+            // Boxing Ring Platform & Royal Blue Mat
+            const apron = new THREE.Mesh(new THREE.BoxGeometry(7.0, 0.8, 7.0), createMat(0x0f172a, 0.8));
+            apron.position.set(0, -0.42, -0.3);
+            ringGroup.add(apron);
+
+            const matCanvas = new THREE.Mesh(new THREE.BoxGeometry(6.6, 0.08, 6.6), createMat(0x1d4ed8, 0.65, 0.05));
+            matCanvas.position.set(0, 0.0, -0.3);
+            ringGroup.add(matCanvas);
+
+            const centerCircle = new THREE.Mesh(
+                new THREE.RingGeometry(0.95, 1.12, 32),
+                new THREE.MeshBasicMaterial({ color: 0xf8fafc, side: THREE.DoubleSide })
+            );
+            centerCircle.rotation.x = -Math.PI / 2;
+            centerCircle.position.set(0, 0.05, -0.3);
+            ringGroup.add(centerCircle);
+
+            // 4 Corner Posts & 3 Horizontal Ropes (Red, White, Blue)
+            const corners = [
+                { x: -3.15, z: -3.45, c: 0xe11d48 },
+                { x:  3.15, z: -3.45, c: 0x2563eb },
+                { x: -3.15, z:  2.85, c: 0x64748b },
+                { x:  3.15, z:  2.85, c: 0x64748b }
+            ];
+            corners.forEach(pt => {
+                const post = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.12, 2.25, 12), createMat(pt.c, 0.4, 0.35));
+                post.position.set(pt.x, 1.1, pt.z);
+                ringGroup.add(post);
+            });
+
+            const ropeSpecs = [
+                { y: 1.82, c: 0xef4444 },
+                { y: 1.34, c: 0xf8fafc },
+                { y: 0.86, c: 0x38bdf8 }
+            ];
+            ropeSpecs.forEach(rp => {
+                const rMat = createMat(rp.c, 0.45, 0.15);
+                // Front & Back ropes (along X)
+                [-3.45, 2.85].forEach(rz => {
+                    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 6.3, 8), rMat);
+                    bar.rotation.z = Math.PI / 2;
+                    bar.position.set(0, rp.y, rz);
+                    ringGroup.add(bar);
+                });
+                // Left & Right ropes (along Z)
+                [-3.15, 3.15].forEach(rx => {
+                    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 6.3, 8), rMat);
+                    bar.rotation.x = Math.PI / 2;
+                    bar.position.set(rx, rp.y, -0.3);
+                    ringGroup.add(bar);
+                });
+            });
+
+            // 3D Striped Referee + Sky-Toss Coin
+            refereeRoot = new THREE.Group();
+            refereeRoot.position.set(0, 0.90, 0.05);
+            refereeRoot.visible = false;
+            refereeChar = buildCharacterMesh({ name: '심판', gender: 'M', splashCount: 0 }, 4);
+            refereeChar.labelSprite.visible = false;
+            refereeChar.leftLeg.rotation.set(0, 0, -0.06);
+            refereeChar.rightLeg.rotation.set(0, 0, 0.06);
+
+            const stripeMat = new THREE.MeshStandardMaterial({ map: makeRefereeStripeTexture(), roughness: 0.65 });
+            refereeChar.torso.material = stripeMat;
+            refereeChar.leftArm.children[0].material = stripeMat;
+            refereeChar.rightArm.children[0].material = stripeMat;
+
+            // Referee Cap & Bow-tie
+            const capMat = createMat(0x111827, 0.6);
+            const capCrown = new THREE.Mesh(new THREE.SphereGeometry(0.62, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.48), capMat);
+            capCrown.position.set(0, 0.08, 0);
+            refereeChar.headGroup.add(capCrown);
+            const capVisor = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.05, 0.36), capMat);
+            capVisor.position.set(0, 0.24, 0.54);
+            capVisor.rotation.x = 0.14;
+            refereeChar.headGroup.add(capVisor);
+
+            const bowTie = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.10, 0.08), createMat(0xe11d48, 0.5));
+            bowTie.position.set(0, 0.86, 0.44);
+            refereeChar.group.add(bowTie);
+
+            refereeRoot.add(refereeChar.group);
+            dScene.add(refereeRoot);
+
+            // 3D Two-Sided Coin
+            coinGroup = new THREE.Group();
+            coinGroup.visible = false;
+            coinSpinGroup = new THREE.Group();
+            coinGroup.add(coinSpinGroup);
+
+            const rimMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, roughness: 0.2, metalness: 0.78 });
+            const coinBody = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.068, 32), rimMat);
+            coinBody.rotation.x = Math.PI / 2;
+            coinSpinGroup.add(coinBody);
+
+            const headsFace = new THREE.Mesh(
+                new THREE.CircleGeometry(0.368, 32),
+                new THREE.MeshBasicMaterial({ map: makeCoinFaceTexture(true) })
+            );
+            headsFace.position.z = 0.036;
+            coinSpinGroup.add(headsFace);
+
+            const tailsFace = new THREE.Mesh(
+                new THREE.CircleGeometry(0.368, 32),
+                new THREE.MeshBasicMaterial({ map: makeCoinFaceTexture(false) })
+            );
+            tailsFace.position.z = -0.036;
+            tailsFace.rotation.y = Math.PI;
+            coinSpinGroup.add(tailsFace);
+
+            coinGlowRing = new THREE.Mesh(
+                new THREE.RingGeometry(0.42, 0.54, 32),
+                new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide, transparent: true, opacity: 0.0 })
+            );
+            coinGroup.add(coinGlowRing);
+            dScene.add(coinGroup);
+        }
+
+        function init(container) {
+            if (!container || typeof THREE === 'undefined') return false;
+            dContainer = container;
+            if (dInitialized && dRenderer) {
+                if (dRenderer.domElement.parentNode !== dContainer) {
+                    dContainer.innerHTML = '';
+                    dContainer.appendChild(dRenderer.domElement);
+                }
+                handleResize();
+                return true;
+            }
+            try {
+                dScene = new THREE.Scene();
+                dScene.background = new THREE.Color(0x0b0e1c);
+                dScene.fog = new THREE.FogExp2(0x0b0e1c, 0.035);
+
+                const w = Math.max(260, dContainer.clientWidth || 440);
+                const h = Math.max(150, dContainer.clientHeight || 205);
+                dCamera = new THREE.PerspectiveCamera(52, w / h, 0.08, 90);
+                dCamera.position.set(0, 2.22, 2.25);
+                dCamera.lookAt(0, 2.08, -0.45);
+
+                dRenderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+                dRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+                dRenderer.setSize(w, h);
+                dContainer.innerHTML = '';
+                dContainer.appendChild(dRenderer.domElement);
+
+                const hemi = new THREE.HemisphereLight(0xe0f2fe, 0x1e1b4b, 0.85);
+                dScene.add(hemi);
+
+                const keyLight = new THREE.DirectionalLight(0xffffff, 1.05);
+                keyLight.position.set(2.8, 7.5, 4.5);
+                dScene.add(keyLight);
+
+                const rimLight = new THREE.PointLight(0xf43f5e, 0.65, 16);
+                rimLight.position.set(-3.2, 4.0, -2.5);
+                dScene.add(rimLight);
+
+                const blueRim = new THREE.PointLight(0x38bdf8, 0.65, 16);
+                blueRim.position.set(3.2, 4.0, -2.5);
+                dScene.add(blueRim);
+
+                fpRig = new THREE.Group();
+                dScene.add(fpRig);
+
+                buildArenaEnvironment();
+
+                dClock = new THREE.Clock();
+                if (typeof ResizeObserver !== 'undefined') {
+                    dResizeObs = new ResizeObserver(() => handleResize());
+                    dResizeObs.observe(dContainer);
+                }
+                dInitialized = true;
+                return true;
+            } catch (err) {
+                console.warn('DuelArena 3D WebGL fallback:', err);
+                dInitialized = false;
+                return false;
+            }
+        }
+
+        function handleResize() {
+            if (!dInitialized || !dRenderer || !dCamera || !dContainer) return;
+            const w = dContainer.clientWidth;
+            const h = dContainer.clientHeight;
+            if (w <= 10 || h <= 10) return;
+            dCamera.aspect = w / h;
+            // Slightly wider horizontal framing on narrow mobile screens
+            dCamera.fov = (w / h < 1.55) ? 58 : 50;
+            dCamera.updateProjectionMatrix();
+            dRenderer.setSize(w, h);
+        }
+
+        function clearParticles() {
+            while (dParticles.length > 0) {
+                const p = dParticles.pop();
+                if (p.mesh && dScene) {
+                    dScene.remove(p.mesh);
+                    disposeObjectGroup(p.mesh);
+                }
+            }
+        }
+
+        function buildOpponentInRing(oppGender, oppIsChallenger, oppName) {
+            if (oppRoot && dScene) {
+                dScene.remove(oppRoot);
+                disposeObjectGroup(oppRoot);
+                oppRoot = null;
+            }
+            oppRoot = new THREE.Group();
+            oppRoot.position.set(0, 0.90, -0.45);
+            oppChar = buildCharacterMesh({ name: oppName || '상대', gender: oppGender || 'M', splashCount: 0 }, oppIsChallenger ? 0 : 1);
+            oppChar.labelSprite.visible = false;
+            oppChar.leftLeg.rotation.set(0, 0, -0.07);
+            oppChar.rightLeg.rotation.set(0, 0, 0.07);
+
+            oppLeftGlove = makeGloveMesh(oppIsChallenger, 1.05);
+            oppLeftGlove.position.set(0, -0.76, 0.08);
+            oppChar.leftArm.add(oppLeftGlove);
+
+            oppRightGlove = makeGloveMesh(oppIsChallenger, 1.05);
+            oppRightGlove.position.set(0, -0.76, 0.08);
+            oppChar.rightArm.add(oppRightGlove);
+
+            // Boxing high guard pose facing +Z
+            oppChar.leftArm.position.set(-0.56, 0.76, 0.14);
+            oppChar.rightArm.position.set(0.56, 0.76, 0.14);
+            oppChar.leftArm.rotation.set(-2.15, 0.25, 0.35);
+            oppChar.rightArm.rotation.set(-2.15, -0.25, -0.35);
+
+            oppRoot.add(oppChar.group);
+            dScene.add(oppRoot);
+        }
+
+        function buildFirstPersonArms(myGender, myIsChallenger) {
+            if (!fpRig) return;
+            while (fpRig.children.length > 0) {
+                const ch = fpRig.children[0];
+                fpRig.remove(ch);
+                disposeObjectGroup(ch);
+            }
+            const isAlien = myGender === 'alien' || myGender === 'A';
+            const isFemale = !isAlien && (myGender === 'female' || myGender === 'F');
+            const palette = isAlien ? ALIEN_COLORS : (isFemale ? FEMALE_COLORS : MALE_COLORS);
+            const sleeveHex = palette[myIsChallenger ? 0 : 1];
+            const skinHex = isAlien ? 0x2ecc71 : 0xffdbac;
+
+            const sleeveMat = createMat(sleeveHex, 0.55);
+            const skinMat = createMat(skinHex, 0.5);
+
+            function makeFpArm(sideSign) {
+                const pivot = new THREE.Group();
+                const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.125, 0.68, 12), sleeveMat);
+                forearm.rotation.x = Math.PI / 2.35;
+                forearm.rotation.z = sideSign * 0.18;
+                forearm.position.set(0, -0.14, 0.26);
+                pivot.add(forearm);
+
+                const wrist = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.10, 0.14, 10), skinMat);
+                wrist.rotation.x = Math.PI / 2.35;
+                wrist.position.set(0, -0.02, 0.0);
+                pivot.add(wrist);
+
+                const glove = makeGloveMesh(myIsChallenger, 1.12);
+                glove.position.set(0, 0.05, -0.14);
+                // Flip thumb inward toward center screen
+                glove.scale.x = sideSign < 0 ? 1.12 : -1.12;
+                pivot.add(glove);
+                return pivot;
+            }
+
+            fpLeftPivot = makeFpArm(-1);
+            fpRightPivot = makeFpArm(1);
+            fpRig.add(fpLeftPivot);
+            fpRig.add(fpRightPivot);
+        }
+
+        function syncFpRigToCamera() {
+            if (!fpRig || !dCamera) return;
+            fpRig.position.copy(dCamera.position);
+            fpRig.quaternion.copy(dCamera.quaternion);
+        }
+
+        function spawn3DImpactFX(wx, wy, wz, isHit) {
+            if (!dScene) return;
+            const ringMat = new THREE.MeshBasicMaterial({
+                color: isHit ? 0xfacc15 : 0x38bdf8,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.95
+            });
+            const shockRing = new THREE.Mesh(new THREE.RingGeometry(0.12, isHit ? 0.28 : 0.22, 24), ringMat);
+            shockRing.position.set(wx, wy, wz);
+            shockRing.lookAt(dCamera.position);
+            dScene.add(shockRing);
+            dParticles.push({ mesh: shockRing, kind: 'ring', age: 0, life: 0.52, maxScale: isHit ? 3.8 : 2.6 });
+
+            if (isHit) {
+                const sparkCols = [0xfef08a, 0xf97316, 0xef4444, 0xffffff];
+                for (let i = 0; i < 18; i++) {
+                    const spMat = new THREE.MeshBasicMaterial({
+                        color: sparkCols[i % sparkCols.length],
+                        transparent: true,
+                        opacity: 1
+                    });
+                    const sp = new THREE.Mesh(new THREE.OctahedronGeometry(0.065, 0), spMat);
+                    sp.position.set(wx, wy, wz);
+                    const ang = (i / 18) * Math.PI * 2 + (Math.random() * 0.25);
+                    const spd = 2.4 + Math.random() * 2.6;
+                    dScene.add(sp);
+                    dParticles.push({
+                        mesh: sp,
+                        kind: 'spark',
+                        vx: Math.cos(ang) * spd,
+                        vy: Math.sin(ang) * spd + 0.8,
+                        vz: (Math.random() - 0.3) * 2.2,
+                        age: 0,
+                        life: 0.62
+                    });
+                }
+            }
+        }
+
+        function setRoundPOV(opts) {
+            if (!dInitialized && dContainer) init(dContainer);
+            if (!dInitialized) return;
+            clearParticles();
+
+            dState.mode = 'choosing';
+            dState.povRole = opts.povRole || 'attacker';
+            dState.isFinalMatch = !!opts.isFinalMatch;
+            dState.preChoice = null;
+            dState.animElapsed = 0;
+            dState.impactTriggered = false;
+            dState.shakeTime = 0;
+            dState.oppHeadOffsetX = 0;
+            dState.fpPunchProgress = 0;
+
+            if (refereeRoot) refereeRoot.visible = false;
+            if (coinGroup) coinGroup.visible = false;
+
+            buildOpponentInRing(opts.oppGender, !!opts.oppIsChallenger, opts.oppName);
+            buildFirstPersonArms(opts.myGender, !!opts.myIsChallenger);
+            if (fpRig) fpRig.visible = true;
+            if (oppRoot) oppRoot.visible = true;
+
+            handleResize();
+            setVisible(true);
+        }
+
+        function setPreChoice(dir) {
+            if (dir === 'left' || dir === 'right' || dir === null) {
+                dState.preChoice = dir;
+            }
+        }
+
+        function playSlowMoRound(opts) {
+            if (!dInitialized) return;
+            dState.mode = 'slowmo';
+            dState.povRole = opts.povRole || dState.povRole || 'attacker';
+            dState.attackDir = opts.attackDir || 'left';
+            dState.dodgeDir = opts.dodgeDir || 'right';
+            dState.hit = !!opts.hit;
+            dState.isFinalMatch = !!opts.isFinalMatch;
+            dState.animElapsed = 0;
+            dState.animDuration = (opts.durationMs || 2400) / 1000;
+            dState.impactAt = (opts.impactAtMs || 900) / 1000;
+            dState.impactTriggered = false;
+            dState.fpPunchProgress = 0;
+            dState.oppHeadOffsetX = 0;
+        }
+
+        function playCoinToss(opts) {
+            if (!dInitialized && dContainer) init(dContainer);
+            if (!dInitialized) return;
+            clearParticles();
+
+            dState.mode = 'coin_toss';
+            dState.coinResult = opts.coinResult === 'tails' ? 'tails' : 'heads';
+            dState.animElapsed = 0;
+            dState.animDuration = (opts.durationMs || 3800) / 1000;
+            dState.coinSoundAt = 0.52;
+            dState.coinLaunched = false;
+            dState.coinPeakY = 0;
+            dState.shakeTime = 0;
+
+            if (fpRig) fpRig.visible = false;
+            // Show opponent in background corner + referee center stage
+            buildOpponentInRing(opts.targetGender || 'M', false, opts.targetName || '상대');
+            if (oppRoot) {
+                oppRoot.visible = true;
+                oppRoot.position.set(1.38, 0.90, -0.85);
+                oppRoot.rotation.set(0, -0.35, 0);
+            }
+            if (refereeRoot) {
+                refereeRoot.visible = true;
+                refereeRoot.position.set(0, 0.90, 0.05);
+                refereeChar.leftArm.rotation.set(-0.55, 0, 0.18);
+                refereeChar.rightArm.rotation.set(-1.35, 0, -0.1);
+            }
+            if (coinGroup) {
+                coinGroup.visible = true;
+                coinGroup.position.set(0.45, 2.02, 0.62);
+                coinSpinGroup.rotation.set(0, 0, 0);
+                if (coinGlowRing) coinGlowRing.material.opacity = 0;
+            }
+
+            handleResize();
+            setVisible(true);
+        }
+
+        function updateParticles(dt) {
+            for (let i = dParticles.length - 1; i >= 0; i--) {
+                const p = dParticles[i];
+                p.age += dt;
+                const u = Math.min(1, p.age / p.life);
+                if (p.kind === 'ring') {
+                    const s = 1 + (p.maxScale - 1) * (1 - Math.pow(1 - u, 3));
+                    p.mesh.scale.setScalar(s);
+                    p.mesh.material.opacity = (1 - u) * 0.92;
+                } else {
+                    p.mesh.position.x += p.vx * dt;
+                    p.mesh.position.y += p.vy * dt;
+                    p.mesh.position.z += p.vz * dt;
+                    p.vy -= 5.8 * dt;
+                    p.mesh.rotation.x += 9 * dt;
+                    p.mesh.rotation.y += 7 * dt;
+                    p.mesh.material.opacity = 1 - u;
+                    p.mesh.scale.setScalar(Math.max(0.15, 1 - u * 0.75));
+                }
+                if (p.age >= p.life) {
+                    dScene.remove(p.mesh);
+                    disposeObjectGroup(p.mesh);
+                    dParticles.splice(i, 1);
+                }
+            }
+        }
+
+        function animateDuel() {
+            if (!dVisible || !dInitialized) {
+                dRafId = null;
+                return;
+            }
+            dRafId = requestAnimationFrame(animateDuel);
+            const dt = Math.min(0.05, dClock ? dClock.getDelta() : 0.016);
+            const nowSec = performance.now() * 0.001;
+
+            updateParticles(dt);
+
+            if (oppChar && oppChar.duelFaceGroup && oppChar.duelFaceGroup.visible && oppChar.duelStarsRing) {
+                oppChar.duelStarsRing.rotation.y += dt * 4.2;
+            }
+
+            if (dState.mode === 'choosing') {
+                const bob = Math.sin(nowSec * 5.2) * 0.035;
+                const sway = Math.cos(nowSec * 2.6) * 0.04;
+                const isDef = dState.povRole === 'defender';
+                const preDir = dState.preChoice === 'left' ? -1 : (dState.preChoice === 'right' ? 1 : 0);
+
+                const camLeanX = isDef ? preDir * 0.11 : 0;
+                dCamera.position.set(camLeanX, 2.22 + bob * 0.5, dState.povRole === 'spectator' ? 2.52 : 2.22);
+                dCamera.lookAt(camLeanX * 0.35, 2.10, -0.45);
+                dCamera.rotation.z = isDef ? -preDir * 0.04 : 0;
+                syncFpRigToCamera();
+
+                if (oppRoot && oppChar) {
+                    oppRoot.position.set(sway, 0.90 + Math.abs(bob), -0.45);
+                    oppRoot.rotation.set(0, 0, -sway * 0.4);
+                    oppChar.headGroup.position.set(0, 1.3, 0);
+                    oppChar.headGroup.rotation.set(0, 0, 0);
+                    oppChar.normalFaceGroup.visible = true;
+                    oppChar.duelFaceGroup.visible = false;
+                    oppChar.leftArm.position.set(-0.56, 0.76, 0.14);
+                    oppChar.rightArm.position.set(0.56, 0.76, 0.14);
+                    oppChar.leftArm.rotation.set(-2.15 + bob, 0.25, 0.35);
+                    oppChar.rightArm.rotation.set(-2.15 - bob, -0.25, -0.35);
+                }
+
+                if (fpLeftPivot && fpRightPivot) {
+                    const guardY = isDef ? -0.34 : -0.42;
+                    const cockL = (!isDef && dState.preChoice === 'left') ? 0.12 : 0;
+                    const cockR = (!isDef && dState.preChoice === 'right') ? 0.12 : 0;
+                    fpLeftPivot.position.set(-0.46, guardY + bob * 0.7, -0.82 + cockL);
+                    fpRightPivot.position.set(0.46, guardY - bob * 0.7, -0.82 + cockR);
+                    fpLeftPivot.rotation.set(0.18, 0.16, 0.12);
+                    fpRightPivot.rotation.set(0.18, -0.16, -0.12);
+                }
+            } else if (dState.mode === 'slowmo') {
+                dState.animElapsed += dt;
+                const t = dState.animElapsed;
+                const imp = dState.impactAt;
+                const atkSign = dState.attackDir === 'left' ? -1 : 1;
+                const dodgeSign = dState.dodgeDir === 'left' ? -1 : 1;
+
+                // Normalized slow-motion travel curve: windup (0..0.18) -> extension (0.18..1.0 at impact) -> hold/retract
+                let reach = 0;
+                if (t < imp * 0.2) {
+                    reach = -0.18 * (t / (imp * 0.2));
+                } else if (t <= imp) {
+                    const u = (t - imp * 0.2) / (imp * 0.8);
+                    reach = -0.18 + 1.18 * smoothstep(0, 1, u);
+                } else {
+                    const after = Math.min(1, (t - imp) / Math.max(0.4, dState.animDuration - imp));
+                    reach = 1.0 - 0.55 * smoothstep(0, 1, after);
+                }
+                dState.fpPunchProgress = Math.max(dState.fpPunchProgress, reach);
+
+                // Weave curve for head/face movement toward selected dodge direction
+                const weaveU = t <= imp
+                    ? smoothstep(0.08, 0.96, t / imp)
+                    : 1.0 - 0.25 * smoothstep(0, 1, (t - imp) / Math.max(0.4, dState.animDuration - imp));
+
+                if (!dState.impactTriggered && t >= imp) {
+                    dState.impactTriggered = true;
+                    if (dState.hit) {
+                        dState.shakeTime = 0.42;
+                        dState.shakeMag = dState.povRole === 'defender' ? 0.14 : 0.08;
+                        if (dState.povRole === 'defender') {
+                            spawn3DImpactFX(dodgeSign * 0.46, 2.08, 1.35, true);
+                        } else {
+                            if (oppChar) {
+                                oppChar.normalFaceGroup.visible = false;
+                                oppChar.duelFaceGroup.visible = true;
+                            }
+                            spawn3DImpactFX(dodgeSign * 0.48, 2.16, 0.05, true);
+                        }
+                    } else {
+                        const slipX = dState.povRole === 'defender' ? -dodgeSign * 0.46 : dodgeSign * 0.52;
+                        const slipZ = dState.povRole === 'defender' ? 1.35 : -0.25;
+                        spawn3DImpactFX(slipX, 2.12, slipZ, false);
+                    }
+                }
+
+                let shakeX = 0, shakeY = 0;
+                if (dState.shakeTime > 0) {
+                    dState.shakeTime = Math.max(0, dState.shakeTime - dt);
+                    const k = (dState.shakeTime / 0.42) * dState.shakeMag;
+                    shakeX = Math.sin(t * 68) * k;
+                    shakeY = Math.cos(t * 57) * k;
+                }
+
+                if (dState.povRole === 'defender') {
+                    // DEFENDER FIRST-PERSON POV:
+                    // My camera (head/face) weaves toward dodgeSign; Opponent in front throws slow-mo punch into atkSign!
+                    const hitRecoilZ = (dState.hit && t >= imp) ? Math.sin(Math.min(1, (t - imp) / 0.45) * Math.PI) * 0.28 : 0;
+                    const myCamX = dodgeSign * 0.56 * weaveU + shakeX;
+                    const myCamY = 2.22 - 0.11 * weaveU + shakeY;
+                    const myCamZ = 2.18 + hitRecoilZ;
+
+                    dCamera.position.set(myCamX, myCamY, myCamZ);
+                    dCamera.lookAt(myCamX * 0.45, 2.10, -0.35);
+                    dCamera.rotation.z = -dodgeSign * 0.16 * weaveU + (dState.hit && t >= imp ? dodgeSign * 0.18 : 0);
+                    syncFpRigToCamera();
+
+                    dState.oppHeadOffsetX = myCamX;
+
+                    if (fpLeftPivot && fpRightPivot) {
+                        fpLeftPivot.position.set(-0.46, -0.36, -0.78);
+                        fpRightPivot.position.set(0.46, -0.36, -0.78);
+                        fpLeftPivot.rotation.set(0.24, 0.2, 0.18);
+                        fpRightPivot.rotation.set(0.24, -0.2, -0.18);
+                    }
+
+                    if (oppRoot && oppChar) {
+                        const lungeZ = -0.45 + Math.max(0, reach) * 0.85;
+                        oppRoot.position.set(atkSign * 0.14 * Math.max(0, reach), 0.90, lungeZ);
+                        oppRoot.rotation.set(0.08 * Math.max(0, reach), -atkSign * 0.18 * Math.max(0, reach), 0);
+
+                        const punchArm = atkSign < 0 ? oppChar.leftArm : oppChar.rightArm;
+                        const guardArm = atkSign < 0 ? oppChar.rightArm : oppChar.leftArm;
+                        const pGlove = atkSign < 0 ? oppLeftGlove : oppRightGlove;
+                        const gGlove = atkSign < 0 ? oppRightGlove : oppLeftGlove;
+
+                        // Extend attacker's chosen arm straight toward defender's face plane in slow-mo!
+                        punchArm.position.set(
+                            atkSign * (0.52 - 0.04 * Math.max(0, reach)),
+                            0.80 + 0.36 * Math.max(0, reach),
+                            0.18 + Math.max(0, reach) * 0.82
+                        );
+                        punchArm.rotation.set(-Math.PI / 2 - 0.06, 0, 0);
+                        if (pGlove) pGlove.scale.setScalar(1.05 + Math.max(0, reach) * 0.42);
+
+                        guardArm.position.set(-atkSign * 0.56, 0.76, 0.14);
+                        guardArm.rotation.set(-2.15, -atkSign * 0.25, -atkSign * 0.35);
+                        if (gGlove) gGlove.scale.setScalar(1.05);
+                    }
+                } else {
+                    // ATTACKER (or SPECTATOR) FIRST-PERSON POV:
+                    // Defender stands in front of me; my chosen arm punches in slow-mo while Defender moves their face toward dodgeSign!
+                    const baseZ = dState.povRole === 'spectator' ? 2.46 : 2.18;
+                    const camLungeZ = baseZ - Math.max(0, reach) * 0.36;
+                    dCamera.position.set(atkSign * 0.06 * Math.max(0, reach) + shakeX, 2.22 + shakeY, camLungeZ);
+                    dCamera.lookAt(0, 2.12, -0.45);
+                    dCamera.rotation.z = -atkSign * 0.035 * Math.max(0, reach);
+                    syncFpRigToCamera();
+
+                    if (fpLeftPivot && fpRightPivot) {
+                        const activePivot = atkSign < 0 ? fpLeftPivot : fpRightPivot;
+                        const idlePivot = atkSign < 0 ? fpRightPivot : fpLeftPivot;
+                        const rClamped = Math.max(-0.18, reach);
+
+                        // Smooth slow-mo fist extension right to opponent's face plane!
+                        activePivot.position.set(
+                            atkSign * (0.46 - 0.06 * Math.max(0, rClamped)),
+                            -0.40 + 0.34 * Math.max(0, rClamped),
+                            -0.82 - 1.05 * rClamped
+                        );
+                        activePivot.rotation.set(
+                            0.18 - 0.32 * Math.max(0, rClamped),
+                            -atkSign * 0.08,
+                            -atkSign * 0.55 * Math.max(0, rClamped)
+                        );
+
+                        idlePivot.position.set(-atkSign * 0.48, -0.46, -0.78);
+                        idlePivot.rotation.set(0.22, atkSign * 0.16, atkSign * 0.14);
+                    }
+
+                    if (oppRoot && oppChar) {
+                        const postHitU = (dState.hit && t >= imp) ? Math.min(1, (t - imp) / 0.32) : 0;
+                        const bodyShiftX = dodgeSign * 0.42 * weaveU + (dState.hit ? dodgeSign * 0.12 * postHitU : 0);
+                        const bodyDuckY = (!dState.hit ? -0.09 * weaveU : 0);
+                        const bodyRecoilZ = -0.45 - (dState.hit ? 0.38 * Math.sin(postHitU * Math.PI * 0.85) : 0);
+
+                        oppRoot.position.set(bodyShiftX, 0.90 + bodyDuckY, bodyRecoilZ);
+                        oppRoot.rotation.set(
+                            dState.hit ? -0.26 * postHitU : 0.06 * weaveU,
+                            dodgeSign * 0.16 * weaveU,
+                            -dodgeSign * 0.18 * weaveU - (dState.hit ? dodgeSign * 0.22 * postHitU : 0)
+                        );
+
+                        // Explicit face/head movement toward chosen dodge direction!
+                        oppChar.headGroup.position.set(dodgeSign * 0.11 * weaveU, 1.30, 0);
+                        oppChar.headGroup.rotation.set(
+                            dState.hit ? -0.42 * postHitU : 0.04 * weaveU,
+                            dodgeSign * 0.24 * weaveU - (dState.hit ? dodgeSign * 0.45 * postHitU : 0),
+                            -dodgeSign * 0.22 * weaveU
+                        );
+                        dState.oppHeadOffsetX = bodyShiftX + dodgeSign * 0.11 * weaveU;
+
+                        // Defender guard arms shift with dodge
+                        oppChar.leftArm.position.set(-0.56, 0.76, 0.14);
+                        oppChar.rightArm.position.set(0.56, 0.76, 0.14);
+                        oppChar.leftArm.rotation.set(-2.05 + postHitU * 0.8, 0.25, 0.35 + postHitU * 0.5);
+                        oppChar.rightArm.rotation.set(-2.05 + postHitU * 0.8, -0.25, -0.35 - postHitU * 0.5);
+                    }
+                }
+            } else if (dState.mode === 'coin_toss') {
+                dState.animElapsed += dt;
+                const t = dState.animElapsed;
+                const launchT = dState.coinSoundAt;
+                const catchT = 2.48;
+
+                if (t < launchT) {
+                    // Referee prepares & flicks thumb upward
+                    const prep = t / launchT;
+                    dCamera.position.set(0, 2.18, 2.55);
+                    dCamera.lookAt(0, 2.02, 0.15);
+                    dCamera.rotation.z = 0;
+                    if (refereeChar) {
+                        refereeChar.rightArm.rotation.set(-1.25 - prep * 0.45, 0, -0.08);
+                    }
+                    if (coinGroup) {
+                        coinGroup.position.set(0.45, 2.02 - Math.sin(prep * Math.PI) * 0.12, 0.62);
+                        coinSpinGroup.rotation.set(0, 0, 0);
+                    }
+                } else if (t < catchT) {
+                    // Coin shoots way up into the arena sky ("동전을 저 하늘 위로 팅군 다음")!
+                    if (!dState.coinLaunched) {
+                        dState.coinLaunched = true;
+                        if (refereeChar) refereeChar.rightArm.rotation.set(-2.55, 0, -0.05);
+                    }
+                    const u = (t - launchT) / (catchT - launchT); // 0 -> 1
+                    const arc = Math.sin(u * Math.PI);
+                    const coinY = THREE.MathUtils.lerp(2.05, 2.14, u) + arc * 7.25; // Peaks at y ≈ 9.35 high in stadium sky!
+                    const coinX = THREE.MathUtils.lerp(0.45, 0.0, smoothstep(0, 0.65, u));
+                    const coinZ = THREE.MathUtils.lerp(0.62, 1.42, smoothstep(0.35, 1.0, u));
+                    if (coinY > dState.coinPeakY) dState.coinPeakY = coinY;
+
+                    if (coinGroup) {
+                        coinGroup.position.set(coinX, coinY, coinZ);
+                        const targetYaw = dState.coinResult === 'heads' ? 0 : Math.PI;
+                        coinSpinGroup.rotation.set(u * Math.PI * 16, targetYaw * smoothstep(0.55, 1.0, u), 0);
+                    }
+
+                    // Camera tilts up to track the coin soaring into the stadium lights, then frames close-up reveal
+                    const camY = 2.18 + arc * 0.45;
+                    const camZ = THREE.MathUtils.lerp(2.55, 2.28, smoothstep(0.5, 1.0, u));
+                    dCamera.position.set(0, camY, camZ);
+                    dCamera.lookAt(coinX * 0.5, Math.min(8.6, coinY), coinZ * 0.5);
+                } else {
+                    // Close-up dramatic settle showing HEADS (앞면) or TAILS (뒷면) squarely!
+                    const settleU = Math.min(1, (t - catchT) / 0.35);
+                    const targetYaw = dState.coinResult === 'heads' ? 0 : Math.PI;
+                    if (coinGroup) {
+                        coinGroup.position.set(0, 2.14 + Math.sin(nowSec * 4) * 0.015, 1.44);
+                        coinSpinGroup.rotation.set(0, targetYaw, (1 - settleU) * 0.25 * Math.sin(t * 28));
+                        if (coinGlowRing) {
+                            coinGlowRing.material.color.setHex(dState.coinResult === 'heads' ? 0xfacc15 : 0x60a5fa);
+                            coinGlowRing.material.opacity = 0.72 + Math.sin(nowSec * 8) * 0.2;
+                            coinGlowRing.scale.setScalar(1 + 0.08 * Math.sin(nowSec * 6));
+                        }
+                    }
+                    dCamera.position.set(0, 2.15, 2.26);
+                    dCamera.lookAt(0, 2.14, 1.44);
+                }
+            }
+
+            dRenderer.render(dScene, dCamera);
+        }
+
+        function setVisible(show) {
+            dVisible = !!show;
+            if (show) {
+                if (dClock) dClock.getDelta();
+                handleResize();
+                if (!dRafId) dRafId = requestAnimationFrame(animateDuel);
+            } else {
+                if (dRafId) {
+                    cancelAnimationFrame(dRafId);
+                    dRafId = null;
+                }
+                clearParticles();
+                dState.mode = 'idle';
+            }
+        }
+
+        return {
+            init: init,
+            setVisible: setVisible,
+            handleResize: handleResize,
+            setRoundPOV: setRoundPOV,
+            setPreChoice: setPreChoice,
+            playSlowMoRound: playSlowMoRound,
+            playCoinToss: playCoinToss,
+            getDebugState: () => ({
+                initialized: dInitialized,
+                visible: dVisible,
+                mode: dState.mode,
+                povRole: dState.povRole,
+                isFinalMatch: dState.isFinalMatch,
+                preChoice: dState.preChoice,
+                attackDir: dState.attackDir,
+                dodgeDir: dState.dodgeDir,
+                hit: dState.hit,
+                coinResult: dState.coinResult,
+                coinPeakY: Number(dState.coinPeakY.toFixed(2)),
+                oppHeadOffsetX: Number(dState.oppHeadOffsetX.toFixed(3)),
+                fpPunchProgress: Number(dState.fpPunchProgress.toFixed(3)),
+                oppBruisedVisible: !!(oppChar && oppChar.duelFaceGroup && oppChar.duelFaceGroup.visible),
+                cameraPos: dCamera ? {
+                    x: Number(dCamera.position.x.toFixed(2)),
+                    y: Number(dCamera.position.y.toFixed(2)),
+                    z: Number(dCamera.position.z.toFixed(2))
+                } : null
+            })
+        };
+    }());
+
+    // ─────────────────────────────────────────────────────────────
     // 15. Visibility
     // ─────────────────────────────────────────────────────────────
     function setVisible(show) {
@@ -3874,6 +4810,7 @@
         showSpeechBubble: showSpeechBubble,
         updateRoamingAnimal: updateRoamingAnimal,
         handleResize: onResize,
+        duelArena: duelArena,
         getCameraState: () => ({
             fov: camera ? camera.fov : BASE_FOV,
             aspect: camera ? camera.aspect : 1,
