@@ -351,8 +351,8 @@
         .status-idle .exp-idle, .status-walking .exp-idle { display: block; }
         .status-flying .exp-fly { display: block; }
         .status-swimming .exp-water { display: block; }
-        .status-dead .exp-dead, .status-dead-gator .exp-dead, .status-dead-missile .exp-dead, .status-snatched .exp-dead { display: block; }
-        .status-salt-farm:not(.salt-abducting), .status-dueling { opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+        .status-dead .exp-dead, .status-dead-gator .exp-dead, .status-dead-missile .exp-dead, .status-snatched .exp-dead, .status-dead-octopus .exp-dead { display: block; }
+        .status-salt-farm:not(.salt-abducting), .status-dueling, .status-octopus-hunt:not(.octopus-diving) { opacity: 0; pointer-events: none; transition: opacity 0.25s; }
         .status-dead-duel .exp-duel { display: block; }
         .status-dead-bomb .avatar-normal-hair { display: none; }
         .status-dead-bomb .avatar-bomb-hair { display: block; }
@@ -542,6 +542,7 @@
         .item-btn.duel { background: rgba(244, 63, 94, 0.24); border-color: rgba(244, 63, 94, 0.7); color: #fda4af; }
         .item-btn.reflect { background: rgba(56, 189, 248, 0.24); border-color: rgba(125, 211, 252, 0.78); color: #bae6fd; }
         .item-btn.scapegoat { background: rgba(251, 191, 36, 0.22); border-color: rgba(251, 191, 36, 0.75); color: #fde68a; }
+        .item-btn.octopus_hunt { background: rgba(244, 63, 94, 0.22); border-color: rgba(251, 113, 133, 0.75); color: #fecdd3; }
 
         /* Active Defense / Counter Buff HUD & Character Status Pill */
         .my-buff-hud {
@@ -888,6 +889,129 @@
             .duel-score-name { max-width: 86px; font-size: 0.76rem; }
             .duel-fx-banner { font-size: 0.92rem; padding: 4px 10px; }
             .duel-choice-btn { padding: 10px 6px; font-size: 0.82rem; }
+        }
+
+        /* ── Octopus Haerujil Minigame Modal (Shared Realtime Screen) ── */
+        .octopus-modal {
+            width: min(490px, 95vw);
+            max-height: 90vh;
+            overflow-y: auto;
+            background: linear-gradient(180deg, #07192d 0%, #0a1020 100%);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75);
+            text-align: center;
+        }
+        .octopus-top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .octopus-badge {
+            font-size: 0.82rem;
+            font-weight: 800;
+            color: #7dd3fc;
+            background: rgba(14, 165, 233, 0.16);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            padding: 4px 10px;
+            border-radius: 999px;
+        }
+        .octopus-attempt-pills {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+        .octopus-attempt-dot {
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            color: #cbd5e1;
+        }
+        .octopus-attempt-dot.active {
+            background: rgba(250, 204, 21, 0.22);
+            border-color: #facc15;
+            color: #fef08a;
+        }
+        .octopus-attempt-dot.missed {
+            background: rgba(239, 68, 68, 0.24);
+            border-color: #ef4444;
+            color: #fecaca;
+            text-decoration: line-through;
+        }
+        .octopus-attempt-dot.caught {
+            background: rgba(34, 197, 94, 0.25);
+            border-color: #22c55e;
+            color: #bbf7d0;
+        }
+        .octopus-breath-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .octopus-breath-label {
+            font-size: 0.76rem;
+            font-weight: 800;
+            color: #bae6fd;
+            white-space: nowrap;
+        }
+        .octopus-breath-bar {
+            flex: 1;
+            height: 8px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.12);
+            overflow: hidden;
+        }
+        .octopus-breath-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #ef4444 0%, #f59e0b 45%, #38bdf8 100%);
+            transition: width 0.2s linear;
+        }
+        .octopus-canvas-wrap {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 440 / 248;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid rgba(56, 189, 248, 0.35);
+            background: #041526;
+            margin-bottom: 10px;
+        }
+        #octopus-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .octopus-status-text {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: #f8fafc;
+            margin-bottom: 10px;
+            min-height: 20px;
+        }
+        .octopus-grab-btn {
+            width: 100%;
+            padding: 13px 16px;
+            font-size: 1.05rem;
+            font-weight: 900;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #f43f5e, #e11d48);
+            border: 2px solid #fda4af;
+            color: #fff;
+            box-shadow: 0 8px 22px rgba(244, 63, 94, 0.45);
+            transition: transform 0.08s ease, opacity 0.15s ease;
+        }
+        .octopus-grab-btn:active:not(:disabled) {
+            transform: scale(0.97);
+        }
+        .octopus-grab-btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
         }
 
         /* Stage Top-Right HUD (Never overlaps supply timer & salt progress) */
@@ -2067,7 +2191,7 @@
                     </div>
                     <div class="item-pool-selector" id="opt-item-pool-wrap">
                         <div class="item-pool-header">
-                            <span class="item-pool-title">사용할 아이템 <strong id="opt-item-pool-count">(13/13)</strong></span>
+                            <span class="item-pool-title">사용할 아이템 <strong id="opt-item-pool-count">(14/14)</strong></span>
                             <div class="item-pool-actions">
                                 <button type="button" class="item-pool-mini-btn" id="btn-item-pool-all" onclick="setAllItemPoolSelection(true)">전체선택</button>
                                 <button type="button" class="item-pool-mini-btn" id="btn-item-pool-none" onclick="setAllItemPoolSelection(false)">전체해제</button>
@@ -2187,8 +2311,8 @@
                         <div class="card-icon-badge">🎒</div>
                         <span class="card-tag">아이템</span>
                     </div>
-                    <h4>13종 특수 아이템 도감</h4>
-                    <p>유도 미사일, 결투신청, 공격반사, 떠넘기기, 폭탄해체하기, 염전으로 보내기, 방패, 금기어 조작 및 동물 소환 스펙 & 밸런스 분석</p>
+                    <h4>14종 특수 아이템 도감</h4>
+                    <p>유도 미사일, 낙지잡아와, 결투신청, 공격반사, 떠넘기기, 폭탄해체하기, 염전으로 보내기, 방패, 금기어 조작 및 동물 소환 스펙 & 밸런스 분석</p>
                     <span class="card-action">자세히 보기 &rarr;</span>
                 </a>
 
@@ -2288,8 +2412,8 @@
                         <p style="font-size:0.88rem; line-height:1.6;">게임 시작 전 서로에게 지정한 비밀 단어! 일상 대화 속에 교묘한 낚시 질문을 던져 상대방이 금기어를 외치게 유도하세요. 발화 즉시 의자가 격발되어 시원한 수영장으로 날아갑니다.</p>
                     </div>
                     <div style="background:rgba(255,255,255,0.03); padding:18px; border-radius:14px; border:1px solid rgba(255,255,255,0.06);">
-                        <h3 style="font-size:1.05rem; font-weight:700; color:var(--toss-blue); margin-bottom:8px;">⚡ 13종 전략 특수 아이템</h3>
-                        <p style="font-size:0.88rem; line-height:1.6;">유도 미사일, 결투신청(1:1 링 3판 2선승 복싱 & 패배 시 30초 눈탱이 밤탱이 기절), 공격반사, 떠넘기기, 폭탄해체하기, 염전으로 보내기, 이지스 방패, 금기어 변경/추가/삭제, 상어/악어/부산갈매기 소환 등 전세를 뒤집는 전략 아이템으로 역전승을 거두세요.</p>
+                        <h3 style="font-size:1.05rem; font-weight:700; color:var(--toss-blue); margin-bottom:8px;">⚡ 14종 전략 특수 아이템</h3>
+                        <p style="font-size:0.88rem; line-height:1.6;">유도 미사일, 낙지잡아와(해루질 실시간 생중계 미니게임 · 3회 실패 시 45초 기절 · 성공 시 초장 먹방 퍼포먼스!), 결투신청(1:1 링 3판 2선승 복싱), 공격반사, 떠넘기기, 폭탄해체하기, 염전으로 보내기, 이지스 방패, 금기어 변경/추가/삭제, 상어/악어/부산갈매기 소환 등 전세를 뒤집는 전략 아이템으로 역전승을 거두세요.</p>
                     </div>
                     <div style="background:rgba(255,255,255,0.03); padding:18px; border-radius:14px; border:1px solid rgba(255,255,255,0.06);">
                         <h3 style="font-size:1.05rem; font-weight:700; color:var(--toss-blue); margin-bottom:8px;">📱 모바일 앱 전환 완벽 복구</h3>
@@ -2309,7 +2433,7 @@
                     <li>• <strong>1단계 (대기실 & 맞춤 룰셋 구성):</strong> 방장은 참가자당 금기어 개수(1~3개), 침묵 방지(AFK) 자동 발사 타이머(최소 30초 이상), 특수 아이템 보급 주기 및 게임에서 사용할 아이템 종류를 모임 성격에 맞게 자유롭게 선택할 수 있습니다. 4자리 숫자 방 코드 또는 초대 링크 복사로 친구들을 간편하게 초대하세요.</li>
                     <li>• <strong>2단계 (비밀 금기어 교차 등록):</strong> 게임이 시작되면 본인을 제외한 다른 참가자들에게 부여할 금기어를 직접 입력합니다. 공정한 게임 밸런스를 위해 <strong>2글자 이상 25글자 이하의 단어</strong>로 제한되며, 초성(ㅋㅋ, ㅎㅎ 등) 및 특수기호(?!, ^^ 등)도 자유롭게 설정할 수 있습니다. 단, 띄어쓰기(공백)와 시스템 예약어(???) 및 동일 대상 중복 단어는 단일 검증 엔진(WordValidator)에 의해 자동으로 차단됩니다.</li>
                     <li>• <strong>3단계 (실시간 채팅 & 부분 문자열 격발 판정):</strong> 상단 전광판에는 다른 모든 참가자의 금기어가 투명하게 공개되지만, 정작 <strong>내 머리 위에 걸린 금기어는 나에게만 `?`로 가려져 보이지 않습니다.</strong> 채팅 메시지에 내 금기어가 부분 문자열(Substring)로 포함되는 순간(예: 금기어가 '치킨'일 때 '양념치킨 먹고 싶다' 입력), 서버가 0.05초 내에 감지하여 의자를 수영장으로 발사합니다.</li>
-                    <li>• <strong>4단계 (특수 아이템 공방 & 결과 리포트):</strong> 보급 주기에 따라 지급되는 13종의 아이템(유도 미사일, 결투신청, 공격반사, 떠넘기기, 폭탄해체하기, 염전으로 보내기 등)으로 상대를 기절·격리시키거나 공격을 되받아칠 수 있습니다. 라운드 종료 시 총 비행 횟수, 상어/악어/갈매기 조우 횟수, 미사일·폭탄·결투 패배 및 염전 납치 횟수, 금기어별 발동 통계를 한눈에 확인할 수 있습니다.</li>
+                    <li>• <strong>4단계 (특수 아이템 공방 & 결과 리포트):</strong> 보급 주기에 따라 지급되는 14종의 아이템(유도 미사일, 낙지잡아와, 결투신청, 공격반사, 떠넘기기, 폭탄해체하기, 염전으로 보내기 등)으로 상대를 기절·격리시키거나 공격을 되받아칠 수 있습니다. 라운드 종료 시 총 비행 횟수, 상어/악어/갈매기 조우 횟수, 미사일·폭탄·결투·낙지잡이 패배 및 염전 납치 횟수, 금기어별 발동 통계를 한눈에 확인할 수 있습니다.</li>
                 </ul>
 
                 <h3 style="font-size:1.15rem; font-weight:700; color:#fff; margin:24px 0 10px;">🌟 승리를 위한 고수들의 6대 심리 대화 & 아이템 전술</h3>
@@ -2328,7 +2452,7 @@
                 <p style="font-size:0.9rem; color:var(--toss-text-muted); border-top:1px solid var(--toss-card-border); padding-top:16px;">
                     더 깊이 있는 전략과 기술 아카이브가 궁금하신가요?
                     <a href="/guide/rules" style="color:var(--toss-blue); font-weight:600;">게임 규칙 매뉴얼</a>,
-                    <a href="/guide/items" style="color:var(--toss-blue); font-weight:600;">13종 아이템 도감</a>,
+                    <a href="/guide/items" style="color:var(--toss-blue); font-weight:600;">14종 아이템 도감</a>,
                     <a href="/guide/strategy" style="color:var(--toss-blue); font-weight:600;">심리전 공략집</a>,
                     <a href="/words" style="color:var(--toss-blue); font-weight:600;">금기어 백과 100선</a>,
                     <a href="/history" style="color:var(--toss-blue); font-weight:600;">예능의 역사</a>,
@@ -2387,8 +2511,8 @@
                 <button id="mobile-leave-btn" class="btn btn-danger" style="width: auto; padding: 5px 10px; font-size: 0.8rem; display: none;" onclick="leaveRoom()">나가기</button>
                 <button id="end-game-btn" class="btn btn-warning hidden" style="width: auto; padding: 5px 10px; font-size: 0.8rem; color: #000;" onclick="endGame()">게임 종료</button>
                 <div id="view-mode-toggle" class="view-mode-toggle">
-                    <button type="button" id="btn-mode-2d" class="toggle-mode-btn active" onclick="setViewMode('2D')" aria-label="2D 모드로 전환">2D</button>
-                    <button type="button" id="btn-mode-3d" class="toggle-mode-btn" onclick="setViewMode('3D')" aria-label="3D 모드로 전환">3D</button>
+                    <button type="button" id="btn-mode-2d" class="toggle-mode-btn" onclick="setViewMode('2D')" aria-label="2D 모드로 전환">2D</button>
+                    <button type="button" id="btn-mode-3d" class="toggle-mode-btn active" onclick="setViewMode('3D')" aria-label="3D 모드로 전환">3D</button>
                 </div>
             </div>
             <div id="stage-top-right-hud" class="stage-top-right-hud">
@@ -2482,6 +2606,7 @@
                     <li>💣 폭탄 피격: <strong id="stats-bomb" style="color:#fff;">0</strong>회</li>
                     <li>🧂 염전 끌려감: <strong id="stats-salt" style="color:#fff;">0</strong>회</li>
                     <li>🥊 결투 패배(밤탱이): <strong id="stats-duel" style="color:#fff;">0</strong>회</li>
+                    <li>🐙 낙지잡이 탈진: <strong id="stats-octopus" style="color:#fff;">0</strong>회</li>
                 </ul>
                 <div style="margin-top:15px; border-top:1px solid #444; padding-top:15px;">
                     <h4 style="margin-bottom:5px; color:#aaa;">발동된 금기어 횟수</h4>
@@ -2779,6 +2904,32 @@
         </div>
     </div>
 
+    <!-- Octopus Haerujil Shared Realtime Minigame Modal -->
+    <div id="modal-octopus-hunt" class="modal-overlay hidden notranslate" translate="no">
+        <div class="modal octopus-modal notranslate" translate="no">
+            <div class="octopus-top-bar">
+                <span id="octopus-mode-badge" class="octopus-badge">🐙 실시간 해루질 (잠수 중)</span>
+                <div id="octopus-attempt-pills" class="octopus-attempt-pills">
+                    <span class="octopus-attempt-dot" data-attempt="1">1회</span>
+                    <span class="octopus-attempt-dot" data-attempt="2">2회</span>
+                    <span class="octopus-attempt-dot" data-attempt="3">3회</span>
+                </div>
+            </div>
+            <div class="octopus-breath-wrap">
+                <span class="octopus-breath-label">🫧 남은 숨</span>
+                <div class="octopus-breath-bar">
+                    <div id="octopus-breath-fill" class="octopus-breath-fill"></div>
+                </div>
+            </div>
+            <div class="octopus-canvas-wrap">
+                <canvas id="octopus-canvas" width="440" height="248"></canvas>
+            </div>
+            <div id="octopus-status-text" class="octopus-status-text">숨을 참고 파이프에서 낙지가 나오기를 기다리는 중...</div>
+            <button type="button" id="btn-octopus-grab" class="btn octopus-grab-btn hidden" onclick="submitOctopusGrab()">🐙 잡기!</button>
+            <button type="button" id="btn-octopus-spectator-close" class="btn btn-secondary hidden" style="margin-top:8px;" onclick="closeOctopusModalSpectator()">닫기 (배경 관전)</button>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script>
     // --- Toss Guide Navigator ---
@@ -2833,17 +2984,19 @@
                 DEAD_BOMB: 'dead-bomb',       // 폭탄 폭발 피격 (10초 그을림/머리 삐죽 기절)
                 SALT_FARM: 'salt-farm',       // 염전 납치 노역 (소금 100% 채취 시 복귀)
                 DUELING: 'dueling',           // 결투장 링 위에서 1:1 결투 진행 중
-                DEAD_DUEL: 'dead-duel'        // 결투 패배 (30초 의자 눈탱이 밤탱이 기절)
+                DEAD_DUEL: 'dead-duel',       // 결투 패배 (30초 의자 눈탱이 밤탱이 기절)
+                OCTOPUS_HUNT: 'octopus-hunt', // 해루질 낙지잡이 미니게임 잠수 중
+                DEAD_OCTOPUS: 'dead-octopus'  // 해루질 호흡 부족 탈진 (45초 후 부활)
             },
 
             // 1. 좌석 이탈 상태 목록 (의자에서 튕겨나가 공중, 물속, 심해, 납치, 염전, 결투장 등 자리를 벗어난 상태)
-            AWAY_STATUSES: ['flying', 'swimming', 'walking', 'dead', 'dead-gator', 'snatched', 'salt-farm', 'dueling'],
+            AWAY_STATUSES: ['flying', 'swimming', 'walking', 'dead', 'dead-gator', 'snatched', 'salt-farm', 'dueling', 'octopus-hunt', 'dead-octopus'],
 
             // 2. 동물 3종(상어/악어/부산갈매기)에게 잡힌 상태 목록
             ANIMAL_CAUGHT_STATUSES: ['dead', 'dead-gator', 'snatched'],
 
-            // 3. 행동 불능/기절 상태 목록 (상어, 악어, 갈매기, 미사일, 폭탄, 염전, 결투 중/패배 기절로 일반 행동/채팅 불가)
-            INCAPACITATED_STATUSES: ['dead', 'dead-gator', 'snatched', 'dead-missile', 'dead-bomb', 'salt-farm', 'dueling', 'dead-duel'],
+            // 3. 행동 불능/기절 상태 목록 (상어, 악어, 갈매기, 미사일, 폭탄, 염전, 결투 중/패배 기절, 해루질/탈진으로 일반 행동/채팅 불가)
+            INCAPACITATED_STATUSES: ['dead', 'dead-gator', 'snatched', 'dead-missile', 'dead-bomb', 'salt-farm', 'dueling', 'dead-duel', 'octopus-hunt', 'dead-octopus'],
 
             // 상태 문자열 안전 추출 헬퍼 (플레이어 객체 또는 문자열 수용)
             _toStatus(p) {
@@ -2925,6 +3078,16 @@
                 return this._toStatus(p) === this.STATUS.DEAD_DUEL;
             },
 
+            // 해루질 낙지잡이 미니게임 잠수 중인가?
+            isHuntingOctopus(p) {
+                return this._toStatus(p) === this.STATUS.OCTOPUS_HUNT;
+            },
+
+            // 해루질 호흡 부족으로 사망 기절 중인가?
+            isDeadFromOctopus(p) {
+                return this._toStatus(p) === this.STATUS.DEAD_OCTOPUS;
+            },
+
             // [4. 기절 / 행동 불능 상태 체크]
             // 공격을 받거나 동물에게 잡혀 기절 중(채팅/일반행동 불가)인가?
             isIncapacitated(p) {
@@ -2942,14 +3105,19 @@
                 return this.isHealthySeated(p) && !(p && typeof p === 'object' && p.activeBomb);
             },
 
-            // 염전으로 보내기 아이템의 타깃이 될 수 있는가? (현재 염전 노역 중이 아닌 상대)
+            // 염전으로 보내기 아이템의 타깃이 될 수 있는가? (현재 염전/결투/해루질 진행 중이 아닌 상대)
             canBeTargetedBySaltFarm(p) {
-                return !this.isAtSaltFarm(p) && !this.isDueling(p) && !(p && typeof p === 'object' && (p.saltFarm || p.activeDuel));
+                return !this.isAtSaltFarm(p) && !this.isDueling(p) && !this.isHuntingOctopus(p) && !(p && typeof p === 'object' && (p.saltFarm || p.activeDuel || p.activeOctopus));
             },
 
-            // 결투신청 아이템의 타깃이 될 수 있는가? (건강하게 착석 중이며 폭탄/결투 진행 중이 아닌 대상)
+            // 결투신청 아이템의 타깃이 될 수 있는가? (건강하게 착석 중이며 폭탄/결투/해루질 진행 중이 아닌 대상)
             canBeTargetedByDuel(p) {
-                return this.isHealthySeated(p) && !(p && typeof p === 'object' && (p.activeBomb || p.activeDuel));
+                return this.isHealthySeated(p) && !(p && typeof p === 'object' && (p.activeBomb || p.activeDuel || p.activeOctopus));
+            },
+
+            // 낙지잡아와 아이템의 타깃이 될 수 있는가? (건강하게 착석 중이며 폭탄/결투/해루질 진행 중이 아닌 대상)
+            canBeTargetedByOctopus(p) {
+                return this.isHealthySeated(p) && !(p && typeof p === 'object' && (p.activeBomb || p.activeDuel || p.activeOctopus));
             },
 
             // 채팅을 전송할 수 있는 상태인가? (기절하지 않았고 좌석을 이탈하지 않은 상태)
@@ -2978,6 +3146,8 @@
                     case this.STATUS.SALT_FARM: return '이탈 (염전 소금 채취 중)';
                     case this.STATUS.DUELING: return '이탈 (결투장 결투 중)';
                     case this.STATUS.DEAD_DUEL: return '착석 (결투 패배 기절)';
+                    case this.STATUS.OCTOPUS_HUNT: return '이탈 (해루질 낙지잡이 중)';
+                    case this.STATUS.DEAD_OCTOPUS: return '이탈 (숨 부족 기절)';
                     default: return '알 수 없음';
                 }
             }
@@ -3002,9 +3172,12 @@
                 canBeTargetedByMissile: PlayerState.canBeTargetedByMissile(p),
                 isDueling: PlayerState.isDueling(p),
                 isKnockedOutByDuel: PlayerState.isKnockedOutByDuel(p),
+                isHuntingOctopus: PlayerState.isHuntingOctopus(p),
+                isDeadFromOctopus: PlayerState.isDeadFromOctopus(p),
                 canBeTargetedByBomb: PlayerState.canBeTargetedByBomb(p),
                 canBeTargetedBySaltFarm: PlayerState.canBeTargetedBySaltFarm(p),
                 canBeTargetedByDuel: PlayerState.canBeTargetedByDuel(p),
+                canBeTargetedByOctopus: PlayerState.canBeTargetedByOctopus(p),
                 label: PlayerState.getKoreanLabel(p)
             };
         }
@@ -3176,17 +3349,92 @@
         }
 
         // --- UI Utils & Browser Events ---
+        function pushRoomBackGuard() {
+            const roomViewEl = document.getElementById('room-view');
+            if (!roomViewEl || roomViewEl.classList.contains('hidden')) return;
+            try {
+                history.pushState({ inRoomGuard: true }, document.title, location.href);
+            } catch (e) {}
+        }
+
+        function isModalVisible(id) {
+            const el = document.getElementById(id);
+            return !!(el && !el.classList.contains('hidden'));
+        }
+
         window.addEventListener('popstate', function(event) {
-            if (currentMode && (document.getElementById('room-view').classList.contains('hidden') === false)) {
-                if (confirm("퇴장하시겠습니까?")) {
-                    leaveRoom();
-                } else {
-                    history.pushState(null, document.title, location.href);
-                }
+            if (!currentMode || isModalVisible('room-view') === false) return;
+
+            // 1. Mandatory active minigames block back-navigation cleanly without leaving room
+            if (isModalVisible('modal-salt-farm') && typeof saltPanActive === 'boolean' && saltPanActive) {
+                pushRoomBackGuard();
+                sysChat('🧂 염전 노역 중에는 뒤로갈 수 없습니다! 소금을 100% 채취해 주세요.');
+                return;
+            }
+            if (isModalVisible('modal-bomb-defuse') && currentBombModal && currentBombModal.isDefuser) {
+                pushRoomBackGuard();
+                sysChat('💣 폭탄 해체 중에는 뒤로갈 수 없습니다! 해제선을 선택해 주세요.');
+                return;
+            }
+            if (isModalVisible('modal-duel-arena') && clientDuelState && clientDuelState.isParticipant) {
+                pushRoomBackGuard();
+                sysChat('🥊 1:1 결투 진행 중에는 뒤로갈 수 없습니다!');
+                return;
+            }
+            if (isModalVisible('modal-octopus-hunt') && typeof clientOctopusState === 'object' && clientOctopusState && clientOctopusState.isDiver) {
+                pushRoomBackGuard();
+                sysChat('🐙 해루질 미니게임 중에는 뒤로갈 수 없습니다!');
+                return;
+            }
+
+            // 2. Spectator / setup / selection modals close only themselves and restore guard
+            if (isModalVisible('modal-duel-arena')) {
+                if (typeof closeDuelModalSpectator === 'function') closeDuelModalSpectator();
+                pushRoomBackGuard();
+                return;
+            }
+            if (isModalVisible('modal-bomb-defuse')) {
+                if (typeof closeBombDefuseModal === 'function') closeBombDefuseModal();
+                pushRoomBackGuard();
+                return;
+            }
+            if (isModalVisible('modal-octopus-hunt')) {
+                if (typeof closeOctopusModalSpectator === 'function') closeOctopusModalSpectator();
+                pushRoomBackGuard();
+                return;
+            }
+            if (isModalVisible('modal-target-selection')) {
+                if (typeof closeTargetModal === 'function') closeTargetModal();
+                pushRoomBackGuard();
+                return;
+            }
+            if (isModalVisible('modal-bomb-setup')) {
+                if (typeof closeBombSetupModal === 'function') closeBombSetupModal();
+                pushRoomBackGuard();
+                return;
+            }
+            if (isModalVisible('modal-word-add')) {
+                if (typeof closeWordAddModal === 'function') closeWordAddModal();
+                pushRoomBackGuard();
+                return;
+            }
+            if (isModalVisible('modal-word-change')) {
+                if (typeof closeWordChangeModal === 'function') closeWordChangeModal();
+                pushRoomBackGuard();
+                return;
+            }
+            if (isModalVisible('stats-modal')) {
+                if (typeof closeStatsModal === 'function') closeStatsModal();
+                pushRoomBackGuard();
+                return;
+            }
+
+            if (confirm("퇴장하시겠습니까?")) {
+                leaveRoom();
+            } else {
+                pushRoomBackGuard();
             }
         });
-
-
 
         function switchView(viewId) {
             els.lobbyView.classList.add('hidden');
@@ -3195,7 +3443,10 @@
             if (viewId === 'room-view') {
                 els.chatInput.disabled = false;
                 els.chatSend.disabled = false;
-                history.pushState(null, document.title, location.href); // Trap back button
+                pushRoomBackGuard(); // Trap back button
+                if (currentViewMode === '3D') {
+                    setViewMode('3D');
+                }
             }
         }
         function showJoinInput() {
@@ -3239,7 +3490,8 @@
             { id: 'salt_farm', label: '🧂 염전으로 보내기' },
             { id: 'duel', label: '🥊 결투신청' },
             { id: 'reflect', label: '🪞 공격반사' },
-            { id: 'scapegoat', label: '🪃 떠넘기기' }
+            { id: 'scapegoat', label: '🪃 떠넘기기' },
+            { id: 'octopus_hunt', label: '🐙 낙지잡아와' }
         ];
         const ITEM_LABEL_MAP = Object.fromEntries(ITEM_CATALOG.map(it => [it.id, it.label]));
         const ALL_ITEM_IDS = ITEM_CATALOG.map(it => it.id);
@@ -3494,6 +3746,9 @@
             if (typeof clearAllActiveBombs === 'function') clearAllActiveBombs();
             if (typeof clearAllSaltFarms === 'function') clearAllSaltFarms();
             if (typeof clearAllActiveDuels === 'function') clearAllActiveDuels();
+            if (typeof clearAllActiveOctopuses === 'function') clearAllActiveOctopuses();
+            const octoModal = document.getElementById('modal-octopus-hunt');
+            if (octoModal) octoModal.classList.add('hidden');
             if (Array.isArray(state.players)) {
                 state.players.forEach(p => {
                     p.reflectBuff = false;
@@ -3532,6 +3787,10 @@
             if (typeof cleanupDuelsForPlayer === 'function') {
                 cleanupDuelsForPlayer(actualId);
                 cleanupDuelsForPlayer(guestId);
+            }
+            if (typeof cleanupOctopusesForPlayer === 'function') {
+                cleanupOctopusesForPlayer(actualId);
+                cleanupOctopusesForPlayer(guestId);
             }
             if (state.disconnectTimeouts[guestId]) {
                 clearTimeout(state.disconnectTimeouts[guestId]);
@@ -3635,7 +3894,7 @@
                         state.myId = 'host';
                         state.room = { status: 'waiting', title: '멀티플레이 방', wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds, enabledItems };
                         updateBodyState();
-                        state.players = [{ id: state.myId, name: myName, gender: myGender, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0, salt_farm: 0, duel: 0 } }];
+                        state.players = [{ id: state.myId, name: myName, gender: myGender, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0, salt_farm: 0, duel: 0, octopus: 0 } }];
                         
                         switchView('room-view');
                         updateRoomUI();
@@ -3857,7 +4116,7 @@
                 
                 if (state.room.status !== 'waiting') return socket.emit('SEND_TO_GUEST', { roomCode, guestId, type: 'REJECT_JOIN', payload: { reason: '이미 게임이 시작되어 입장할 수 없습니다.' } });
                 if (state.players.length >= 6) return socket.emit('SEND_TO_GUEST', { roomCode, guestId, type: 'REJECT_JOIN', payload: { reason: '방이 꽉 찼습니다.' } });
-                state.players.push({ ...data.payload, id: guestId, previousIds: [], isBot: false, isReady: false, hasSubmittedWords: false, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0, salt_farm: 0, duel: 0 } });
+                state.players.push({ ...data.payload, id: guestId, previousIds: [], isBot: false, isReady: false, hasSubmittedWords: false, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0, salt_farm: 0, duel: 0, octopus: 0 } });
                 broadcastState();
                 updateRoomUI();
                 renderStage();
@@ -3892,6 +4151,11 @@
                     if (typeof handleDuelChoiceOnHost === 'function') {
                         const ed = data.payload.extraData || {};
                         handleDuelChoiceOnHost(ed.duelId, guestId, ed.round, ed.dir);
+                    }
+                } else if (data.payload && data.payload.item === 'octopus_grab') {
+                    if (typeof handleOctopusGrabOnHost === 'function') {
+                        const ed = data.payload.extraData || {};
+                        handleOctopusGrabOnHost(ed.huntId, guestId);
                     }
                 } else {
                     executeItem(guestId, data.payload.item, data.payload.index, data.payload.targetId, data.payload.extraData);
@@ -3931,6 +4195,9 @@
                 
                 state.room = data.payload.state.room;
                 updateBodyState();
+                if (state.room && state.room.status === 'playing' && currentViewMode === '3D') {
+                    setViewMode('3D');
+                }
                 state.players = incomingPlayers.map(inc => {
                     if (inc.penaltyRemain !== undefined) {
                         inc.penaltyEndTime = now + inc.penaltyRemain;
@@ -3951,6 +4218,7 @@
                         Object.assign(existing, inc);
                         if (!inc.activeBomb) existing.activeBomb = null;
                         if (!inc.activeDuel) existing.activeDuel = null;
+                        if (!inc.activeOctopus) existing.activeOctopus = null;
                         existing.reflectBuff = !!inc.reflectBuff;
                         existing.scapegoatTargetId = inc.scapegoatTargetId || null;
                         existing.scapegoatTargetName = inc.scapegoatTargetName || null;
@@ -3966,6 +4234,7 @@
                 });
                 if (typeof syncSaltModalFromState === 'function') syncSaltModalFromState();
                 if (typeof syncDuelModalFromState === 'function') syncDuelModalFromState();
+                if (typeof syncOctopusModalFromState === 'function') syncOctopusModalFromState();
                 if (typeof renderSaltProgressHud === 'function') renderSaltProgressHud();
                 if (typeof renderMyBuffHud === 'function') renderMyBuffHud();
                 if (currentBombModal && !currentBombModal.animating) {
@@ -4017,7 +4286,7 @@
             const { wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds, enabledItems } = options;
             state.room = { status: 'waiting', title: '시뮬레이션 방', wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds, enabledItems };
             updateBodyState();
-            state.players = [{ id: state.myId, name: sanitizeNickname(els.nickname.value.trim(), '게스트'), gender: document.querySelector('input[name="gender"]:checked').value, isBot: false, isReady: true, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0, salt_farm: 0, duel: 0 } }];
+            state.players = [{ id: state.myId, name: sanitizeNickname(els.nickname.value.trim(), '게스트'), gender: document.querySelector('input[name="gender"]:checked').value, isBot: false, isReady: true, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0, salt_farm: 0, duel: 0, octopus: 0 } }];
             
             switchView('room-view');
             document.getElementById('guest-controls').classList.add('hidden');
@@ -4036,7 +4305,7 @@
             const botGender = r < 0.33 ? 'M' : (r < 0.66 ? 'F' : 'A');
             state.players.push({
                 id: botId, name: `봇 ${botNum}호`, gender: botGender,
-                isBot: true, isReady: true, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0, salt_farm: 0, duel: 0 }
+                isBot: true, isReady: true, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0, salt_farm: 0, duel: 0, octopus: 0 }
             });
             updateRoomUI();
             renderStage();
@@ -4094,7 +4363,7 @@
                         clearCharacterPose(p.id);
                         finalizeIdle(p.id);
                         stateChanged = true;
-                    } else if (p.status === PlayerState.STATUS.DEAD_MISSILE || p.status === PlayerState.STATUS.DEAD_BOMB || p.status === PlayerState.STATUS.DEAD_DUEL) {
+                    } else if (p.status === PlayerState.STATUS.DEAD_MISSILE || p.status === PlayerState.STATUS.DEAD_BOMB || p.status === PlayerState.STATUS.DEAD_DUEL || p.status === PlayerState.STATUS.DEAD_OCTOPUS) {
                         const remainMs = p.penaltyEndTime - now;
                         const prevStatus = p.status;
                         if (p.reviveTimeout) clearTimeout(p.reviveTimeout);
@@ -4107,7 +4376,9 @@
                                 ? `✨ ${p.name}님이 폭탄 충격에서 회복했습니다!`
                                 : (prevStatus === PlayerState.STATUS.DEAD_DUEL
                                     ? `✨ ${p.name}님의 눈탱이 밤탱이 부기가 빠져 회복했습니다!`
-                                    : `✨ ${p.name}님이 미사일 기절에서 회복했습니다!`);
+                                    : (prevStatus === PlayerState.STATUS.DEAD_OCTOPUS
+                                        ? `✨ ${p.name}님이 호흡을 되찾고 물속에서 부활했습니다!`
+                                        : `✨ ${p.name}님이 미사일 기절에서 회복했습니다!`));
                             if (currentMode === MODE_HOST) {
                                 broadcast({ type: 'EVENT_SYS', payload: { text: recoverMsg } });
                             }
@@ -4602,10 +4873,12 @@
             }
             const wasSaltAbducting = wrap.classList.contains('salt-abducting');
             const keepSaltAbducting = p.status === PlayerState.STATUS.SALT_FARM && (wasSaltAbducting || (p.saltFarm && p.saltFarm.abducting));
-            wrap.className = `character-wrapper status-${p.status}` + (keepSaltAbducting ? ' salt-abducting' : '');
+            const wasOctoDiving = wrap.classList.contains('octopus-diving');
+            const keepOctoDiving = p.status === PlayerState.STATUS.OCTOPUS_HUNT && (wasOctoDiving || (p.activeOctopus && p.activeOctopus.phase === 'diving'));
+            wrap.className = `character-wrapper status-${p.status}` + (keepSaltAbducting ? ' salt-abducting' : '') + (keepOctoDiving ? ' octopus-diving' : '');
             if (p.status === PlayerState.STATUS.DEAD_MISSILE) {
                 applyMissileStunPose(p.id, opts.animate !== false, false);
-            } else if (PlayerState.isHealthySeated(p) || p.status === PlayerState.STATUS.DEAD_BOMB || p.status === PlayerState.STATUS.DEAD_DUEL) {
+            } else if (PlayerState.isHealthySeated(p) || p.status === PlayerState.STATUS.DEAD_BOMB || p.status === PlayerState.STATUS.DEAD_DUEL || p.status === PlayerState.STATUS.DEAD_OCTOPUS) {
                 clearCharacterPose(p.id);
             }
             if (p.activeBomb) {
@@ -4745,7 +5018,7 @@
         }
 
         // --- 2D / 3D View Mode Controller ---
-        let currentViewMode = '2D';
+        let currentViewMode = '3D';
 
         function setViewMode(mode) {
             currentViewMode = mode;
@@ -4755,14 +5028,22 @@
             const container3D = document.getElementById('three-stage-container');
 
             if (mode === '3D') {
-                if (stage) stage.classList.add('mode-3d');
-                if (btn3D) btn3D.classList.add('active');
-                if (btn2D) btn2D.classList.remove('active');
-
                 if (window.ThreeStageManager) {
                     if (!window.ThreeStageManager.isInitialized()) {
                         window.ThreeStageManager.init(container3D);
                     }
+                    if (!window.ThreeStageManager.isInitialized()) {
+                        // Graceful fallback to 2D if WebGL fails to initialize
+                        currentViewMode = '2D';
+                        if (stage) stage.classList.remove('mode-3d');
+                        if (btn2D) btn2D.classList.add('active');
+                        if (btn3D) btn3D.classList.remove('active');
+                        renderStage();
+                        return;
+                    }
+                    if (stage) stage.classList.add('mode-3d');
+                    if (btn3D) btn3D.classList.add('active');
+                    if (btn2D) btn2D.classList.remove('active');
                     window.ThreeStageManager.setVisible(true);
                     window.ThreeStageManager.syncPlayers(state.players);
                     // Sync active waiting animals
@@ -4771,19 +5052,23 @@
                         window.ThreeStageManager.updateRoamingAnimal(animal, waitingList.includes(animal));
                     });
                     setTimeout(() => {
-                        if (window.ThreeStageManager) window.ThreeStageManager.handleResize();
+                        if (window.ThreeStageManager && window.ThreeStageManager.isInitialized()) {
+                            window.ThreeStageManager.handleResize({ forceRadius: true });
+                        }
                     }, 50);
+                    return;
                 }
-            } else {
-                if (stage) stage.classList.remove('mode-3d');
-                if (btn2D) btn2D.classList.add('active');
-                if (btn3D) btn3D.classList.remove('active');
-
-                if (window.ThreeStageManager) {
-                    window.ThreeStageManager.setVisible(false);
-                }
-                renderStage();
+                // Fallback when ThreeStageManager is not available
+                currentViewMode = '2D';
             }
+            if (stage) stage.classList.remove('mode-3d');
+            if (btn2D) btn2D.classList.add('active');
+            if (btn3D) btn3D.classList.remove('active');
+
+            if (window.ThreeStageManager) {
+                window.ThreeStageManager.setVisible(false);
+            }
+            renderStage();
         }
         window.setViewMode = setViewMode;
 
@@ -5025,6 +5310,7 @@
             document.getElementById('submit-words-btn').style.display = 'block';
             document.getElementById('missing-players-list').textContent = '';
             els.wordSettingModal.classList.remove('hidden');
+            pushRoomBackGuard();
         }
 
         function submitWords() {
@@ -5184,6 +5470,14 @@
             clearAllWaitingAnimals();
             els.wordSettingModal.classList.add('hidden');
             clearChatUI();
+            if (currentViewMode === '3D') {
+                setViewMode('3D');
+                setTimeout(() => {
+                    if (window.ThreeStageManager && window.ThreeStageManager.isInitialized()) {
+                        window.ThreeStageManager.handleResize({ forceRadius: true });
+                    }
+                }, 80);
+            }
             sysChat('게임이 시작되었습니다! 채팅을 자유롭게 시작하세요.');
             if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
                 document.getElementById('end-game-btn').classList.remove('hidden');
@@ -5428,7 +5722,7 @@
                 } else {
                     socket.emit('SEND_TO_HOST', { roomCode, type: 'USE_ITEM', payload: { item, index, targetId: null, extraData: null } });
                 }
-            } else if (item === 'missile' || item === 'word_change' || item === 'salt_farm' || item === 'duel') {
+            } else if (item === 'missile' || item === 'word_change' || item === 'salt_farm' || item === 'duel' || item === 'octopus_hunt') {
                 pendingItemUse = { item, index };
                 openTargetModal();
             } else if (item === 'bomb_defuse') {
@@ -5491,6 +5785,7 @@
             
             updateCooldownUI();
             document.getElementById('modal-word-add').classList.remove('hidden');
+            pushRoomBackGuard();
         }
         
         function closeWordAddModal() {
@@ -5630,6 +5925,8 @@
             if (saltStatEl) saltStatEl.textContent = me.stats.salt_farm || 0;
             const duelStatEl = document.getElementById('stats-duel');
             if (duelStatEl) duelStatEl.textContent = me.stats.duel || 0;
+            const octopusStatEl = document.getElementById('stats-octopus');
+            if (octopusStatEl) octopusStatEl.textContent = me.stats.octopus || 0;
             
             // Word counts
             const countsDiv = document.getElementById('stats-word-counts');
@@ -5645,6 +5942,7 @@
             }
             
             document.getElementById('stats-modal').classList.remove('hidden');
+            pushRoomBackGuard();
         }
         
         function closeStatsModal() {
@@ -5658,12 +5956,16 @@
             const titleEl = document.getElementById('target-modal-title');
             const descEl = document.getElementById('target-modal-desc');
             if (titleEl) {
-                titleEl.textContent = item === 'scapegoat' ? '🪃 떠넘기기 대상 지정' : '타깃 선택';
+                titleEl.textContent = item === 'scapegoat'
+                    ? '🪃 떠넘기기 대상 지정'
+                    : (item === 'octopus_hunt' ? '🐙 낙지잡아와 대상 선택' : '타깃 선택');
             }
             if (descEl) {
                 descEl.textContent = item === 'scapegoat'
                     ? '내가 공격받았을 때 대신 피격될 플레이어 1명을 미리 지정하세요.'
-                    : '아이템을 사용할 대상을 선택하세요.';
+                    : (item === 'octopus_hunt'
+                        ? '바다로 잠수시켜 낙지를 잡아오게 할 상대를 선택하세요!'
+                        : '아이템을 사용할 대상을 선택하세요.');
             }
             
             let targets;
@@ -5676,6 +5978,8 @@
                 targets = state.players.filter(p => p.id !== state.myId && PlayerState.canBeTargetedBySaltFarm(p) && !(typeof hasPendingSaltAbduction === 'function' && hasPendingSaltAbduction(p.id)));
             } else if (item === 'duel') {
                 targets = state.players.filter(p => p.id !== state.myId && PlayerState.canBeTargetedByDuel(p));
+            } else if (item === 'octopus_hunt') {
+                targets = state.players.filter(p => p.id !== state.myId && PlayerState.canBeTargetedByOctopus(p));
             } else {
                 // Missile etc. - Only target those currently healthy and sitting in their chair
                 targets = state.players.filter(p => p.id !== state.myId && PlayerState.canBeTargetedByMissile(p));
@@ -5688,7 +5992,9 @@
                         ? '현재 염전에 보낼 수 있는 타깃이 없습니다.'
                         : (item === 'duel'
                             ? '현재 결투를 신청할 수 있는 착석 상태의 상대가 없습니다.'
-                            : (item === 'scapegoat' ? '떠넘기기를 지정할 다른 플레이어가 없습니다.' : '타깃이 없습니다.')));
+                            : (item === 'octopus_hunt'
+                                ? '현재 해루질을 보낼 수 있는 착석 상태의 상대가 없습니다.'
+                                : (item === 'scapegoat' ? '떠넘기기를 지정할 다른 플레이어가 없습니다.' : '타깃이 없습니다.'))));
                 list.innerHTML = `<span style="color:#aaa; text-align:center; padding: 12px 0;">${emptyText}</span>`;
             } else {
                 targets.forEach(p => {
@@ -5701,6 +6007,7 @@
                 });
             }
             document.getElementById('modal-target-selection').classList.remove('hidden');
+            pushRoomBackGuard();
         }
         
         function closeTargetModal() {
@@ -5739,6 +6046,13 @@
                 if (!target || !PlayerState.canBeTargetedByDuel(target)) {
                     pendingItemUse = null;
                     alert('해당 플레이어가 자리에 없거나 다른 이벤트 진행 중이어서 결투를 신청할 수 없습니다.');
+                    return;
+                }
+            } else if (item === 'octopus_hunt') {
+                const target = state.players.find(p => p.id === targetId);
+                if (!target || !PlayerState.canBeTargetedByOctopus(target)) {
+                    pendingItemUse = null;
+                    alert('해당 플레이어가 자리에 없거나 다른 이벤트 진행 중이어서 해루질을 보낼 수 없습니다.');
                     return;
                 }
             } else if (item === 'scapegoat') {
@@ -5862,6 +6176,7 @@
             
             updateCooldownUI();
             document.getElementById('modal-word-change').classList.remove('hidden');
+            pushRoomBackGuard();
         }
         
         function closeWordChangeModal() {
@@ -5934,6 +6249,9 @@
             }
             if (item === 'salt_farm') {
                 return !PlayerState.isAtSaltFarm(proxy) && !(typeof hasPendingSaltAbduction === 'function' && hasPendingSaltAbduction(proxy.id));
+            }
+            if (item === 'octopus_hunt') {
+                return PlayerState.canBeTargetedByOctopus(proxy);
             }
             return true;
         }
@@ -6085,6 +6403,13 @@
                     return; // Abort without consuming item!
                 }
                 targetId = target.id;
+            } else if (item === 'octopus_hunt') {
+                const target = findPlayerById(targetId);
+                if (!target || target.id === actualSenderId || !PlayerState.canBeTargetedByOctopus(target) || (typeof isAnyOctopusActiveOnHost === 'function' && isAnyOctopusActiveOnHost())) {
+                    sendPrivateSysMessage(actualSenderId, '현재 낙지잡이 해루질을 시작할 수 없는 상태입니다. (상대가 자리에 없거나 다른 해루질이 진행 중)');
+                    return; // Abort without consuming item!
+                }
+                targetId = target.id;
             } else if (item === 'bomb_defuse') {
                 const safeWire = extraData && extraData.safeWire;
                 if (safeWire !== 'red' && safeWire !== 'blue') return;
@@ -6120,7 +6445,7 @@
 
             // Run unified counter/redirect pipeline (`공격반사` & `떠넘기기`) for immediate targeted opponent attacks
             let effectiveSender = sender;
-            if (item === 'missile' || item === 'duel' || item === 'bomb_defuse' || item === 'word_change') {
+            if (item === 'missile' || item === 'duel' || item === 'bomb_defuse' || item === 'word_change' || item === 'octopus_hunt') {
                 const origTarget = findPlayerById(targetId);
                 const resolved = resolveIncomingAttackOnHost(sender, origTarget, item, extraData);
                 renderStage();
@@ -6223,6 +6548,9 @@
                 return;
             } else if (item === 'duel') {
                 startDuelOnHost(effectiveSenderId, targetId);
+                return;
+            } else if (item === 'octopus_hunt') {
+                startOctopusHuntOnHost(effectiveSenderId, targetId);
                 return;
             }
             
@@ -6347,6 +6675,10 @@
             }
             if (typeof item === 'string' && item.startsWith('duel_')) {
                 if (typeof handleDuelNetworkEvent === 'function') handleDuelNetworkEvent(item, extraData);
+                return;
+            }
+            if (typeof item === 'string' && item.startsWith('octopus_')) {
+                if (typeof handleOctopusNetworkEvent === 'function') handleOctopusNetworkEvent(item, extraData);
                 return;
             }
             const sender = findPlayerById(senderId);
@@ -6583,6 +6915,7 @@
             document.getElementById('bomb-pick-blue').classList.remove('selected');
             renderBombTargetList();
             document.getElementById('modal-bomb-setup').classList.remove('hidden');
+            pushRoomBackGuard();
         }
 
         function selectBombSafeWire(wire) {
@@ -6736,6 +7069,7 @@
             bombCountdownInterval = setInterval(updateTimer, 250);
 
             document.getElementById('modal-bomb-defuse').classList.remove('hidden');
+            pushRoomBackGuard();
         }
 
         function closeBombDefuseModal() {
@@ -8241,6 +8575,7 @@
             }
             updateSaltModalProgressUI(0);
             modal.classList.remove('hidden');
+            pushRoomBackGuard();
             drawSaltPanCanvas();
             startSaltAnimLoop();
         }
@@ -8885,6 +9220,7 @@
 
             const modal = document.getElementById('modal-duel-arena');
             if (modal) modal.classList.remove('hidden');
+            pushRoomBackGuard();
 
             const arena3D = getDuelArena3D();
             const threeContainer = document.getElementById('duel-three-container');
@@ -9288,6 +9624,797 @@
             ) {
                 startDuelRoundClientUI(snap);
             }
+        }
+        // ────────────────────────────────────────────────────────────────────────
+
+        // ─── Octopus Haerujil ("낙지잡아와") System ──────────────────────────────
+        const OCTOPUS_DIVE_BASE_MS = 4100;
+        const OCTOPUS_SHOW_BASE_MS = 6800;
+        const OCTOPUS_DEATH_STUN_MS = 45000;
+        const activeOctopuses = {}; // Host-authoritative hunts
+        let clientOctopusState = null;
+        let octopusCanvasRaf = null;
+        let octopusClientTimers = [];
+        let octopusGrabCooldownUntil = 0;
+
+        function addOctopusClientTimer(fn, ms) {
+            const id = setTimeout(() => {
+                const idx = octopusClientTimers.indexOf(id);
+                if (idx !== -1) octopusClientTimers.splice(idx, 1);
+                fn();
+            }, ms);
+            octopusClientTimers.push(id);
+            return id;
+        }
+
+        function clearOctopusClientTimers() {
+            while (octopusClientTimers.length > 0) {
+                clearTimeout(octopusClientTimers.pop());
+            }
+            if (octopusCanvasRaf) {
+                cancelAnimationFrame(octopusCanvasRaf);
+                octopusCanvasRaf = null;
+            }
+        }
+
+        function isAnyOctopusActiveOnHost() {
+            return Object.keys(activeOctopuses).length > 0;
+        }
+
+        function buildPublicOctopusSnapshot(h) {
+            if (!h) return null;
+            return {
+                huntId: h.huntId,
+                senderId: h.senderId,
+                diverId: h.diverId,
+                diverName: h.diverName,
+                diverGender: h.diverGender,
+                phase: h.phase,
+                attempt: h.attempt,
+                maxAttempts: h.maxAttempts,
+                missedAttempts: [...(h.missedAttempts || [])],
+                peeking: !!h.peeking,
+                peekDurationMs: h.peekDurationMs || 0
+            };
+        }
+
+        function clearAllActiveOctopuses() {
+            Object.keys(activeOctopuses).forEach(hId => {
+                const h = activeOctopuses[hId];
+                if (h) {
+                    if (h.diveTimerId) clearTimeout(h.diveTimerId);
+                    if (h.waitTimerId) clearTimeout(h.waitTimerId);
+                    if (h.peekTimerId) clearTimeout(h.peekTimerId);
+                    if (h.showTimerId) clearTimeout(h.showTimerId);
+                    if (h.botTimerId) clearTimeout(h.botTimerId);
+                }
+                delete activeOctopuses[hId];
+            });
+            if (Array.isArray(state.players)) {
+                state.players.forEach(p => {
+                    if (p.activeOctopus) p.activeOctopus = null;
+                });
+            }
+            document.querySelectorAll('.octopus-2d-overlay').forEach(el => el.remove());
+            closeOctopusModalUI();
+        }
+
+        function cleanupOctopusesForPlayer(playerId) {
+            if (!playerId) return;
+            Object.keys(activeOctopuses).forEach(hId => {
+                const h = activeOctopuses[hId];
+                if (!h) return;
+                if (h.diverId === playerId) {
+                    if (h.diveTimerId) clearTimeout(h.diveTimerId);
+                    if (h.waitTimerId) clearTimeout(h.waitTimerId);
+                    if (h.peekTimerId) clearTimeout(h.peekTimerId);
+                    if (h.showTimerId) clearTimeout(h.showTimerId);
+                    if (h.botTimerId) clearTimeout(h.botTimerId);
+                    delete activeOctopuses[hId];
+                    if (currentMode === MODE_HOST) {
+                        broadcast({ type: 'EVENT_ITEM', payload: { senderId: state.myId, item: 'octopus_abort', targetId: null, extraData: { huntId: hId } } });
+                    }
+                    handleOctopusNetworkEvent('octopus_abort', { huntId: hId });
+                }
+            });
+        }
+
+        function startOctopusHuntOnHost(senderId, targetId) {
+            const sender = findPlayerById(senderId);
+            const target = findPlayerById(targetId);
+            if (!sender || !target || !PlayerState.canBeTargetedByOctopus(target) || isAnyOctopusActiveOnHost()) {
+                return;
+            }
+
+            target.flySequenceId = (target.flySequenceId || 0) + 1;
+            if (target.flyTimeouts) { target.flyTimeouts.forEach(clearTimeout); target.flyTimeouts = []; }
+            if (target.reviveTimeout) { clearTimeout(target.reviveTimeout); target.reviveTimeout = null; }
+            target.pendingMissileStunMs = 0;
+            target.penaltyEndTime = null;
+            clearCharacterPose(target.id);
+
+            const huntId = 'octo-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+            const hunt = {
+                huntId,
+                senderId: sender.id,
+                diverId: target.id,
+                diverName: target.name,
+                diverGender: target.gender || 'M',
+                phase: 'diving',
+                attempt: 0,
+                maxAttempts: 3,
+                missedAttempts: [],
+                peeking: false,
+                peekStartAt: 0,
+                peekDurationMs: 0,
+                caught: false,
+                startedAt: Date.now(),
+                diveTimerId: null,
+                waitTimerId: null,
+                peekTimerId: null,
+                showTimerId: null,
+                botTimerId: null
+            };
+            activeOctopuses[huntId] = hunt;
+
+            const snap = buildPublicOctopusSnapshot(hunt);
+            target.status = PlayerState.STATUS.OCTOPUS_HUNT;
+            target.activeOctopus = snap;
+
+            broadcastPublicSysMessage(`🐙 ${sender.name}님이 ${target.name}님에게 [낙지잡아와]를 사용했습니다! 스노클·마스크·망태기를 착용하고 깊은 바다로 잠수합니다!`);
+            if (currentMode === MODE_HOST) {
+                broadcastState();
+                broadcast({ type: 'EVENT_ITEM', payload: { senderId: sender.id, item: 'octopus_start', targetId: target.id, extraData: snap } });
+            }
+            handleOctopusNetworkEvent('octopus_start', snap);
+
+            const diveMs = Math.round(OCTOPUS_DIVE_BASE_MS * (Math.max(0.05, Number(window.__TEST_OCTOPUS_DIVE_SCALE) || 1)));
+            hunt.diveTimerId = setTimeout(() => {
+                hunt.diveTimerId = null;
+                startOctopusUnderwaterOnHost(huntId);
+            }, diveMs);
+        }
+
+        function startOctopusUnderwaterOnHost(huntId) {
+            const h = activeOctopuses[huntId];
+            if (!h || !state.room || state.room.status !== 'playing') return;
+            const target = findPlayerById(h.diverId);
+            if (!target) {
+                cleanupOctopusesForPlayer(h.diverId);
+                return;
+            }
+            h.phase = 'underwater';
+            const snap = buildPublicOctopusSnapshot(h);
+            target.activeOctopus = snap;
+
+            if (currentMode === MODE_HOST) {
+                broadcast({ type: 'EVENT_ITEM', payload: { senderId: h.senderId, item: 'octopus_underwater', targetId: h.diverId, extraData: snap } });
+                broadcastState();
+            }
+            handleOctopusNetworkEvent('octopus_underwater', snap);
+            scheduleNextOctopusPeekOnHost(huntId);
+        }
+
+        function scheduleNextOctopusPeekOnHost(huntId) {
+            const h = activeOctopuses[huntId];
+            if (!h || h.phase !== 'underwater' || h.caught || !state.room || state.room.status !== 'playing') return;
+            const waitScale = Math.max(0.05, Number(window.__TEST_OCTOPUS_WAIT_SCALE) || 1);
+            const rawWait = 1300 + Math.floor(Math.random() * 1900);
+            const waitMs = Math.round(rawWait * waitScale);
+            if (h.waitTimerId) clearTimeout(h.waitTimerId);
+            h.waitTimerId = setTimeout(() => {
+                h.waitTimerId = null;
+                triggerOctopusPeekOnHost(huntId);
+            }, waitMs);
+        }
+
+        function triggerOctopusPeekOnHost(huntId) {
+            const h = activeOctopuses[huntId];
+            if (!h || h.phase !== 'underwater' || h.caught || !state.room || state.room.status !== 'playing') return;
+            const target = findPlayerById(h.diverId);
+            if (!target) {
+                cleanupOctopusesForPlayer(h.diverId);
+                return;
+            }
+            h.attempt += 1;
+            const peekMs = Number(window.__TEST_OCTOPUS_PEEK_MS) || (330 + Math.floor(Math.random() * 61)); // 0.33~0.39s
+            h.peeking = true;
+            h.peekStartAt = Date.now();
+            h.peekDurationMs = peekMs;
+
+            const snap = buildPublicOctopusSnapshot(h);
+            target.activeOctopus = snap;
+            if (currentMode === MODE_HOST) {
+                broadcast({ type: 'EVENT_ITEM', payload: { senderId: h.senderId, item: 'octopus_peek', targetId: h.diverId, extraData: snap } });
+            }
+            handleOctopusNetworkEvent('octopus_peek', snap);
+
+            // Network grace (+220ms) on Host while client renders exact 0.3~0.4s window
+            if (h.peekTimerId) clearTimeout(h.peekTimerId);
+            const currentAttempt = h.attempt;
+            h.peekTimerId = setTimeout(() => {
+                h.peekTimerId = null;
+                onOctopusPeekExpiredOnHost(huntId, currentAttempt);
+            }, peekMs + 220);
+
+            if (target.isBot) {
+                const reactDelay = Math.max(120, Math.min(peekMs - 40, 160 + Math.floor(Math.random() * 160)));
+                if (h.botTimerId) clearTimeout(h.botTimerId);
+                h.botTimerId = setTimeout(() => {
+                    h.botTimerId = null;
+                    if (Math.random() < 0.45) {
+                        handleOctopusGrabOnHost(huntId, target.id);
+                    }
+                }, reactDelay);
+            }
+        }
+
+        function onOctopusPeekExpiredOnHost(huntId, attemptNum) {
+            const h = activeOctopuses[huntId];
+            if (!h || h.phase !== 'underwater' || h.caught || h.attempt !== attemptNum) return;
+            h.peeking = false;
+            if (!h.missedAttempts.includes(attemptNum)) h.missedAttempts.push(attemptNum);
+
+            const snap = buildPublicOctopusSnapshot(h);
+            const target = findPlayerById(h.diverId);
+            if (target) target.activeOctopus = snap;
+            if (currentMode === MODE_HOST) {
+                broadcast({ type: 'EVENT_ITEM', payload: { senderId: h.senderId, item: 'octopus_miss', targetId: h.diverId, extraData: snap } });
+            }
+            handleOctopusNetworkEvent('octopus_miss', snap);
+
+            if (h.attempt >= h.maxAttempts) {
+                resolveOctopusFailOnHost(huntId);
+            } else {
+                scheduleNextOctopusPeekOnHost(huntId);
+            }
+        }
+
+        function handleOctopusGrabOnHost(huntId, playerId) {
+            const h = activeOctopuses[huntId];
+            if (!h || h.phase !== 'underwater' || h.caught || h.diverId !== playerId || !state.room || state.room.status !== 'playing') return;
+            const now = Date.now();
+            if (h.peeking && (now - h.peekStartAt <= h.peekDurationMs + 220)) {
+                resolveOctopusCatchOnHost(huntId);
+                return;
+            }
+            // Early whiff when octopus is still inside the pipe
+            if (currentMode === MODE_HOST) {
+                broadcast({ type: 'EVENT_ITEM', payload: { senderId: h.senderId, item: 'octopus_whiff', targetId: h.diverId, extraData: { huntId, attempt: h.attempt } } });
+            }
+            handleOctopusNetworkEvent('octopus_whiff', { huntId, attempt: h.attempt });
+        }
+
+        function resolveOctopusCatchOnHost(huntId) {
+            const h = activeOctopuses[huntId];
+            if (!h || h.caught) return;
+            h.caught = true;
+            h.peeking = false;
+            if (h.waitTimerId) { clearTimeout(h.waitTimerId); h.waitTimerId = null; }
+            if (h.peekTimerId) { clearTimeout(h.peekTimerId); h.peekTimerId = null; }
+            if (h.botTimerId) { clearTimeout(h.botTimerId); h.botTimerId = null; }
+            h.phase = 'caught';
+
+            const snap = buildPublicOctopusSnapshot(h);
+            const target = findPlayerById(h.diverId);
+            if (target) target.activeOctopus = snap;
+
+            broadcastPublicSysMessage(`🐙 [해루질 성공!] ${h.diverName}님이 찰나의 순간을 노려 싱싱한 대왕 낙지를 잡아냈습니다!!`);
+            if (currentMode === MODE_HOST) {
+                broadcast({ type: 'EVENT_ITEM', payload: { senderId: h.senderId, item: 'octopus_catch', targetId: h.diverId, extraData: snap } });
+                broadcastState();
+            }
+            handleOctopusNetworkEvent('octopus_catch', snap);
+
+            // After 950ms celebration in modal, rise from ocean & perform center-front chojang show
+            const showMs = Math.round(OCTOPUS_SHOW_BASE_MS * (Math.max(0.05, Number(window.__TEST_OCTOPUS_SHOW_SCALE) || 1)));
+            h.showTimerId = setTimeout(() => {
+                const liveH = activeOctopuses[huntId];
+                if (!liveH || !state.room || state.room.status !== 'playing') return;
+                liveH.phase = 'show';
+                const showSnap = buildPublicOctopusSnapshot(liveH);
+                if (currentMode === MODE_HOST) {
+                    broadcast({ type: 'EVENT_ITEM', payload: { senderId: liveH.senderId, item: 'octopus_show', targetId: liveH.diverId, extraData: showSnap } });
+                }
+                handleOctopusNetworkEvent('octopus_show', showSnap);
+
+                liveH.showTimerId = setTimeout(() => {
+                    delete activeOctopuses[huntId];
+                    const liveTarget = findPlayerById(liveH.diverId);
+                    if (liveTarget) {
+                        liveTarget.activeOctopus = null;
+                        clearCharacterPose(liveTarget.id);
+                        if (state.room && state.room.status === 'playing') {
+                            broadcastPublicSysMessage(`🥢 ${liveTarget.name}님이 낙지 다리에 초장을 듬뿍 짜먹고 유유히 자리로 돌아왔습니다!`);
+                            updateStatus(liveTarget.id, PlayerState.STATUS.IDLE);
+                        }
+                    }
+                }, showMs);
+            }, 950);
+        }
+
+        function resolveOctopusFailOnHost(huntId) {
+            const h = activeOctopuses[huntId];
+            if (!h) return;
+            h.phase = 'failed';
+            if (h.waitTimerId) { clearTimeout(h.waitTimerId); h.waitTimerId = null; }
+            if (h.peekTimerId) { clearTimeout(h.peekTimerId); h.peekTimerId = null; }
+            if (h.botTimerId) { clearTimeout(h.botTimerId); h.botTimerId = null; }
+
+            const target = findPlayerById(h.diverId);
+            const snap = buildPublicOctopusSnapshot(h);
+            if (currentMode === MODE_HOST) {
+                broadcast({ type: 'EVENT_ITEM', payload: { senderId: h.senderId, item: 'octopus_fail_death', targetId: h.diverId, extraData: snap } });
+            }
+            handleOctopusNetworkEvent('octopus_fail_death', snap);
+
+            delete activeOctopuses[huntId];
+            if (!target) return;
+
+            target.activeOctopus = null;
+            if (target.stats) target.stats.octopus = (target.stats.octopus || 0) + 1;
+            target.penaltyEndTime = Date.now() + OCTOPUS_DEATH_STUN_MS;
+            broadcastPublicSysMessage(`🫧 [해루질 실패] ${target.name}님이 3회 안에 낙지를 잡지 못해 숨이 딸려 물속에서 기절했습니다! (45초 후 부활)`);
+            updateStatus(target.id, PlayerState.STATUS.DEAD_OCTOPUS);
+
+            if (target.reviveTimeout) clearTimeout(target.reviveTimeout);
+            target.reviveTimeout = setTimeout(() => {
+                if (!state.room || state.room.status !== 'playing') return;
+                clearCharacterPose(target.id);
+                target.penaltyEndTime = null;
+                target.reviveTimeout = null;
+                broadcastPublicSysMessage(`✨ ${target.name}님이 호흡을 되찾고 물속에서 부활했습니다!`);
+                updateStatus(target.id, PlayerState.STATUS.IDLE);
+            }, OCTOPUS_DEATH_STUN_MS);
+        }
+
+        function handleOctopusNetworkEvent(eventType, data) {
+            if (!data) return;
+            if (eventType === 'octopus_start') {
+                try { playSaltAbductSound(); } catch (e) {}
+                if (currentViewMode === '3D' && window.ThreeStageManager && window.ThreeStageManager.isInitialized() && typeof window.ThreeStageManager.triggerOctopusDive === 'function') {
+                    window.ThreeStageManager.triggerOctopusDive(data.diverId);
+                } else {
+                    createOctopusDive2D(data.diverId);
+                }
+            } else if (eventType === 'octopus_underwater') {
+                openOctopusModal(data);
+            } else if (eventType === 'octopus_peek') {
+                if (!clientOctopusState || clientOctopusState.huntId !== data.huntId) {
+                    if (!clientOctopusState || !clientOctopusState.spectatorClosed) openOctopusModal(data);
+                }
+                if (clientOctopusState && clientOctopusState.huntId === data.huntId) {
+                    clientOctopusState.attempt = data.attempt;
+                    clientOctopusState.peeking = true;
+                    clientOctopusState.peekStartAt = performance.now();
+                    clientOctopusState.peekDurationMs = data.peekDurationMs || 350;
+                    playTone(1040, 'triangle', 0.08, 0.16);
+                    updateOctopusModalUI();
+                    addOctopusClientTimer(() => {
+                        if (clientOctopusState && clientOctopusState.huntId === data.huntId && clientOctopusState.peeking && !clientOctopusState.caught) {
+                            clientOctopusState.peeking = false;
+                            updateOctopusModalUI();
+                        }
+                    }, clientOctopusState.peekDurationMs);
+                }
+            } else if (eventType === 'octopus_miss') {
+                if (clientOctopusState && clientOctopusState.huntId === data.huntId) {
+                    clientOctopusState.peeking = false;
+                    clientOctopusState.missedAttempts = data.missedAttempts || [];
+                    clientOctopusState.whiffUntil = 0;
+                    playTone(260, 'sawtooth', 0.14, 0.16);
+                    const st = document.getElementById('octopus-status-text');
+                    if (st) st.textContent = `💨 아깝다! 낙지가 다시 파이프 속으로 쏙 들어갔습니다! (${clientOctopusState.missedAttempts.length}/3)`;
+                    updateOctopusModalUI();
+                }
+            } else if (eventType === 'octopus_whiff') {
+                if (clientOctopusState && clientOctopusState.huntId === data.huntId) {
+                    clientOctopusState.whiffUntil = performance.now() + 360;
+                    playTone(340, 'sine', 0.08, 0.1);
+                    const st = document.getElementById('octopus-status-text');
+                    if (st && !clientOctopusState.peeking) st.textContent = '🖐️ 헛손질! 아직 파이프 안에 있습니다 — 나올 때를 노리세요!';
+                }
+            } else if (eventType === 'octopus_catch') {
+                if (clientOctopusState && clientOctopusState.huntId === data.huntId) {
+                    clientOctopusState.caught = true;
+                    clientOctopusState.peeking = false;
+                    try { playSaltCompleteSound(); } catch (e) {}
+                    const st = document.getElementById('octopus-status-text');
+                    if (st) st.textContent = `🎉 찰나 포착! ${clientOctopusState.diverName}님이 낙지를 잡았습니다!!`;
+                    const grabBtn = document.getElementById('btn-octopus-grab');
+                    if (grabBtn) grabBtn.disabled = true;
+                    updateOctopusModalUI();
+                }
+                addOctopusClientTimer(() => closeOctopusModalUI(), 920);
+            } else if (eventType === 'octopus_show') {
+                closeOctopusModalUI();
+                if (currentViewMode === '3D' && window.ThreeStageManager && window.ThreeStageManager.isInitialized() && typeof window.ThreeStageManager.triggerOctopusSuccessShow === 'function') {
+                    window.ThreeStageManager.triggerOctopusSuccessShow(data.diverId);
+                } else {
+                    createOctopusSuccessShow2D(data.diverId);
+                }
+            } else if (eventType === 'octopus_fail_death') {
+                if (clientOctopusState && clientOctopusState.huntId === data.huntId) {
+                    clientOctopusState.failed = true;
+                    clientOctopusState.peeking = false;
+                    clientOctopusState.missedAttempts = [1, 2, 3];
+                    playTone(130, 'sawtooth', 0.35, 0.24);
+                    const st = document.getElementById('octopus-status-text');
+                    if (st) st.textContent = `🫧 숨이 딸려 3회 모두 실패! ${clientOctopusState.diverName}님 45초간 기절...`;
+                    const grabBtn = document.getElementById('btn-octopus-grab');
+                    if (grabBtn) grabBtn.disabled = true;
+                    updateOctopusModalUI();
+                }
+                addOctopusClientTimer(() => closeOctopusModalUI(), 950);
+            } else if (eventType === 'octopus_abort') {
+                closeOctopusModalUI();
+            }
+        }
+
+        function openOctopusModal(snap) {
+            clearOctopusClientTimers();
+            const isDiver = (state.myId === snap.diverId);
+            if (clientOctopusState && clientOctopusState.huntId === snap.huntId && clientOctopusState.spectatorClosed && !isDiver) {
+                return;
+            }
+            clientOctopusState = {
+                ...snap,
+                isDiver,
+                spectatorClosed: false,
+                openedAt: performance.now(),
+                peekStartAt: 0,
+                whiffUntil: 0
+            };
+
+            const badge = document.getElementById('octopus-mode-badge');
+            if (badge) {
+                badge.textContent = isDiver
+                    ? '🐙 해루질 중 (0.3~0.4초 찰나에 잡기!)'
+                    : `👀 ${snap.diverName}님 해루질 실시간 화면 공유`;
+            }
+            const grabBtn = document.getElementById('btn-octopus-grab');
+            const specBtn = document.getElementById('btn-octopus-spectator-close');
+            if (grabBtn) {
+                grabBtn.classList.toggle('hidden', !isDiver);
+                grabBtn.disabled = false;
+            }
+            if (specBtn) {
+                specBtn.classList.toggle('hidden', isDiver);
+            }
+            const st = document.getElementById('octopus-status-text');
+            if (st) {
+                st.textContent = isDiver
+                    ? '숨을 참고 파이프를 주시하세요! 낙지가 나오면 즉시 [잡기!] 클릭!'
+                    : `👀 ${snap.diverName}님이 숨을 참고 파이프에서 낙지가 나오길 기다리는 중...`;
+            }
+
+            updateOctopusModalUI();
+            const modal = document.getElementById('modal-octopus-hunt');
+            if (modal) modal.classList.remove('hidden');
+            pushRoomBackGuard();
+            startOctopusCanvasLoop();
+        }
+
+        function closeOctopusModalSpectator() {
+            if (!clientOctopusState || clientOctopusState.isDiver) return;
+            clientOctopusState.spectatorClosed = true;
+            clearOctopusClientTimers();
+            const modal = document.getElementById('modal-octopus-hunt');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function closeOctopusModalUI() {
+            clearOctopusClientTimers();
+            clientOctopusState = null;
+            const modal = document.getElementById('modal-octopus-hunt');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function syncOctopusModalFromState() {
+            const diverPlayer = state.players.find(p => p.activeOctopus);
+            if (!diverPlayer || diverPlayer.activeOctopus.phase === 'show' || diverPlayer.activeOctopus.phase === 'failed') {
+                if (clientOctopusState && !clientOctopusState.caught && !clientOctopusState.failed) {
+                    closeOctopusModalUI();
+                }
+                return;
+            }
+            const snap = diverPlayer.activeOctopus;
+            if (snap.phase === 'underwater' && (!clientOctopusState || clientOctopusState.huntId !== snap.huntId)) {
+                openOctopusModal(snap);
+            }
+        }
+
+        function updateOctopusModalUI() {
+            if (!clientOctopusState) return;
+            const missed = clientOctopusState.missedAttempts || [];
+            const dots = document.querySelectorAll('#octopus-attempt-pills .octopus-attempt-dot');
+            dots.forEach(dot => {
+                const n = Number(dot.dataset.attempt);
+                dot.className = 'octopus-attempt-dot';
+                if (clientOctopusState.caught && n === clientOctopusState.attempt) {
+                    dot.classList.add('caught');
+                } else if (missed.includes(n)) {
+                    dot.classList.add('missed');
+                } else if (clientOctopusState.peeking && n === clientOctopusState.attempt) {
+                    dot.classList.add('active');
+                }
+            });
+            const breathFill = document.getElementById('octopus-breath-fill');
+            if (breathFill) {
+                const remainRatio = clientOctopusState.failed
+                    ? 0
+                    : Math.max(0.08, 1 - (missed.length / 3) * 0.85);
+                breathFill.style.width = `${Math.round(remainRatio * 100)}%`;
+            }
+            const st = document.getElementById('octopus-status-text');
+            if (st && clientOctopusState.peeking && !clientOctopusState.caught) {
+                st.textContent = clientOctopusState.isDiver
+                    ? `🐙 지금!! 파이프에서 낙지 출현! (${clientOctopusState.attempt}/3회)`
+                    : `🐙 낙지 출현!! ${clientOctopusState.diverName}님 잡기 시도 중! (${clientOctopusState.attempt}/3회)`;
+            }
+        }
+
+        function submitOctopusGrab() {
+            if (!clientOctopusState || !clientOctopusState.isDiver || clientOctopusState.caught || clientOctopusState.failed) return;
+            const nowPerf = performance.now();
+            if (nowPerf < octopusGrabCooldownUntil) return;
+            if (!clientOctopusState.peeking) {
+                octopusGrabCooldownUntil = nowPerf + 450;
+            }
+            if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
+                handleOctopusGrabOnHost(clientOctopusState.huntId, state.myId);
+            } else if (socket && socket.connected) {
+                socket.emit('SEND_TO_HOST', {
+                    roomCode,
+                    type: 'USE_ITEM',
+                    payload: {
+                        item: 'octopus_grab',
+                        index: -1,
+                        targetId: null,
+                        extraData: { huntId: clientOctopusState.huntId }
+                    }
+                });
+            }
+        }
+
+        function drawOctopusUnderwaterFrame(nowPerf) {
+            const canvas = document.getElementById('octopus-canvas');
+            if (!canvas || !clientOctopusState) return;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+            const W = canvas.width;
+            const H = canvas.height;
+            const t = nowPerf * 0.001;
+
+            // 1. Deep ocean background & light shafts
+            const grad = ctx.createLinearGradient(0, 0, 0, H);
+            grad.addColorStop(0, '#07406b');
+            grad.addColorStop(0.65, '#042544');
+            grad.addColorStop(1, '#021526');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H);
+
+            ctx.save();
+            for (let i = 0; i < 4; i++) {
+                ctx.fillStyle = 'rgba(125, 211, 252, 0.06)';
+                ctx.beginPath();
+                const rx = 60 + i * 105 + Math.sin(t * 0.8 + i) * 14;
+                ctx.moveTo(rx, 0);
+                ctx.lineTo(rx + 42, 0);
+                ctx.lineTo(rx + 95, H);
+                ctx.lineTo(rx - 20, H);
+                ctx.closePath();
+                ctx.fill();
+            }
+            ctx.restore();
+
+            // 2. Sandy seabed & rocks
+            ctx.fillStyle = '#1e293b';
+            ctx.beginPath();
+            ctx.moveTo(0, H - 42);
+            ctx.quadraticCurveTo(W * 0.35, H - 58, W, H - 36);
+            ctx.lineTo(W, H);
+            ctx.lineTo(0, H);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.ellipse(380, H - 40, 44, 24, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Swaying kelp
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 4;
+            [38, 56, 405].forEach((kx, idx) => {
+                ctx.beginPath();
+                ctx.moveTo(kx, H - 30);
+                ctx.quadraticCurveTo(kx + Math.sin(t * 2 + idx) * 14, H - 85, kx + Math.sin(t * 2.4 + idx) * 10, H - 130);
+                ctx.stroke();
+            });
+
+            // 3. Underwater Pipe on the right (where octopus hides & peeks)
+            const pipeX = 278;
+            const pipeY = 122;
+            const pipeW = 112;
+            const pipeH = 68;
+            // Pipe shadow & body
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(pipeX, pipeY, pipeW, pipeH);
+            const pipeGrad = ctx.createLinearGradient(pipeX, pipeY, pipeX, pipeY + pipeH);
+            pipeGrad.addColorStop(0, '#64748b');
+            pipeGrad.addColorStop(0.4, '#94a3b8');
+            pipeGrad.addColorStop(1, '#334155');
+            ctx.fillStyle = pipeGrad;
+            ctx.fillRect(pipeX + 12, pipeY, pipeW - 12, pipeH);
+            // Pipe collar lip facing diver
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(pipeX - 4, pipeY - 8, 22, pipeH + 16);
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(pipeX - 4, pipeY - 8, 22, pipeH + 16);
+            // Dark pipe interior hole
+            ctx.fillStyle = '#030712';
+            ctx.beginPath();
+            ctx.ellipse(pipeX + 2, pipeY + pipeH / 2, 11, pipeH / 2 - 4, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 4. Octopus emerging from the pipe!
+            let peekAmount = 0;
+            if (clientOctopusState.caught) {
+                peekAmount = 1.15;
+            } else if (clientOctopusState.peeking) {
+                const dur = clientOctopusState.peekDurationMs || 350;
+                const p = Math.max(0, Math.min(1, (nowPerf - clientOctopusState.peekStartAt) / dur));
+                peekAmount = Math.sin(p * Math.PI);
+            }
+            if (peekAmount > 0.02) {
+                ctx.save();
+                const ox = pipeX - peekAmount * 52;
+                const oy = pipeY + pipeH / 2 - (clientOctopusState.caught ? 26 : 0);
+                // Tentacles
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 5;
+                ctx.lineCap = 'round';
+                for (let k = -2; k <= 2; k++) {
+                    ctx.beginPath();
+                    ctx.moveTo(ox + 8, oy + k * 6);
+                    ctx.quadraticCurveTo(ox - 12, oy + k * 11 + Math.sin(t * 22 + k) * 5, ox - 20, oy + k * 14);
+                    ctx.stroke();
+                }
+                // Mantle/head
+                ctx.fillStyle = '#dc2626';
+                ctx.beginPath();
+                ctx.ellipse(ox + 6, oy - 4, 22, 17, 0, 0, Math.PI * 2);
+                ctx.fill();
+                // Googly eyes
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(ox - 6, oy - 7, 5, 0, Math.PI * 2);
+                ctx.arc(ox - 6, oy + 4, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#111';
+                ctx.beginPath();
+                ctx.arc(ox - 7.5, oy - 7, 2.5, 0, Math.PI * 2);
+                ctx.arc(ox - 7.5, oy + 4, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // 5. Diver on the left holding breath, watching the pipe intensely
+            const dx = 92;
+            const dy = 140 + Math.sin(t * 2.2) * 5;
+            ctx.save();
+            // Mesh bag on back
+            ctx.fillStyle = '#f97316';
+            ctx.strokeStyle = '#fdba74';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.ellipse(dx - 24, dy + 14, 14, 20, -0.3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            // Diver body (wetsuit)
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.ellipse(dx, dy + 10, 26, 15, -0.2, 0, Math.PI * 2);
+            ctx.fill();
+            // Diver legs
+            ctx.lineWidth = 8;
+            ctx.strokeStyle = '#1e293b';
+            ctx.beginPath();
+            ctx.moveTo(dx - 22, dy + 14);
+            ctx.lineTo(dx - 52, dy + 22 + Math.sin(t * 5) * 6);
+            ctx.stroke();
+            // Grabbing hand lunge
+            const isGrabbing = clientOctopusState.caught || (clientOctopusState.whiffUntil > nowPerf);
+            ctx.strokeStyle = '#ffdbac';
+            ctx.lineWidth = 7;
+            ctx.beginPath();
+            ctx.moveTo(dx + 14, dy + 6);
+            ctx.lineTo(isGrabbing ? dx + 135 : dx + 46, isGrabbing ? dy - 2 : dy + 8);
+            ctx.stroke();
+            // Diver head + diving mask + snorkel
+            ctx.fillStyle = '#ffdbac';
+            ctx.beginPath();
+            ctx.arc(dx + 22, dy - 6, 16, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.72)';
+            ctx.strokeStyle = '#020617';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.roundRect(dx + 24, dy - 14, 14, 12, 4);
+            ctx.fill();
+            ctx.stroke();
+            ctx.strokeStyle = '#facc15';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(dx + 26, dy + 4);
+            ctx.lineTo(dx + 16, dy + 4);
+            ctx.lineTo(dx + 16, dy - 28);
+            ctx.stroke();
+
+            // Floating bubbles from holding breath
+            ctx.fillStyle = 'rgba(224, 242, 254, 0.6)';
+            for (let b = 0; b < 5; b++) {
+                const by = ((dy - 30) - ((t * 36 + b * 24) % 90));
+                const bx = dx + 16 + Math.sin(t * 4 + b) * 6;
+                ctx.beginPath();
+                ctx.arc(bx, by, 2 + (b % 3), 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        function startOctopusCanvasLoop() {
+            if (octopusCanvasRaf) cancelAnimationFrame(octopusCanvasRaf);
+            const loop = (nowPerf) => {
+                if (!clientOctopusState) return;
+                drawOctopusUnderwaterFrame(nowPerf);
+                octopusCanvasRaf = requestAnimationFrame(loop);
+            };
+            octopusCanvasRaf = requestAnimationFrame(loop);
+        }
+
+        // 2D Stage Fallback Animations for "낙지잡아와"
+        function createOctopusDive2D(targetId) {
+            const stage = document.getElementById('stage');
+            const wrap = document.getElementById(`char-wrap-${targetId}`);
+            if (!stage || !wrap || currentViewMode === '3D') return;
+            wrap.classList.add('octopus-diving');
+            const sRect = stage.getBoundingClientRect();
+            const wRect = wrap.getBoundingClientRect();
+            const sx = wRect.left - sRect.left + wRect.width / 2;
+            const sy = wRect.top - sRect.top;
+
+            const el = document.createElement('div');
+            el.className = 'octopus-2d-overlay';
+            el.style.cssText = `position:absolute; left:${sx}px; top:${sy}px; z-index:48; pointer-events:none; font-size:1.8rem; transform:translate(-50%,-50%); transition: all 1.5s ease-in-out;`;
+            el.textContent = '🤿';
+            stage.appendChild(el);
+            const scale = Math.max(0.05, Number(window.__TEST_OCTOPUS_DIVE_SCALE) || 1);
+            setTimeout(() => {
+                el.style.top = `${Math.max(40, sRect.height * 0.25)}px`;
+                el.style.left = `${sRect.width * 0.5}px`;
+            }, Math.round(600 * scale));
+            setTimeout(() => {
+                el.style.transform = 'translate(-50%,-50%) rotate(180deg) scale(0.45)';
+                el.style.opacity = '0';
+                wrap.classList.remove('octopus-diving');
+            }, Math.round(2800 * scale));
+            setTimeout(() => el.remove(), Math.round(4100 * scale));
+        }
+
+        function createOctopusSuccessShow2D(targetId) {
+            const stage = document.getElementById('stage');
+            if (!stage || currentViewMode === '3D') return;
+            const sRect = stage.getBoundingClientRect();
+            const show = document.createElement('div');
+            show.className = 'octopus-2d-overlay';
+            show.style.cssText = `position:absolute; left:50%; top:${Math.round(sRect.height * 0.56)}px; transform:translate(-50%,-50%); z-index:55; pointer-events:none; font-size:2.1rem; filter:drop-shadow(0 4px 10px rgba(0,0,0,0.6));`;
+            show.textContent = '🐙🥢🧴 초장 한입 냠!';
+            stage.appendChild(show);
+            const scale = Math.max(0.05, Number(window.__TEST_OCTOPUS_SHOW_SCALE) || 1);
+            setTimeout(() => show.remove(), Math.round(6400 * scale));
         }
         // ────────────────────────────────────────────────────────────────────────
 
@@ -11004,6 +12131,9 @@
         window.closeBombDefuseModal = closeBombDefuseModal;
         window.submitDuelChoice = submitDuelChoice;
         window.closeDuelModalSpectator = closeDuelModalSpectator;
+        window.submitOctopusGrab = submitOctopusGrab;
+        window.closeOctopusModalSpectator = closeOctopusModalSpectator;
+        window.clearAllActiveOctopuses = clearAllActiveOctopuses;
         window.closeWordAddModal = closeWordAddModal;
         window.submitWordAdd = submitWordAdd;
         window.closeWordChangeModal = closeWordChangeModal;

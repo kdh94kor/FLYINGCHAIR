@@ -2448,7 +2448,7 @@
             }
 
             if (player.status === 'idle') {
-                if (slot.currentAnim !== 'salt-abduct' && slot.currentAnim !== 'salt-return') {
+                if (slot.currentAnim !== 'salt-abduct' && slot.currentAnim !== 'salt-return' && slot.currentAnim !== 'octopus-dive' && slot.currentAnim !== 'octopus-show') {
                     resetSlotToSeat(slot);
                 }
             } else if (!slot.currentAnim) {
@@ -2487,12 +2487,12 @@
                 charGroup.position.set(slot.x, 0.05, -11.0);
                 charGroup.rotation.set(0, 0, 0);
             }
-        } else if (status === 'dead' || status === 'dead-gator') {
+        } else if (status === 'dead' || status === 'dead-gator' || status === 'dead-octopus') {
             setNormalSkinAndHair();
             charGroup.visible = true;
-            hinge.rotation.x = -1.3;
+            hinge.rotation.x = status === 'dead-octopus' ? 0 : -1.3;
             const waterX = charGroup.position.z < -2 ? charGroup.position.x : slot.x;
-            const waterZ = charGroup.position.z < -2 ? charGroup.position.z : -11.0;
+            const waterZ = status === 'dead-octopus' ? -15.5 : (charGroup.position.z < -2 ? charGroup.position.z : -11.0);
             charGroup.position.set(waterX, -0.45, waterZ);
             charGroup.rotation.set(0, 0, Math.PI / 2);
             if (m) {
@@ -2504,7 +2504,7 @@
             setNormalSkinAndHair();
             hinge.rotation.x = -1.3;
             charGroup.visible = false;
-        } else if (status === 'salt-farm' || status === 'dueling') {
+        } else if (status === 'salt-farm' || status === 'dueling' || status === 'octopus-hunt') {
             setNormalSkinAndHair();
             hinge.rotation.x = 0;
             charGroup.visible = false;
@@ -3443,6 +3443,7 @@
 
         updateActiveMissiles(time, delta);
         updateActiveSaltAnims(time, delta);
+        updateActiveOctopusAnims(time, delta);
 
         for (let i = activeParticles.length - 1; i >= 0; i--) {
             const p = activeParticles[i];
@@ -3792,8 +3793,11 @@
         });
     }
 
+    function clamp01(v) {
+        return Math.max(0, Math.min(1, v));
+    }
+
     function updateActiveSaltAnims(time, delta) {
-        const clamp01 = v => Math.max(0, Math.min(1, v));
         for (let i = activeSaltAnims.length - 1; i >= 0; i--) {
             const anim = activeSaltAnims[i];
             if (anim.finished) {
@@ -3923,6 +3927,447 @@
                 } else {
                     finishSaltAnimImmediate(anim);
                     activeSaltAnims.splice(i, 1);
+                }
+            }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 14-B. Octopus Haerujil ("낙지잡아와") & Center Chojang Show 3D
+    // ─────────────────────────────────────────────────────────────
+    const activeOctopusAnims = [];
+
+    function buildDiveGearRig3D() {
+        const maskGroup = new THREE.Group();
+        const frameMat = createMat(0x111827, 0.35, 0.25);
+        const glassMat = new THREE.MeshStandardMaterial({
+            color: 0x38bdf8,
+            roughness: 0.12,
+            metalness: 0.1,
+            transparent: true,
+            opacity: 0.68
+        });
+        const snorkelMat = createMat(0xfacc15, 0.3, 0.1);
+
+        const visorFrame = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.26, 0.14), frameMat);
+        visorFrame.position.set(0, 0.05, 0.56);
+        maskGroup.add(visorFrame);
+
+        const visorGlass = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.18, 0.16), glassMat);
+        visorGlass.position.set(0, 0.05, 0.565);
+        maskGroup.add(visorGlass);
+
+        const strap = new THREE.Mesh(new THREE.TorusGeometry(0.52, 0.032, 6, 18), frameMat);
+        strap.rotation.x = Math.PI / 2;
+        strap.position.set(0, 0.05, 0.02);
+        maskGroup.add(strap);
+
+        // Bright yellow snorkel tube curving up past the right cheek
+        const mouthPiece = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.22, 8), snorkelMat);
+        mouthPiece.rotation.z = Math.PI / 2;
+        mouthPiece.position.set(0.18, -0.14, 0.54);
+        maskGroup.add(mouthPiece);
+
+        const snorkelStem = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.042, 0.72, 10), snorkelMat);
+        snorkelStem.position.set(0.36, 0.22, 0.44);
+        maskGroup.add(snorkelStem);
+
+        const snorkelTip = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 8), createMat(0xf97316, 0.3, 0.1));
+        snorkelTip.position.set(0.36, 0.59, 0.44);
+        maskGroup.add(snorkelTip);
+
+        // Woven mesh catch bag (망태기) worn on hip/back
+        const bagGroup = new THREE.Group();
+        const meshBag = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.19, 0.26, 0.52, 10, 1, false),
+            new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.75, wireframe: false })
+        );
+        bagGroup.add(meshBag);
+        const netRing = new THREE.Mesh(
+            new THREE.TorusGeometry(0.2, 0.03, 6, 14),
+            createMat(0x22d3ee, 0.4, 0.1)
+        );
+        netRing.rotation.x = Math.PI / 2;
+        netRing.position.y = 0.25;
+        bagGroup.add(netRing);
+        bagGroup.position.set(-0.46, 0.05, -0.05);
+        bagGroup.rotation.z = 0.28;
+
+        return { maskGroup, bagGroup };
+    }
+
+    function buildCaughtOctopus3D() {
+        const g = new THREE.Group();
+        const bodyMat = createMat(0xd94848, 0.42, 0.08);
+        const suckerMat = createMat(0xfda4af, 0.5, 0.05);
+
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 14, 12), bodyMat);
+        head.scale.set(0.9, 1.32, 0.9);
+        head.position.y = 0.26;
+        g.add(head);
+
+        const eyeWhite = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const eyeBlack = new THREE.MeshBasicMaterial({ color: 0x111111 });
+        [-1, 1].forEach(side => {
+            const ew = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), eyeWhite);
+            ew.position.set(side * 0.11, 0.2, 0.19);
+            g.add(ew);
+            const eb = new THREE.Mesh(new THREE.SphereGeometry(0.032, 8, 8), eyeBlack);
+            eb.position.set(side * 0.11, 0.2, 0.235);
+            g.add(eb);
+        });
+
+        for (let t = 0; t < 8; t++) {
+            const ang = (t / 8) * Math.PI * 2;
+            const leg = new THREE.Mesh(new THREE.ConeGeometry(0.048, 0.44, 7), bodyMat);
+            leg.position.set(Math.cos(ang) * 0.14, -0.08, Math.sin(ang) * 0.14);
+            leg.rotation.set(Math.sin(ang) * 0.55 + Math.PI, 0, -Math.cos(ang) * 0.55);
+            g.add(leg);
+            const tip = new THREE.Mesh(new THREE.SphereGeometry(0.025, 6, 6), suckerMat);
+            tip.position.set(Math.cos(ang) * 0.22, -0.24, Math.sin(ang) * 0.22);
+            g.add(tip);
+        }
+        return g;
+    }
+
+    function buildChojangBottle3D() {
+        const g = new THREE.Group();
+        const bottleMat = createMat(0xdc2626, 0.28, 0.12);
+        const capMat = createMat(0xf8fafc, 0.25, 0.1);
+        const labelMat = createMat(0xfef08a, 0.45, 0.05);
+
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.125, 0.44, 12), bottleMat);
+        body.position.y = 0.22;
+        g.add(body);
+
+        const label = new THREE.Mesh(new THREE.CylinderGeometry(0.116, 0.118, 0.18, 12), labelMat);
+        label.position.y = 0.21;
+        g.add(label);
+
+        const nozzle = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.17, 10), capMat);
+        nozzle.position.y = 0.52;
+        g.add(nozzle);
+
+        const squirt = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 8), createMat(0xef4444, 0.2, 0.05));
+        squirt.position.y = 0.64;
+        squirt.visible = false;
+        g.add(squirt);
+        g.userData.squirt = squirt;
+
+        return g;
+    }
+
+    function finishOctopusAnimImmediate(anim) {
+        if (!anim || anim.finished) return;
+        anim.finished = true;
+        const { slot } = anim;
+        if (anim.gearRig) {
+            if (anim.gearRig.maskGroup && anim.gearRig.maskGroup.parent) {
+                anim.gearRig.maskGroup.parent.remove(anim.gearRig.maskGroup);
+                disposeObjectGroup(anim.gearRig.maskGroup);
+            }
+            if (anim.gearRig.bagGroup && anim.gearRig.bagGroup.parent) {
+                anim.gearRig.bagGroup.parent.remove(anim.gearRig.bagGroup);
+                disposeObjectGroup(anim.gearRig.bagGroup);
+            }
+        }
+        if (anim.octoMesh && anim.octoMesh.parent) {
+            anim.octoMesh.parent.remove(anim.octoMesh);
+            disposeObjectGroup(anim.octoMesh);
+        }
+        if (anim.chojangMesh && anim.chojangMesh.parent) {
+            anim.chojangMesh.parent.remove(anim.chojangMesh);
+            disposeObjectGroup(anim.chojangMesh);
+        }
+        if (slot) {
+            if (slot.avatarMeshes) {
+                if (slot.avatarMeshes.headGroup) slot.avatarMeshes.headGroup.rotation.set(0, 0, 0);
+                if (slot.avatarMeshes.leftArm) slot.avatarMeshes.leftArm.rotation.set(0, 0, 0);
+                if (slot.avatarMeshes.rightArm) slot.avatarMeshes.rightArm.rotation.set(0, 0, 0);
+                if (slot.avatarMeshes.leftLeg) slot.avatarMeshes.leftLeg.rotation.set(0, 0, 0);
+                if (slot.avatarMeshes.rightLeg) slot.avatarMeshes.rightLeg.rotation.set(0, 0, 0);
+            }
+            if (anim.mode === 'dive') {
+                slot.currentAnim = null;
+                if (slot.charGroup) slot.charGroup.visible = false;
+                if (anim.onSubmerged) anim.onSubmerged();
+            } else {
+                slot.currentAnim = null;
+                resetSlotToSeat(slot);
+                if (anim.onFinished) anim.onFinished();
+            }
+        }
+    }
+
+    function triggerOctopusDive(playerId, onSubmerged) {
+        const slot = chairSlots.find(s => s.player && s.player.id === playerId);
+        if (!isInitialized || !slot) {
+            if (onSubmerged) setTimeout(onSubmerged, 200);
+            return;
+        }
+        for (let i = activeOctopusAnims.length - 1; i >= 0; i--) {
+            if (activeOctopusAnims[i].slot === slot) {
+                activeOctopusAnims[i].onSubmerged = null;
+                activeOctopusAnims[i].onFinished = null;
+                finishOctopusAnimImmediate(activeOctopusAnims[i]);
+                activeOctopusAnims.splice(i, 1);
+            }
+        }
+
+        const scale = Math.max(0.05, Number(window.__TEST_OCTOPUS_DIVE_SCALE) || 1);
+        const gearRig = buildDiveGearRig3D();
+        if (slot.avatarMeshes && slot.avatarMeshes.headGroup) {
+            gearRig.maskGroup.visible = false;
+            slot.avatarMeshes.headGroup.add(gearRig.maskGroup);
+        }
+        if (slot.avatarMeshes && slot.avatarMeshes.group) {
+            gearRig.bagGroup.visible = false;
+            slot.avatarMeshes.group.add(gearRig.bagGroup);
+        }
+
+        slot.currentAnim = 'octopus-dive';
+        slot.hinge.rotation.x = 0;
+        slot.charGroup.visible = true;
+        slot.charGroup.position.set(slot.x, 2.4, slot.z + 0.1);
+        slot.charGroup.rotation.set(0, 0, 0);
+
+        activeOctopusAnims.push({
+            mode: 'dive',
+            slot,
+            elapsed: 0,
+            total: 4.1 * scale,
+            scale,
+            shoreX: slot.x,
+            shoreZ: -3.2,
+            deepX: THREE.MathUtils.clamp(slot.x * 0.45, -4.5, 4.5),
+            deepZ: -17.5,
+            gearRig,
+            splashEntryDone: false,
+            splashDiveDone: false,
+            finished: false,
+            onSubmerged
+        });
+    }
+
+    function triggerOctopusSuccessShow(playerId, onFinished) {
+        const slot = chairSlots.find(s => s.player && s.player.id === playerId);
+        if (!isInitialized || !slot) {
+            if (onFinished) setTimeout(onFinished, 200);
+            return;
+        }
+        for (let i = activeOctopusAnims.length - 1; i >= 0; i--) {
+            if (activeOctopusAnims[i].slot === slot) {
+                activeOctopusAnims[i].onSubmerged = null;
+                activeOctopusAnims[i].onFinished = null;
+                finishOctopusAnimImmediate(activeOctopusAnims[i]);
+                activeOctopusAnims.splice(i, 1);
+            }
+        }
+
+        const scale = Math.max(0.05, Number(window.__TEST_OCTOPUS_SHOW_SCALE) || 1);
+        const octoMesh = buildCaughtOctopus3D();
+        const chojangMesh = buildChojangBottle3D();
+
+        if (slot.avatarMeshes && slot.avatarMeshes.rightArm) {
+            octoMesh.position.set(0, -0.78, 0.14);
+            octoMesh.scale.setScalar(1.05);
+            slot.avatarMeshes.rightArm.add(octoMesh);
+        }
+        if (slot.avatarMeshes && slot.avatarMeshes.leftArm) {
+            chojangMesh.position.set(0, -0.72, 0.15);
+            chojangMesh.visible = false;
+            slot.avatarMeshes.leftArm.add(chojangMesh);
+        }
+
+        slot.currentAnim = 'octopus-show';
+        slot.hinge.rotation.x = 0;
+        slot.charGroup.visible = true;
+        const deepX = THREE.MathUtils.clamp(slot.x * 0.45, -4.5, 4.5);
+        const deepZ = -14.8;
+        slot.charGroup.position.set(deepX, -1.2, deepZ);
+        slot.charGroup.rotation.set(0, 0, 0);
+
+        activeOctopusAnims.push({
+            mode: 'show',
+            slot,
+            elapsed: 0,
+            total: 6.8 * scale,
+            scale,
+            deepX,
+            deepZ,
+            centerX: 0,
+            centerZ: 9.2,
+            octoMesh,
+            chojangMesh,
+            surfaceSplashDone: false,
+            finished: false,
+            onFinished
+        });
+    }
+
+    function updateActiveOctopusAnims(time, delta) {
+        if (activeOctopusAnims.length === 0) return;
+        for (let i = activeOctopusAnims.length - 1; i >= 0; i--) {
+            const anim = activeOctopusAnims[i];
+            if (!anim || anim.finished) {
+                activeOctopusAnims.splice(i, 1);
+                continue;
+            }
+            anim.elapsed += delta;
+            const s = anim.scale || 1;
+            const t = anim.elapsed / s; // normalized logical seconds 0..total_base
+            const { slot } = anim;
+            const m = slot.avatarMeshes;
+
+            if (anim.mode === 'dive') {
+                if (t < 1.1) {
+                    // Phase 1: Walk to water's edge and put on mask, snorkel & catch bag
+                    const p = clamp01(t / 1.1);
+                    const px = slot.x;
+                    const py = THREE.MathUtils.lerp(2.4, 0.85, p) + Math.abs(Math.sin(t * 10)) * 0.12;
+                    const pz = THREE.MathUtils.lerp(slot.z + 0.1, anim.shoreZ, p);
+                    slot.charGroup.position.set(px, py, pz);
+                    slot.charGroup.rotation.set(0, Math.PI, 0);
+                    if (m) {
+                        m.leftLeg.rotation.x = Math.sin(t * 11) * 0.55;
+                        m.rightLeg.rotation.x = -Math.sin(t * 11) * 0.55;
+                        if (p >= 0.45) {
+                            if (anim.gearRig.maskGroup) anim.gearRig.maskGroup.visible = true;
+                            if (anim.gearRig.bagGroup) anim.gearRig.bagGroup.visible = true;
+                            m.rightArm.rotation.set(-1.35, 0, -0.35);
+                            m.leftArm.rotation.set(-0.95, 0, 0.35);
+                        }
+                    }
+                } else if (t < 2.9) {
+                    // Phase 2: Swim out to deep sea
+                    if (!anim.splashEntryDone) {
+                        anim.splashEntryDone = true;
+                        createWaterSplash(anim.shoreX, 0.2, anim.shoreZ - 1.2, 1.1);
+                    }
+                    const p = clamp01((t - 1.1) / 1.8);
+                    const px = THREE.MathUtils.lerp(anim.shoreX, anim.deepX, p);
+                    const pz = THREE.MathUtils.lerp(anim.shoreZ - 0.6, anim.deepZ, p);
+                    const bob = Math.sin(t * 8) * 0.12;
+                    slot.charGroup.position.set(px, -0.05 + bob, pz);
+                    slot.charGroup.lookAt(anim.deepX, -0.05, anim.deepZ - 4);
+                    if (m) {
+                        m.leftArm.rotation.set(t * 6.2, 0, 0.15);
+                        m.rightArm.rotation.set(t * 6.2 + Math.PI, 0, -0.15);
+                        m.leftLeg.rotation.x = Math.sin(t * 13) * 0.42;
+                        m.rightLeg.rotation.x = -Math.sin(t * 13) * 0.42;
+                    }
+                } else if (t < 4.1) {
+                    // Phase 3: Vertical duck dive (몸을 거꾸로 세워 물속 잠수)
+                    if (!anim.splashDiveDone) {
+                        anim.splashDiveDone = true;
+                        createWaterSplash(anim.deepX, 0.25, anim.deepZ, 1.35);
+                    }
+                    const p = clamp01((t - 2.9) / 1.2);
+                    const ease = p * p * (3 - 2 * p);
+                    const py = p < 0.35
+                        ? THREE.MathUtils.lerp(0.05, 0.65, p / 0.35)
+                        : THREE.MathUtils.lerp(0.65, -2.35, (p - 0.35) / 0.65);
+                    slot.charGroup.position.set(anim.deepX, py, anim.deepZ);
+                    slot.charGroup.rotation.set(ease * Math.PI * 0.92, Math.PI, 0);
+                    if (m) {
+                        m.leftArm.rotation.set(-2.6, 0, 0.2);
+                        m.rightArm.rotation.set(-2.6, 0, -0.2);
+                        m.leftLeg.rotation.x = Math.sin(t * 16) * 0.55;
+                        m.rightLeg.rotation.x = -Math.sin(t * 16) * 0.55;
+                    }
+                } else {
+                    finishOctopusAnimImmediate(anim);
+                    activeOctopusAnims.splice(i, 1);
+                }
+            } else if (anim.mode === 'show') {
+                if (!anim.surfaceSplashDone) {
+                    anim.surfaceSplashDone = true;
+                    createWaterSplash(anim.deepX, 0.2, anim.deepZ, 1.25);
+                }
+                if (t < 1.5) {
+                    // Phase 1: Pop out of water holding octopus high like Animal Crossing!
+                    const p = clamp01(t / 1.5);
+                    const py = p < 0.35 ? THREE.MathUtils.lerp(-1.2, 0.35, p / 0.35) : 0.2 + Math.sin(t * 7) * 0.12;
+                    slot.charGroup.position.set(anim.deepX, py, anim.deepZ);
+                    slot.charGroup.rotation.set(0, 0, 0);
+                    if (m) {
+                        m.rightArm.rotation.set(-2.45, 0, -0.25);
+                        m.leftArm.rotation.set(-0.3, 0, 0.4);
+                    }
+                    if (anim.octoMesh) anim.octoMesh.rotation.y = Math.sin(time * 9) * 0.3;
+                } else if (t < 3.0) {
+                    // Phase 2: Swim & walk ashore straight to center front of all users
+                    const p = clamp01((t - 1.5) / 1.5);
+                    const ease = p * p * (3 - 2 * p);
+                    const px = THREE.MathUtils.lerp(anim.deepX, anim.centerX, ease);
+                    const py = p < 0.55
+                        ? THREE.MathUtils.lerp(0.15, 0.72, p / 0.55)
+                        : THREE.MathUtils.lerp(0.72, 1.05, (p - 0.55) / 0.45) + Math.abs(Math.sin(t * 11)) * 0.1;
+                    const pz = THREE.MathUtils.lerp(anim.deepZ, anim.centerZ, ease);
+                    slot.charGroup.position.set(px, py, pz);
+                    slot.charGroup.rotation.set(0, 0, 0);
+                    if (m) {
+                        m.rightArm.rotation.set(-2.15, 0, -0.25);
+                        m.leftArm.rotation.set(Math.sin(t * 9) * 0.3, 0, 0.2);
+                        m.leftLeg.rotation.x = Math.sin(t * 12) * 0.5;
+                        m.rightLeg.rotation.x = -Math.sin(t * 12) * 0.5;
+                    }
+                } else if (t < 5.6) {
+                    // Phase 3: Center stage! Hold octopus in right hand, pull Chojang from pocket in left hand, take a bite & squeeze Chojang into mouth!
+                    const p = clamp01((t - 3.0) / 2.6);
+                    slot.charGroup.position.set(anim.centerX, 1.05, anim.centerZ);
+                    slot.charGroup.rotation.set(0, 0, 0);
+                    if (m) {
+                        m.leftLeg.rotation.x = 0;
+                        m.rightLeg.rotation.x = 0;
+                        if (p < 0.25) {
+                            // Pull chojang from pocket while showing off octopus
+                            m.rightArm.rotation.set(-1.95, 0, -0.35);
+                            m.leftArm.rotation.set(-0.35, 0, 0.35);
+                            if (anim.chojangMesh) {
+                                anim.chojangMesh.visible = true;
+                                anim.chojangMesh.rotation.set(0, 0, 0);
+                            }
+                        } else if (p < 0.6) {
+                            // Eat an octopus leg!
+                            m.rightArm.rotation.set(-1.55 + Math.sin(t * 18) * 0.12, 0.32, -0.15);
+                            m.leftArm.rotation.set(-0.7, 0, 0.25);
+                            if (m.headGroup) m.headGroup.rotation.x = Math.sin(t * 20) * 0.16;
+                        } else {
+                            // Squeeze chojang directly into mouth!
+                            m.rightArm.rotation.set(-1.75, 0, -0.4);
+                            m.leftArm.rotation.set(-1.62, -0.35, 0.25);
+                            if (anim.chojangMesh) {
+                                anim.chojangMesh.visible = true;
+                                anim.chojangMesh.rotation.set(0.3, 0, -1.75);
+                                if (anim.chojangMesh.userData.squirt) {
+                                    anim.chojangMesh.userData.squirt.visible = Math.sin(t * 18) > 0;
+                                }
+                            }
+                            if (m.headGroup) m.headGroup.rotation.x = -0.22 + Math.sin(t * 16) * 0.08;
+                        }
+                    }
+                } else if (t < 6.8) {
+                    // Phase 4: Walk cleanly back to own seat
+                    const p = clamp01((t - 5.6) / 1.2);
+                    const ease = p * p * (3 - 2 * p);
+                    if (anim.chojangMesh) anim.chojangMesh.visible = false;
+                    if (anim.octoMesh) anim.octoMesh.visible = false;
+                    const px = THREE.MathUtils.lerp(anim.centerX, slot.x, ease);
+                    const py = THREE.MathUtils.lerp(1.05, 2.4, ease) + Math.abs(Math.sin(t * 10)) * 0.08;
+                    const pz = THREE.MathUtils.lerp(anim.centerZ, slot.z + 0.1, ease);
+                    slot.charGroup.position.set(px, py, pz);
+                    slot.charGroup.rotation.set(0, 0, 0);
+                    if (m) {
+                        if (m.headGroup) m.headGroup.rotation.set(0, 0, 0);
+                        m.rightArm.rotation.set(Math.sin(t * 10) * 0.3, 0, 0);
+                        m.leftArm.rotation.set(-Math.sin(t * 10) * 0.3, 0, 0);
+                        m.leftLeg.rotation.x = Math.sin(t * 11) * 0.45;
+                        m.rightLeg.rotation.x = -Math.sin(t * 11) * 0.45;
+                    }
+                } else {
+                    finishOctopusAnimImmediate(anim);
+                    activeOctopusAnims.splice(i, 1);
                 }
             }
         }
@@ -4912,6 +5357,9 @@
             while (activeSaltAnims.length > 0) {
                 finishSaltAnimImmediate(activeSaltAnims.pop());
             }
+            while (activeOctopusAnims.length > 0) {
+                finishOctopusAnimImmediate(activeOctopusAnims.pop());
+            }
         }
     }
 
@@ -4940,6 +5388,8 @@
         triggerBombExplosion: triggerBombExplosion,
         triggerSaltAbduction: triggerSaltAbduction,
         triggerSaltReturn: triggerSaltReturn,
+        triggerOctopusDive: triggerOctopusDive,
+        triggerOctopusSuccessShow: triggerOctopusSuccessShow,
         showSpeechBubble: showSpeechBubble,
         updateRoamingAnimal: updateRoamingAnimal,
         handleResize: onResize,
