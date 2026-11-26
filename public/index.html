@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" translate="no">
 <head>
     <meta charset="UTF-8">
+    <meta name="google" content="notranslate">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
     <title>위험한 초대 - 실시간 플라잉 체어 (온라인 멀티플레이 파티게임)</title>
     <meta name="description" content="전설의 예능 '위험한 초대' 플라잉 체어가 실시간 웹게임으로 부활했습니다! 설치 없이 브라우저에서 친구들과 금기어 심리 서바이벌을 무료로 즐겨보세요.">
@@ -2623,8 +2624,8 @@
     </div>
 
     <!-- Duel Arena 3D POV Ring Modal -->
-    <div id="modal-duel-arena" class="modal-overlay hidden">
-        <div class="modal duel-modal">
+    <div id="modal-duel-arena" class="modal-overlay hidden notranslate" translate="no">
+        <div class="modal duel-modal notranslate" translate="no">
             <div class="duel-top-bar">
                 <span id="duel-round-badge" class="duel-round-pill">🥊 ROUND 1 / 3 (3판 2선승)</span>
                 <span id="duel-timer-text" class="duel-timer-pill">5.0초</span>
@@ -8449,8 +8450,6 @@
             }
 
             const controls = document.getElementById('duel-controls-area');
-            const btnL = document.getElementById('btn-duel-left');
-            const btnR = document.getElementById('btn-duel-right');
             const banner = document.getElementById('duel-role-banner');
             const hint = document.getElementById('duel-sub-hint');
 
@@ -8462,18 +8461,16 @@
                 if (hint) hint.textContent = isFinal
                     ? '적중 시 즉시 최종 승리! 상대가 피하면 상대방이 승리합니다!'
                     : '5초 뒤 내 팔이 슬로우모션으로 뻗습니다! 맞혀야만 승이 쌓입니다.';
-                if (btnL) { btnL.disabled = false; btnL.className = 'btn duel-choice-btn atk-mode'; btnL.textContent = '🥊 레프트'; }
-                if (btnR) { btnR.disabled = false; btnR.className = 'btn duel-choice-btn atk-mode'; btnR.textContent = '🥊 라이트'; }
+                renderDuelChoiceButtons('attacker', null, false);
             } else if (state.myId === snap.defenderId) {
                 if (controls) controls.classList.remove('hidden');
                 if (banner) banner.textContent = isFinal
-                    ? '⚡ 파이널매치 회피! (피하기 레프트 / 라이트 선택)'
-                    : '💨 나의 회피 차례! (피하기 레프트 / 라이트 선택)';
+                    ? '⚡ 파이널매치 회피! (피하기 레프트 / 피하기 라이트 선택)'
+                    : '💨 나의 회피 차례! (피하기 레프트 / 피하기 라이트 선택)';
                 if (hint) hint.textContent = isFinal
                     ? '이번 공격을 피하기만 해도 즉시 최종 승리합니다!'
                     : '5초 뒤 선택한 방향으로 얼굴을 피해 공격을 흘리세요! (회피 시 무승부)';
-                if (btnL) { btnL.disabled = false; btnL.className = 'btn duel-choice-btn def-mode'; btnL.textContent = '💨 피하기 레프트'; }
-                if (btnR) { btnR.disabled = false; btnL.className = 'btn duel-choice-btn def-mode'; btnL.textContent = '💨 피하기 라이트'; }
+                renderDuelChoiceButtons('defender', null, false);
             } else {
                 if (controls) controls.classList.add('hidden');
                 const atkName = p1IsAtk ? snap.challengerName : snap.targetName;
@@ -8500,6 +8497,39 @@
             duelTimerRaf = requestAnimationFrame(tick);
         }
 
+        // SSOT: Always recreate fresh button DOM nodes per round/selection to prevent stale classes
+        // or Chrome/Edge built-in page translator <font> MutationObserver corruption across round swaps.
+        function renderDuelChoiceButtons(roleMode, selectedDir, isDisabled) {
+            const controls = document.getElementById('duel-controls-area');
+            if (!controls) return;
+            controls.setAttribute('translate', 'no');
+            controls.classList.add('notranslate');
+
+            const isAtk = roleMode === 'attacker';
+            const modeCls = isAtk ? 'atk-mode' : 'def-mode';
+            const leftLabel = isAtk ? '🥊 레프트' : '💨 피하기 레프트';
+            const rightLabel = isAtk ? '🥊 라이트' : '💨 피하기 라이트';
+
+            const makeBtn = (dir, id, text) => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.id = id;
+                b.dataset.duelDir = dir;
+                b.dataset.duelRole = roleMode;
+                b.setAttribute('translate', 'no');
+                b.className = `btn duel-choice-btn ${modeCls} notranslate${selectedDir === dir ? ' selected' : ''}`;
+                b.disabled = !!isDisabled;
+                b.textContent = text;
+                b.addEventListener('click', () => submitDuelChoice(dir));
+                return b;
+            };
+
+            controls.replaceChildren(
+                makeBtn('left', 'btn-duel-left', leftLabel),
+                makeBtn('right', 'btn-duel-right', rightLabel)
+            );
+        }
+
         function submitDuelChoice(dir) {
             if (!clientDuelState || clientDuelState.animating) return;
             if (dir !== 'left' && dir !== 'right') return;
@@ -8511,13 +8541,13 @@
             const arena3D = getDuelArena3D();
             if (arena3D) arena3D.setPreChoice(dir);
 
-            const btnL = document.getElementById('btn-duel-left');
-            const btnR = document.getElementById('btn-duel-right');
-            if (btnL) btnL.classList.toggle('selected', dir === 'left');
-            if (btnR) btnR.classList.toggle('selected', dir === 'right');
+            const roleMode = (state.myId === clientDuelState.attackerId) ? 'attacker' : 'defender';
+            renderDuelChoiceButtons(roleMode, dir, false);
 
             const hint = document.getElementById('duel-sub-hint');
-            const label = dir === 'left' ? '레프트' : '라이트';
+            const label = roleMode === 'defender'
+                ? (dir === 'left' ? '피하기 레프트' : '피하기 라이트')
+                : (dir === 'left' ? '레프트' : '라이트');
             if (hint) hint.textContent = `✅ [${label}] 선택 완료! (5초 종료 전까지 변경 가능)`;
 
             if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
@@ -8547,15 +8577,15 @@
             const flash = document.getElementById('duel-screen-flash');
             const timerText = document.getElementById('duel-timer-text');
             const timerFill = document.getElementById('duel-timer-fill');
-            const btnL = document.getElementById('btn-duel-left');
-            const btnR = document.getElementById('btn-duel-right');
+            const controls = document.getElementById('duel-controls-area');
             const banner = document.getElementById('duel-role-banner');
             const hint = document.getElementById('duel-sub-hint');
 
             if (timerText) timerText.textContent = 'SLOW-MO';
             if (timerFill) timerFill.style.width = '0%';
-            if (btnL) btnL.disabled = true;
-            if (btnR) btnR.disabled = true;
+            if (controls) {
+                controls.querySelectorAll('button').forEach(b => { b.disabled = true; });
+            }
 
             const p1IsAtk = res.attackerId === clientDuelState.challengerId;
             const atkName = p1IsAtk ? clientDuelState.challengerName : clientDuelState.targetName;
@@ -8658,6 +8688,14 @@
             const snap = duelPlayer.activeDuel;
             if (!clientDuelState && (state.myId === snap.challengerId || state.myId === snap.targetId)) {
                 openDuelArenaModal(snap);
+            } else if (
+                clientDuelState &&
+                clientDuelState.duelId === snap.duelId &&
+                !clientDuelState.animating &&
+                snap.phase === 'choosing' &&
+                (clientDuelState.round !== snap.round || clientDuelState.attackerId !== snap.attackerId)
+            ) {
+                startDuelRoundClientUI(snap);
             }
         }
         // ────────────────────────────────────────────────────────────────────────
