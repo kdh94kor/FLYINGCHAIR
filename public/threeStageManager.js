@@ -2495,7 +2495,17 @@
             const waterZ = status === 'dead-octopus' ? -15.5 : (charGroup.position.z < -2 ? charGroup.position.z : -11.0);
             charGroup.position.set(waterX, -0.45, waterZ);
             charGroup.rotation.set(0, 0, Math.PI / 2);
-            if (m) {
+            const isOctoBomb = (status === 'dead-octopus' && slot.player && slot.player.octopusBombDead);
+            if (isOctoBomb && m) {
+                if (m.skinMat) m.skinMat.color.setHex(0x1e1e1e);
+                if (m.cheeks) m.cheeks.forEach(c => { c.visible = false; });
+                if (m.normalHairGroup) m.normalHairGroup.visible = false;
+                if (m.bombCharredHairGroup) m.bombCharredHairGroup.visible = true;
+                m.headGroup.rotation.set(0, 0, 0);
+                m.normalFaceGroup.visible = false;
+                m.deadFaceGroup.visible = false;
+                if (m.bombFaceGroup) m.bombFaceGroup.visible = true;
+            } else if (m) {
                 m.headGroup.rotation.set(0, 0, 0);
                 m.normalFaceGroup.visible = false;
                 m.deadFaceGroup.visible = true;
@@ -4205,6 +4215,30 @@
         });
     }
 
+    function triggerOctopusWaterExplosion(playerId) {
+        if (!isInitialized) return;
+        const slot = chairSlots.find(s => s.player && s.player.id === playerId);
+        const deepX = slot ? THREE.MathUtils.clamp(slot.x * 0.45, -4.5, 4.5) : 0;
+        const deepZ = -15.5;
+        createExplosion3D(deepX, 0.45, deepZ);
+        createWaterSplash(deepX, 0.3, deepZ, 1.85);
+        if (!sharedSmokeGeo) sharedSmokeGeo = new THREE.SphereGeometry(0.24, 6, 6);
+        for (let i = 0; i < 14; i++) {
+            const soot = new THREE.Mesh(
+                sharedSmokeGeo,
+                new THREE.MeshBasicMaterial({ color: i % 2 === 0 ? 0x1b1b1b : 0x3d3d3d, transparent: true, opacity: 0.9 })
+            );
+            soot.position.set(deepX + (Math.random() - 0.5) * 0.9, 0.4, deepZ + (Math.random() - 0.5) * 0.9);
+            soot.velocity = new THREE.Vector3((Math.random() - 0.5) * 3.8, 2.2 + Math.random() * 3.6, (Math.random() - 0.5) * 3.8);
+            soot.gravity = 1.6;
+            soot.life = 1.0 + Math.random() * 0.45;
+            soot.maxLife = soot.life;
+            soot.growRate = 2.4;
+            scene.add(soot);
+            activeParticles.push(soot);
+        }
+    }
+
     function updateActiveOctopusAnims(time, delta) {
         if (activeOctopusAnims.length === 0) return;
         for (let i = activeOctopusAnims.length - 1; i >= 0; i--) {
@@ -5390,6 +5424,7 @@
         triggerSaltReturn: triggerSaltReturn,
         triggerOctopusDive: triggerOctopusDive,
         triggerOctopusSuccessShow: triggerOctopusSuccessShow,
+        triggerOctopusWaterExplosion: triggerOctopusWaterExplosion,
         showSpeechBubble: showSpeechBubble,
         updateRoamingAnimal: updateRoamingAnimal,
         handleResize: onResize,

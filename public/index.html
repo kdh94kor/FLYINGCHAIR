@@ -351,7 +351,7 @@
         .status-idle .exp-idle, .status-walking .exp-idle { display: block; }
         .status-flying .exp-fly { display: block; }
         .status-swimming .exp-water { display: block; }
-        .status-dead .exp-dead, .status-dead-gator .exp-dead, .status-dead-missile .exp-dead, .status-snatched .exp-dead, .status-dead-octopus .exp-dead { display: block; }
+        .status-dead .exp-dead, .status-dead-gator .exp-dead, .status-dead-missile .exp-dead, .status-snatched .exp-dead, .status-dead-octopus:not(.status-dead-bomb) .exp-dead { display: block; }
         .status-salt-farm:not(.salt-abducting), .status-dueling, .status-octopus-hunt:not(.octopus-diving) { opacity: 0; pointer-events: none; transition: opacity 0.25s; }
         .status-dead-duel .exp-duel { display: block; }
         .status-dead-bomb .avatar-normal-hair { display: none; }
@@ -3754,6 +3754,7 @@
                     p.reflectBuff = false;
                     p.scapegoatTargetId = null;
                     p.scapegoatTargetName = null;
+                    p.octopusBombDead = false;
                 });
             }
             if (typeof renderMyBuffHud === 'function') renderMyBuffHud();
@@ -4219,6 +4220,7 @@
                         if (!inc.activeBomb) existing.activeBomb = null;
                         if (!inc.activeDuel) existing.activeDuel = null;
                         if (!inc.activeOctopus) existing.activeOctopus = null;
+                        existing.octopusBombDead = !!inc.octopusBombDead;
                         existing.reflectBuff = !!inc.reflectBuff;
                         existing.scapegoatTargetId = inc.scapegoatTargetId || null;
                         existing.scapegoatTargetName = inc.scapegoatTargetName || null;
@@ -4360,6 +4362,7 @@
                         if (p.flyTimeouts) { p.flyTimeouts.forEach(clearTimeout); p.flyTimeouts = []; }
                         p.flySequenceId = (p.flySequenceId || 0) + 1;
                         p.penaltyEndTime = null;
+                        p.octopusBombDead = false;
                         clearCharacterPose(p.id);
                         finalizeIdle(p.id);
                         stateChanged = true;
@@ -4369,6 +4372,7 @@
                         if (p.reviveTimeout) clearTimeout(p.reviveTimeout);
                         p.reviveTimeout = setTimeout(() => {
                             if (state.room.status !== 'playing') return;
+                            p.octopusBombDead = false;
                             clearCharacterPose(p.id);
                             p.penaltyEndTime = null;
                             p.reviveTimeout = null;
@@ -4875,7 +4879,8 @@
             const keepSaltAbducting = p.status === PlayerState.STATUS.SALT_FARM && (wasSaltAbducting || (p.saltFarm && p.saltFarm.abducting));
             const wasOctoDiving = wrap.classList.contains('octopus-diving');
             const keepOctoDiving = p.status === PlayerState.STATUS.OCTOPUS_HUNT && (wasOctoDiving || (p.activeOctopus && p.activeOctopus.phase === 'diving'));
-            wrap.className = `character-wrapper status-${p.status}` + (keepSaltAbducting ? ' salt-abducting' : '') + (keepOctoDiving ? ' octopus-diving' : '');
+            const octoBombCharred = p.status === PlayerState.STATUS.DEAD_OCTOPUS && !!p.octopusBombDead;
+            wrap.className = `character-wrapper status-${p.status}` + (keepSaltAbducting ? ' salt-abducting' : '') + (keepOctoDiving ? ' octopus-diving' : '') + (octoBombCharred ? ' status-dead-bomb' : '');
             if (p.status === PlayerState.STATUS.DEAD_MISSILE) {
                 applyMissileStunPose(p.id, opts.animate !== false, false);
             } else if (PlayerState.isHealthySeated(p) || p.status === PlayerState.STATUS.DEAD_BOMB || p.status === PlayerState.STATUS.DEAD_DUEL || p.status === PlayerState.STATUS.DEAD_OCTOPUS) {
@@ -9674,7 +9679,9 @@
                 maxAttempts: h.maxAttempts,
                 missedAttempts: [...(h.missedAttempts || [])],
                 peeking: !!h.peeking,
-                peekDurationMs: h.peekDurationMs || 0
+                peekKind: h.peekKind || 'octopus',
+                peekDurationMs: h.peekDurationMs || 0,
+                explodedByBomb: !!h.explodedByBomb
             };
         }
 
@@ -9731,6 +9738,7 @@
             if (target.reviveTimeout) { clearTimeout(target.reviveTimeout); target.reviveTimeout = null; }
             target.pendingMissileStunMs = 0;
             target.penaltyEndTime = null;
+            target.octopusBombDead = false;
             clearCharacterPose(target.id);
 
             const huntId = 'octo-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
@@ -9745,9 +9753,14 @@
                 maxAttempts: 3,
                 missedAttempts: [],
                 peeking: false,
+                peekKind: 'octopus',
                 peekStartAt: 0,
                 peekDurationMs: 0,
+                peekGraceMs: 75,
+                consecutiveBombs: 0,
+                totalBombsShown: 0,
                 caught: false,
+                explodedByBomb: false,
                 startedAt: Date.now(),
                 diveTimerId: null,
                 waitTimerId: null,
@@ -9810,17 +9823,43 @@
 
         function triggerOctopusPeekOnHost(huntId) {
             const h = activeOctopuses[huntId];
-            if (!h || h.phase !== 'underwater' || h.caught || !state.room || state.room.status !== 'playing') return;
+            if (!h || h.phase !== 'underwater' || h.caught || h.explodedByBomb || !state.room || state.room.status !== 'playing') return;
             const target = findPlayerById(h.diverId);
             if (!target) {
                 cleanupOctopusesForPlayer(h.diverId);
                 return;
             }
-            h.attempt += 1;
-            const peekMs = Number(window.__TEST_OCTOPUS_PEEK_MS) || (330 + Math.floor(Math.random() * 61)); // 0.33~0.39s
+
+            // Decide whether an octopus or an explosive bomb decoy emerges from the pipe
+            const forcedKind = window.__TEST_OCTOPUS_FORCE_KIND;
+            let peekKind;
+            if (forcedKind === 'bomb' || forcedKind === 'octopus') {
+                peekKind = forcedKind;
+            } else if (h.consecutiveBombs < 2 && h.totalBombsShown < 3 && Math.random() < 0.40) {
+                peekKind = 'bomb';
+            } else {
+                peekKind = 'octopus';
+            }
+
+            let peekMs;
+            let graceMs;
+            if (peekKind === 'bomb') {
+                h.consecutiveBombs += 1;
+                h.totalBombsShown += 1;
+                peekMs = Number(window.__TEST_OCTOPUS_PEEK_MS) || (250 + Math.floor(Math.random() * 71)); // 0.25~0.32s bomb decoy
+                graceMs = 90;
+            } else {
+                h.consecutiveBombs = 0;
+                h.attempt += 1;
+                peekMs = Number(window.__TEST_OCTOPUS_PEEK_MS) || (210 + Math.floor(Math.random() * 51)); // 0.21~0.26s sharp octopus window
+                graceMs = 75;
+            }
+
+            h.peekKind = peekKind;
             h.peeking = true;
             h.peekStartAt = Date.now();
             h.peekDurationMs = peekMs;
+            h.peekGraceMs = graceMs;
 
             const snap = buildPublicOctopusSnapshot(h);
             target.activeOctopus = snap;
@@ -9829,30 +9868,57 @@
             }
             handleOctopusNetworkEvent('octopus_peek', snap);
 
-            // Network grace (+220ms) on Host while client renders exact 0.3~0.4s window
             if (h.peekTimerId) clearTimeout(h.peekTimerId);
             const currentAttempt = h.attempt;
+            const expectedStartAt = h.peekStartAt;
             h.peekTimerId = setTimeout(() => {
                 h.peekTimerId = null;
-                onOctopusPeekExpiredOnHost(huntId, currentAttempt);
-            }, peekMs + 220);
+                onOctopusPeekExpiredOnHost(huntId, currentAttempt, peekKind, expectedStartAt);
+            }, peekMs + graceMs);
 
             if (target.isBot) {
-                const reactDelay = Math.max(120, Math.min(peekMs - 40, 160 + Math.floor(Math.random() * 160)));
-                if (h.botTimerId) clearTimeout(h.botTimerId);
-                h.botTimerId = setTimeout(() => {
-                    h.botTimerId = null;
-                    if (Math.random() < 0.45) {
-                        handleOctopusGrabOnHost(huntId, target.id);
+                if (peekKind === 'octopus') {
+                    const reactDelay = Math.max(105, Math.min(peekMs - 25, 115 + Math.floor(Math.random() * 115)));
+                    if (h.botTimerId) clearTimeout(h.botTimerId);
+                    h.botTimerId = setTimeout(() => {
+                        h.botTimerId = null;
+                        if (Math.random() < 0.42) {
+                            handleOctopusGrabOnHost(huntId, target.id);
+                        }
+                    }, reactDelay);
+                } else {
+                    // 20% chance a bot gets baited by the bomb decoy
+                    if (Math.random() < 0.20) {
+                        const baitDelay = Math.max(110, Math.min(peekMs - 25, 120 + Math.floor(Math.random() * 90)));
+                        if (h.botTimerId) clearTimeout(h.botTimerId);
+                        h.botTimerId = setTimeout(() => {
+                            h.botTimerId = null;
+                            handleOctopusGrabOnHost(huntId, target.id);
+                        }, baitDelay);
                     }
-                }, reactDelay);
+                }
             }
         }
 
-        function onOctopusPeekExpiredOnHost(huntId, attemptNum) {
+        function onOctopusPeekExpiredOnHost(huntId, attemptNum, peekKind, expectedStartAt) {
             const h = activeOctopuses[huntId];
-            if (!h || h.phase !== 'underwater' || h.caught || h.attempt !== attemptNum) return;
+            if (!h || h.phase !== 'underwater' || h.caught || h.explodedByBomb || h.peekStartAt !== expectedStartAt) return;
             h.peeking = false;
+
+            if (peekKind === 'bomb') {
+                // Bomb dodged cleanly: does NOT consume any of the 3 real octopus attempts
+                const snap = buildPublicOctopusSnapshot(h);
+                const target = findPlayerById(h.diverId);
+                if (target) target.activeOctopus = snap;
+                if (currentMode === MODE_HOST) {
+                    broadcast({ type: 'EVENT_ITEM', payload: { senderId: h.senderId, item: 'octopus_bomb_dodge', targetId: h.diverId, extraData: snap } });
+                }
+                handleOctopusNetworkEvent('octopus_bomb_dodge', snap);
+                scheduleNextOctopusPeekOnHost(huntId);
+                return;
+            }
+
+            if (h.attempt !== attemptNum) return;
             if (!h.missedAttempts.includes(attemptNum)) h.missedAttempts.push(attemptNum);
 
             const snap = buildPublicOctopusSnapshot(h);
@@ -9872,17 +9938,64 @@
 
         function handleOctopusGrabOnHost(huntId, playerId) {
             const h = activeOctopuses[huntId];
-            if (!h || h.phase !== 'underwater' || h.caught || h.diverId !== playerId || !state.room || state.room.status !== 'playing') return;
+            if (!h || h.phase !== 'underwater' || h.caught || h.explodedByBomb || h.diverId !== playerId || !state.room || state.room.status !== 'playing') return;
             const now = Date.now();
-            if (h.peeking && (now - h.peekStartAt <= h.peekDurationMs + 220)) {
+            const grace = h.peekGraceMs || 75;
+            if (h.peeking && (now - h.peekStartAt <= h.peekDurationMs + grace)) {
+                if (h.peekKind === 'bomb') {
+                    resolveOctopusBombDeathOnHost(huntId);
+                    return;
+                }
                 resolveOctopusCatchOnHost(huntId);
                 return;
             }
-            // Early whiff when octopus is still inside the pipe
+            // Early whiff when pipe is empty
             if (currentMode === MODE_HOST) {
                 broadcast({ type: 'EVENT_ITEM', payload: { senderId: h.senderId, item: 'octopus_whiff', targetId: h.diverId, extraData: { huntId, attempt: h.attempt } } });
             }
             handleOctopusNetworkEvent('octopus_whiff', { huntId, attempt: h.attempt });
+        }
+
+        function resolveOctopusBombDeathOnHost(huntId) {
+            const h = activeOctopuses[huntId];
+            if (!h || h.explodedByBomb) return;
+            h.explodedByBomb = true;
+            h.peeking = false;
+            h.phase = 'failed';
+            if (h.waitTimerId) { clearTimeout(h.waitTimerId); h.waitTimerId = null; }
+            if (h.peekTimerId) { clearTimeout(h.peekTimerId); h.peekTimerId = null; }
+            if (h.botTimerId) { clearTimeout(h.botTimerId); h.botTimerId = null; }
+
+            const target = findPlayerById(h.diverId);
+            const snap = buildPublicOctopusSnapshot(h);
+            if (currentMode === MODE_HOST) {
+                broadcast({ type: 'EVENT_ITEM', payload: { senderId: h.senderId, item: 'octopus_bomb_explode', targetId: h.diverId, extraData: snap } });
+            }
+            handleOctopusNetworkEvent('octopus_bomb_explode', snap);
+
+            delete activeOctopuses[huntId];
+            if (!target) return;
+
+            target.activeOctopus = null;
+            target.octopusBombDead = true;
+            if (target.stats) {
+                target.stats.octopus = (target.stats.octopus || 0) + 1;
+                target.stats.bomb = (target.stats.bomb || 0) + 1;
+            }
+            target.penaltyEndTime = Date.now() + OCTOPUS_DEATH_STUN_MS;
+            broadcastPublicSysMessage(`💥 [해루질 폭사!] ${target.name}님이 파이프에서 나온 폭탄을 덥석 잡아 수중 폭발로 사망했습니다!! (45초 후 부활)`);
+            updateStatus(target.id, PlayerState.STATUS.DEAD_OCTOPUS);
+
+            if (target.reviveTimeout) clearTimeout(target.reviveTimeout);
+            target.reviveTimeout = setTimeout(() => {
+                if (!state.room || state.room.status !== 'playing') return;
+                target.octopusBombDead = false;
+                clearCharacterPose(target.id);
+                target.penaltyEndTime = null;
+                target.reviveTimeout = null;
+                broadcastPublicSysMessage(`✨ ${target.name}님이 수중 폭발 충격에서 가까스로 부활했습니다!`);
+                updateStatus(target.id, PlayerState.STATUS.IDLE);
+            }, OCTOPUS_DEATH_STUN_MS);
         }
 
         function resolveOctopusCatchOnHost(huntId) {
@@ -9952,6 +10065,7 @@
             if (!target) return;
 
             target.activeOctopus = null;
+            target.octopusBombDead = false;
             if (target.stats) target.stats.octopus = (target.stats.octopus || 0) + 1;
             target.penaltyEndTime = Date.now() + OCTOPUS_DEATH_STUN_MS;
             broadcastPublicSysMessage(`🫧 [해루질 실패] ${target.name}님이 3회 안에 낙지를 잡지 못해 숨이 딸려 물속에서 기절했습니다! (45초 후 부활)`);
@@ -9985,18 +10099,52 @@
                 }
                 if (clientOctopusState && clientOctopusState.huntId === data.huntId) {
                     clientOctopusState.attempt = data.attempt;
+                    clientOctopusState.peekKind = data.peekKind || 'octopus';
                     clientOctopusState.peeking = true;
                     clientOctopusState.peekStartAt = performance.now();
-                    clientOctopusState.peekDurationMs = data.peekDurationMs || 350;
-                    playTone(1040, 'triangle', 0.08, 0.16);
+                    clientOctopusState.peekDurationMs = data.peekDurationMs || (clientOctopusState.peekKind === 'bomb' ? 280 : 230);
+                    if (clientOctopusState.peekKind === 'bomb') {
+                        playTone(420, 'sawtooth', 0.06, 0.14);
+                        playTone(1580, 'square', 0.05, 0.10);
+                    } else {
+                        playTone(1040, 'triangle', 0.07, 0.16);
+                    }
                     updateOctopusModalUI();
                     addOctopusClientTimer(() => {
-                        if (clientOctopusState && clientOctopusState.huntId === data.huntId && clientOctopusState.peeking && !clientOctopusState.caught) {
+                        if (clientOctopusState && clientOctopusState.huntId === data.huntId && clientOctopusState.peeking && !clientOctopusState.caught && !clientOctopusState.explodedByBomb) {
                             clientOctopusState.peeking = false;
                             updateOctopusModalUI();
                         }
                     }, clientOctopusState.peekDurationMs);
                 }
+            } else if (eventType === 'octopus_bomb_dodge') {
+                if (clientOctopusState && clientOctopusState.huntId === data.huntId) {
+                    clientOctopusState.peeking = false;
+                    clientOctopusState.whiffUntil = 0;
+                    playTone(620, 'sine', 0.08, 0.12);
+                    const st = document.getElementById('octopus-status-text');
+                    if (st) st.textContent = '😮 휴! 파이프에서 나온 폭탄을 무사히 흘려보냈습니다! (기회 유지)';
+                    updateOctopusModalUI();
+                }
+            } else if (eventType === 'octopus_bomb_explode') {
+                if (clientOctopusState && clientOctopusState.huntId === data.huntId) {
+                    clientOctopusState.failed = true;
+                    clientOctopusState.explodedByBomb = true;
+                    clientOctopusState.explodeStartAt = performance.now();
+                    clientOctopusState.peeking = false;
+                    const st = document.getElementById('octopus-status-text');
+                    if (st) st.textContent = `💥 펑!! 폭탄을 잡아버렸습니다!! ${clientOctopusState.diverName}님 수중 폭사! (45초 후 부활)`;
+                    const grabBtn = document.getElementById('btn-octopus-grab');
+                    if (grabBtn) grabBtn.disabled = true;
+                    updateOctopusModalUI();
+                }
+                try { playBombExplosionSound(); } catch (e) {}
+                if (currentViewMode === '3D' && window.ThreeStageManager && window.ThreeStageManager.isInitialized() && typeof window.ThreeStageManager.triggerOctopusWaterExplosion === 'function') {
+                    window.ThreeStageManager.triggerOctopusWaterExplosion(data.diverId);
+                } else if (typeof createBombExplosionEffect === 'function') {
+                    createBombExplosionEffect(data.diverId);
+                }
+                addOctopusClientTimer(() => closeOctopusModalUI(), 1050);
             } else if (eventType === 'octopus_miss') {
                 if (clientOctopusState && clientOctopusState.huntId === data.huntId) {
                     clientOctopusState.peeking = false;
@@ -10069,7 +10217,7 @@
             const badge = document.getElementById('octopus-mode-badge');
             if (badge) {
                 badge.textContent = isDiver
-                    ? '🐙 해루질 중 (0.3~0.4초 찰나에 잡기!)'
+                    ? '🐙 해루질 중 (찰나 포착! 💣폭탄 주의!)'
                     : `👀 ${snap.diverName}님 해루질 실시간 화면 공유`;
             }
             const grabBtn = document.getElementById('btn-octopus-grab');
@@ -10084,8 +10232,8 @@
             const st = document.getElementById('octopus-status-text');
             if (st) {
                 st.textContent = isDiver
-                    ? '숨을 참고 파이프를 주시하세요! 낙지가 나오면 즉시 [잡기!] 클릭!'
-                    : `👀 ${snap.diverName}님이 숨을 참고 파이프에서 낙지가 나오길 기다리는 중...`;
+                    ? '파이프를 집중하세요! 🐙낙지는 즉시 [잡기!], 💣폭탄은 절대 누르지 마세요!'
+                    : `👀 ${snap.diverName}님이 숨을 참고 파이프를 주시하는 중... (💣폭탄 함정 주의!)`;
             }
 
             updateOctopusModalUI();
@@ -10135,7 +10283,7 @@
                     dot.classList.add('caught');
                 } else if (missed.includes(n)) {
                     dot.classList.add('missed');
-                } else if (clientOctopusState.peeking && n === clientOctopusState.attempt) {
+                } else if (clientOctopusState.peeking && clientOctopusState.peekKind !== 'bomb' && n === clientOctopusState.attempt) {
                     dot.classList.add('active');
                 }
             });
@@ -10147,10 +10295,16 @@
                 breathFill.style.width = `${Math.round(remainRatio * 100)}%`;
             }
             const st = document.getElementById('octopus-status-text');
-            if (st && clientOctopusState.peeking && !clientOctopusState.caught) {
-                st.textContent = clientOctopusState.isDiver
-                    ? `🐙 지금!! 파이프에서 낙지 출현! (${clientOctopusState.attempt}/3회)`
-                    : `🐙 낙지 출현!! ${clientOctopusState.diverName}님 잡기 시도 중! (${clientOctopusState.attempt}/3회)`;
+            if (st && clientOctopusState.peeking && !clientOctopusState.caught && !clientOctopusState.explodedByBomb) {
+                if (clientOctopusState.peekKind === 'bomb') {
+                    st.textContent = clientOctopusState.isDiver
+                        ? '💣 위험!! 폭탄 출현! 절대 누르지 마세요!!'
+                        : '💣 파이프에서 폭탄 출현!! 손대면 터집니다!';
+                } else {
+                    st.textContent = clientOctopusState.isDiver
+                        ? `🐙 지금!! 파이프에서 낙지 출현! (${clientOctopusState.attempt}/3회)`
+                        : `🐙 낙지 출현!! ${clientOctopusState.diverName}님 잡기 시도 중! (${clientOctopusState.attempt}/3회)`;
+                }
             }
         }
 
@@ -10259,12 +10413,12 @@
             ctx.ellipse(pipeX + 2, pipeY + pipeH / 2, 11, pipeH / 2 - 4, 0, 0, Math.PI * 2);
             ctx.fill();
 
-            // 4. Octopus emerging from the pipe!
+            // 4. Octopus OR Explosive Bomb Decoy emerging from the pipe!
             let peekAmount = 0;
             if (clientOctopusState.caught) {
                 peekAmount = 1.15;
-            } else if (clientOctopusState.peeking) {
-                const dur = clientOctopusState.peekDurationMs || 350;
+            } else if (clientOctopusState.peeking && !clientOctopusState.explodedByBomb) {
+                const dur = clientOctopusState.peekDurationMs || 230;
                 const p = Math.max(0, Math.min(1, (nowPerf - clientOctopusState.peekStartAt) / dur));
                 peekAmount = Math.sin(p * Math.PI);
             }
@@ -10272,38 +10426,101 @@
                 ctx.save();
                 const ox = pipeX - peekAmount * 52;
                 const oy = pipeY + pipeH / 2 - (clientOctopusState.caught ? 26 : 0);
-                // Tentacles
-                ctx.strokeStyle = '#ef4444';
-                ctx.lineWidth = 5;
-                ctx.lineCap = 'round';
-                for (let k = -2; k <= 2; k++) {
+                if (clientOctopusState.peekKind === 'bomb' && !clientOctopusState.caught) {
+                    // Black bomb with red hazard stripe & fizzing fuse spark
+                    ctx.fillStyle = '#0f172a';
+                    ctx.strokeStyle = '#64748b';
+                    ctx.lineWidth = 2;
                     ctx.beginPath();
-                    ctx.moveTo(ox + 8, oy + k * 6);
-                    ctx.quadraticCurveTo(ox - 12, oy + k * 11 + Math.sin(t * 22 + k) * 5, ox - 20, oy + k * 14);
+                    ctx.arc(ox, oy + 2, 21, 0, Math.PI * 2);
+                    ctx.fill();
                     ctx.stroke();
+
+                    // Metallic collar & fuse
+                    ctx.fillStyle = '#475569';
+                    ctx.fillRect(ox - 6, oy - 24, 12, 8);
+                    ctx.strokeStyle = '#d97706';
+                    ctx.lineWidth = 3.5;
+                    ctx.beginPath();
+                    ctx.moveTo(ox, oy - 24);
+                    ctx.quadraticCurveTo(ox + 10, oy - 38, ox + 18, oy - 34);
+                    ctx.stroke();
+
+                    // Bright flickering fuse spark
+                    const sparkR = 5 + Math.sin(t * 45) * 3;
+                    ctx.fillStyle = Math.sin(t * 40) > 0 ? '#facc15' : '#f97316';
+                    ctx.beginPath();
+                    ctx.arc(ox + 18, oy - 34, sparkR, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Red danger stripe / warning icon on bomb face
+                    ctx.fillStyle = '#ef4444';
+                    ctx.beginPath();
+                    ctx.arc(ox - 5, oy + 2, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 10px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('!', ox - 5, oy + 2.5);
+                } else {
+                    // Tentacles
+                    ctx.strokeStyle = '#ef4444';
+                    ctx.lineWidth = 5;
+                    ctx.lineCap = 'round';
+                    for (let k = -2; k <= 2; k++) {
+                        ctx.beginPath();
+                        ctx.moveTo(ox + 8, oy + k * 6);
+                        ctx.quadraticCurveTo(ox - 12, oy + k * 11 + Math.sin(t * 22 + k) * 5, ox - 20, oy + k * 14);
+                        ctx.stroke();
+                    }
+                    // Mantle/head
+                    ctx.fillStyle = '#dc2626';
+                    ctx.beginPath();
+                    ctx.ellipse(ox + 6, oy - 4, 22, 17, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    // Googly eyes
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath();
+                    ctx.arc(ox - 6, oy - 7, 5, 0, Math.PI * 2);
+                    ctx.arc(ox - 6, oy + 4, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#111';
+                    ctx.beginPath();
+                    ctx.arc(ox - 7.5, oy - 7, 2.5, 0, Math.PI * 2);
+                    ctx.arc(ox - 7.5, oy + 4, 2.5, 0, Math.PI * 2);
+                    ctx.fill();
                 }
-                // Mantle/head
-                ctx.fillStyle = '#dc2626';
+                ctx.restore();
+            }
+
+            // Underwater Bomb Explosion Shockwave & Fireball
+            if (clientOctopusState.explodedByBomb) {
+                const expElapsed = Math.max(0, (nowPerf - (clientOctopusState.explodeStartAt || nowPerf)) * 0.001);
+                const expP = Math.min(1, expElapsed / 0.85);
+                const bx = pipeX - 55;
+                const by = pipeY + pipeH / 2;
+                ctx.save();
+                ctx.strokeStyle = `rgba(253, 224, 71, ${Math.max(0, 1 - expP)})`;
+                ctx.lineWidth = 6 * (1 - expP * 0.6);
                 ctx.beginPath();
-                ctx.ellipse(ox + 6, oy - 4, 22, 17, 0, 0, Math.PI * 2);
-                ctx.fill();
-                // Googly eyes
-                ctx.fillStyle = '#fff';
+                ctx.arc(bx, by, 24 + expP * 140, 0, Math.PI * 2);
+                ctx.stroke();
+
+                const blastGrad = ctx.createRadialGradient(bx, by, 4, bx, by, 35 + expP * 85);
+                blastGrad.addColorStop(0, `rgba(255, 255, 255, ${Math.max(0, 1 - expP)})`);
+                blastGrad.addColorStop(0.45, `rgba(249, 115, 22, ${Math.max(0, 0.9 - expP * 0.7)})`);
+                blastGrad.addColorStop(1, 'rgba(220, 38, 38, 0)');
+                ctx.fillStyle = blastGrad;
                 ctx.beginPath();
-                ctx.arc(ox - 6, oy - 7, 5, 0, Math.PI * 2);
-                ctx.arc(ox - 6, oy + 4, 5, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#111';
-                ctx.beginPath();
-                ctx.arc(ox - 7.5, oy - 7, 2.5, 0, Math.PI * 2);
-                ctx.arc(ox - 7.5, oy + 4, 2.5, 0, Math.PI * 2);
+                ctx.arc(bx, by, 35 + expP * 85, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.restore();
             }
 
             // 5. Diver on the left holding breath, watching the pipe intensely
-            const dx = 92;
-            const dy = 140 + Math.sin(t * 2.2) * 5;
+            const dx = clientOctopusState.explodedByBomb ? 74 : 92;
+            const dy = (clientOctopusState.explodedByBomb ? 148 : 140) + Math.sin(t * 2.2) * 5;
             ctx.save();
             // Mesh bag on back
             ctx.fillStyle = '#f97316';
@@ -10326,15 +10543,15 @@
             ctx.lineTo(dx - 52, dy + 22 + Math.sin(t * 5) * 6);
             ctx.stroke();
             // Grabbing hand lunge
-            const isGrabbing = clientOctopusState.caught || (clientOctopusState.whiffUntil > nowPerf);
-            ctx.strokeStyle = '#ffdbac';
+            const isGrabbing = clientOctopusState.caught || clientOctopusState.explodedByBomb || (clientOctopusState.whiffUntil > nowPerf);
+            ctx.strokeStyle = clientOctopusState.explodedByBomb ? '#404040' : '#ffdbac';
             ctx.lineWidth = 7;
             ctx.beginPath();
             ctx.moveTo(dx + 14, dy + 6);
             ctx.lineTo(isGrabbing ? dx + 135 : dx + 46, isGrabbing ? dy - 2 : dy + 8);
             ctx.stroke();
             // Diver head + diving mask + snorkel
-            ctx.fillStyle = '#ffdbac';
+            ctx.fillStyle = clientOctopusState.explodedByBomb ? '#333333' : '#ffdbac';
             ctx.beginPath();
             ctx.arc(dx + 22, dy - 6, 16, 0, Math.PI * 2);
             ctx.fill();
