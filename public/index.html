@@ -2935,7 +2935,7 @@
                 <canvas id="octopus-canvas" width="440" height="248"></canvas>
             </div>
             <div id="octopus-status-text" class="octopus-status-text">숨을 참고 파이프에서 낙지가 나오기를 기다리는 중...</div>
-            <button type="button" id="btn-octopus-grab" class="btn octopus-grab-btn hidden" onclick="submitOctopusGrab()">🐙 잡기!</button>
+            <button type="button" id="btn-octopus-grab" class="btn octopus-grab-btn hidden" onpointerdown="submitOctopusGrab(event)" onclick="submitOctopusGrab(event)">🐙 잡기!</button>
             <button type="button" id="btn-octopus-spectator-close" class="btn btn-secondary hidden" style="margin-top:8px;" onclick="closeOctopusModalSpectator()">닫기 (배경 관전)</button>
         </div>
     </div>
@@ -9644,13 +9644,14 @@
 
         // ─── Octopus Haerujil ("낙지잡아와") System ──────────────────────────────
         const OCTOPUS_DIVE_BASE_MS = 4100;
-        const OCTOPUS_SHOW_BASE_MS = 6800;
+        const OCTOPUS_SHOW_BASE_MS = 8600;
         const OCTOPUS_DEATH_STUN_MS = 45000;
         const activeOctopuses = {}; // Host-authoritative hunts
         let clientOctopusState = null;
         let octopusCanvasRaf = null;
         let octopusClientTimers = [];
         let octopusGrabCooldownUntil = 0;
+        let lastOctopusGrabInputPerf = 0;
 
         function addOctopusClientTimer(fn, ms) {
             const id = setTimeout(() => {
@@ -9856,13 +9857,13 @@
             if (peekKind === 'bomb') {
                 h.consecutiveBombs += 1;
                 h.totalBombsShown += 1;
-                peekMs = Number(window.__TEST_OCTOPUS_PEEK_MS) || (250 + Math.floor(Math.random() * 71)); // 0.25~0.32s bomb decoy
-                graceMs = 90;
+                peekMs = Number(window.__TEST_OCTOPUS_PEEK_MS) || (300 + Math.floor(Math.random() * 81)); // 0.30~0.38s bomb decoy (slower retract)
+                graceMs = 95;
             } else {
                 h.consecutiveBombs = 0;
                 h.attempt += 1;
-                peekMs = Number(window.__TEST_OCTOPUS_PEEK_MS) || (210 + Math.floor(Math.random() * 51)); // 0.21~0.26s sharp octopus window
-                graceMs = 75;
+                peekMs = Number(window.__TEST_OCTOPUS_PEEK_MS) || (255 + Math.floor(Math.random() * 61)); // 0.255~0.315s balanced octopus window
+                graceMs = 80;
             }
 
             h.peekKind = peekKind;
@@ -10127,7 +10128,7 @@
                     clientOctopusState.peekKind = data.peekKind || 'octopus';
                     clientOctopusState.peeking = true;
                     clientOctopusState.peekStartAt = performance.now();
-                    clientOctopusState.peekDurationMs = data.peekDurationMs || (clientOctopusState.peekKind === 'bomb' ? 280 : 230);
+                    clientOctopusState.peekDurationMs = data.peekDurationMs || (clientOctopusState.peekKind === 'bomb' ? 340 : 285);
                     if (clientOctopusState.peekKind === 'bomb') {
                         playTone(420, 'sawtooth', 0.06, 0.14);
                         playTone(1580, 'square', 0.05, 0.10);
@@ -10192,9 +10193,12 @@
                 }
             } else if (eventType === 'octopus_whiff') {
                 if (clientOctopusState && clientOctopusState.huntId === data.huntId) {
-                    clientOctopusState.whiffUntil = performance.now() + 360;
-                    if (arena3D) arena3D.triggerWhiff();
-                    playTone(340, 'sine', 0.08, 0.1);
+                    const alreadyPlayingLocalGrab = clientOctopusState.isDiver && (clientOctopusState.whiffUntil > performance.now() + 60);
+                    if (!alreadyPlayingLocalGrab) {
+                        clientOctopusState.whiffUntil = performance.now() + 340;
+                        if (arena3D) arena3D.triggerWhiff();
+                        playTone(340, 'sine', 0.08, 0.1);
+                    }
                     const st = document.getElementById('octopus-status-text');
                     if (st && !clientOctopusState.peeking) st.textContent = '🖐️ 헛손질! 아직 파이프 안에 있습니다 — 나올 때를 노리세요!';
                 }
@@ -10380,13 +10384,25 @@
             }
         }
 
-        function submitOctopusGrab() {
+        function submitOctopusGrab(ev) {
+            if (ev && ev.type === 'pointerdown' && typeof ev.button === 'number' && ev.button !== 0) return;
             if (!clientOctopusState || !clientOctopusState.isDiver || clientOctopusState.caught || clientOctopusState.failed) return;
             const nowPerf = performance.now();
+            if (nowPerf - lastOctopusGrabInputPerf < 80) return;
             if (nowPerf < octopusGrabCooldownUntil) return;
+            lastOctopusGrabInputPerf = nowPerf;
             if (!clientOctopusState.peeking) {
                 octopusGrabCooldownUntil = nowPerf + 450;
             }
+
+            // 0-frame instant client grab feedback before network round-trip
+            clientOctopusState.whiffUntil = nowPerf + 340;
+            const arena3D = getOctopusArena3D();
+            if (arena3D && typeof arena3D.triggerGrabMotion === 'function') {
+                arena3D.triggerGrabMotion();
+            }
+            try { playTone(460, 'triangle', 0.045, 0.09); } catch (e) {}
+
             if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
                 handleOctopusGrabOnHost(clientOctopusState.huntId, state.myId);
             } else if (socket && socket.connected) {
@@ -10402,6 +10418,18 @@
                 });
             }
         }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.repeat) return;
+            if (e.code !== 'Space' && e.code !== 'Enter') return;
+            const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+            if (!clientOctopusState || !clientOctopusState.isDiver || clientOctopusState.caught || clientOctopusState.failed) return;
+            const modal = document.getElementById('modal-octopus-hunt');
+            if (!modal || modal.classList.contains('hidden')) return;
+            e.preventDefault();
+            submitOctopusGrab(e);
+        });
 
         function drawOctopusUnderwaterFrame(nowPerf) {
             const canvas = document.getElementById('octopus-canvas');
@@ -10490,9 +10518,11 @@
             if (clientOctopusState.caught) {
                 peekAmount = 1.15;
             } else if (clientOctopusState.peeking && !clientOctopusState.explodedByBomb) {
-                const dur = clientOctopusState.peekDurationMs || 230;
-                const p = Math.max(0, Math.min(1, (nowPerf - clientOctopusState.peekStartAt) / dur));
-                peekAmount = Math.sin(p * Math.PI);
+                const dur = clientOctopusState.peekDurationMs || 285;
+                const u = Math.max(0, Math.min(1, (nowPerf - clientOctopusState.peekStartAt) / dur));
+                peekAmount = u < 0.42
+                    ? Math.sin((u / 0.42) * (Math.PI / 2))
+                    : Math.cos(((u - 0.42) / 0.58) * (Math.PI / 2));
             }
             if (peekAmount > 0.02) {
                 ctx.save();
@@ -10728,11 +10758,11 @@
             const sRect = stage.getBoundingClientRect();
             const show = document.createElement('div');
             show.className = 'octopus-2d-overlay';
-            show.style.cssText = `position:absolute; left:50%; top:${Math.round(sRect.height * 0.56)}px; transform:translate(-50%,-50%); z-index:55; pointer-events:none; font-size:2.1rem; filter:drop-shadow(0 4px 10px rgba(0,0,0,0.6));`;
-            show.textContent = '🐙🥢🧴 초장 한입 냠!';
+            show.style.cssText = `position:absolute; left:50%; top:${Math.round(sRect.height * 0.56)}px; transform:translate(-50%,-50%); z-index:55; pointer-events:none; font-size:2.0rem; filter:drop-shadow(0 4px 10px rgba(0,0,0,0.6));`;
+            show.textContent = '아싸!! 🐙🥢🧴 초장 물어뜯기 냠!';
             stage.appendChild(show);
             const scale = Math.max(0.05, Number(window.__TEST_OCTOPUS_SHOW_SCALE) || 1);
-            setTimeout(() => show.remove(), Math.round(6400 * scale));
+            setTimeout(() => show.remove(), Math.round(8400 * scale));
         }
         // ────────────────────────────────────────────────────────────────────────
 
