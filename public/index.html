@@ -81,7 +81,46 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; }
-        body { background-color: var(--bg-main); color: var(--text-main); height: 100vh; height: 100dvh; display: flex; overflow: hidden; padding-top: 70px; box-sizing: border-box; }
+        html { overscroll-behavior: none; -webkit-text-size-adjust: 100%; }
+        body { background-color: var(--bg-main); color: var(--text-main); height: 100vh; height: 100dvh; display: flex; overflow: hidden; padding-top: 70px; box-sizing: border-box; overscroll-behavior: none; }
+        /* Lock game viewport at 1:1 on mobile/iPad/tablet so pinching NEVER zooms the whole page or pushes chat off-screen */
+        body:not(.state-lobby) {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+            overscroll-behavior: none;
+            touch-action: none;
+        }
+        body:not(.state-lobby) .chat-messages,
+        body:not(.state-lobby) .sidebar,
+        body:not(.state-lobby) #player-list,
+        body:not(.state-lobby) .modal,
+        body:not(.state-lobby) .modal-content,
+        body:not(.state-lobby) .bomb-target-list-scroll {
+            touch-action: pan-y;
+        }
+        body:not(.state-lobby) .words-bar,
+        body:not(.state-lobby) .inventory-bar {
+            touch-action: pan-x;
+        }
+        body:not(.state-lobby) .stage,
+        body:not(.state-lobby) #three-stage-container {
+            touch-action: none !important;
+        }
+        body:not(.state-lobby) .chat-input-area input {
+            font-size: 16px;
+            touch-action: pan-x;
+        }
+        @media (pointer: coarse), (max-width: 1024px) {
+            body:not(.state-lobby) input,
+            body:not(.state-lobby) select,
+            body:not(.state-lobby) textarea {
+                font-size: 16px !important;
+            }
+        }
 
         /* Layout */
         .sidebar { width: 25%; min-width: 250px; background-color: var(--bg-panel); border-right: 2px solid var(--bg-darker); display: flex; flex-direction: column; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.3); z-index: 20; transition: width 0.3s, min-width 0.3s, padding 0.3s; position: relative; overflow-y: auto; }
@@ -228,7 +267,7 @@
         }
 
         /* Stage */
-        .stage { flex: 1; position: relative; background: linear-gradient(to bottom, #87CEEB, #e0f6ff); overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+        .stage { flex: 1; position: relative; background: linear-gradient(to bottom, #87CEEB, #e0f6ff); overflow: hidden; display: flex; flex-direction: column; min-height: 0; overscroll-behavior: none; }
         
         /* 2D / 3D Mode Toggle */
         .view-mode-toggle {
@@ -501,6 +540,57 @@
         .item-btn.bomb_defuse { background: rgba(255, 107, 53, 0.25); border-color: rgba(255, 107, 53, 0.65); color: #ff7f50; }
         .item-btn.salt_farm { background: rgba(56, 189, 248, 0.22); border-color: rgba(56, 189, 248, 0.65); color: #7dd3fc; }
         .item-btn.duel { background: rgba(244, 63, 94, 0.24); border-color: rgba(244, 63, 94, 0.7); color: #fda4af; }
+        .item-btn.reflect { background: rgba(56, 189, 248, 0.24); border-color: rgba(125, 211, 252, 0.78); color: #bae6fd; }
+        .item-btn.scapegoat { background: rgba(251, 191, 36, 0.22); border-color: rgba(251, 191, 36, 0.75); color: #fde68a; }
+
+        /* Active Defense / Counter Buff HUD & Character Status Pill */
+        .my-buff-hud {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+            pointer-events: none;
+        }
+        .my-buff-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.76rem;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+            backdrop-filter: blur(6px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
+            white-space: nowrap;
+        }
+        .my-buff-pill.reflect {
+            background: rgba(14, 116, 144, 0.88);
+            border: 1.5px solid #67e8f9;
+            color: #ecfeff;
+        }
+        .my-buff-pill.scapegoat {
+            background: rgba(146, 64, 14, 0.9);
+            border: 1.5px solid #fbbf24;
+            color: #fef3c7;
+        }
+        .self-buff-badge {
+            position: absolute;
+            top: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.9);
+            border: 1.5px solid rgba(103, 232, 249, 0.85);
+            color: #f8fafc;
+            font-size: 0.66rem;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 999px;
+            white-space: nowrap;
+            z-index: 29;
+            pointer-events: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+        }
 
         /* Duel Arena 3D POV Ring Modal (fits safely within 90vh mobile & desktop) */
         .duel-modal {
@@ -932,39 +1022,51 @@
         }
         .salt-hood-2d {
             position: absolute;
-            top: 2px;
+            top: -2%;
             left: 50%;
             transform: translateX(-50%);
-            width: 44px;
-            height: 46px;
-            background: radial-gradient(circle at 35% 30%, #2b2d38 0%, #0b0c10 75%);
-            border-radius: 45% 45% 35% 35%;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.6);
-            z-index: 25;
+            width: 84%;
+            height: 76%;
+            background: radial-gradient(circle at 35% 28%, #2b2e3b 0%, #11131a 55%, #07080c 92%);
+            border-radius: 46% 46% 30% 30%;
+            border-bottom: 3px solid #1e293b;
+            box-shadow: 0 5px 12px rgba(0,0,0,0.72);
+            z-index: 34;
             pointer-events: none;
         }
         .salt-hood-2d::before {
             content: '';
             position: absolute;
-            top: -8px;
+            top: -9px;
             left: 50%;
             transform: translateX(-50%);
-            width: 14px;
-            height: 10px;
-            background: #14161d;
-            clip-path: polygon(20% 100%, 0 0, 45% 35%, 100% 0, 80% 100%);
+            width: 18px;
+            height: 12px;
+            background: #101219;
+            clip-path: polygon(18% 100%, 0 0, 46% 38%, 100% 0, 82% 100%);
+        }
+        .salt-hood-2d::after {
+            content: '';
+            position: absolute;
+            bottom: 3px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 86%;
+            height: 5px;
+            border-radius: 999px;
+            background: #27303f;
         }
         .salt-rope-2d {
             position: absolute;
-            top: 46px;
+            top: 71%;
             left: 50%;
             transform: translateX(-50%);
-            width: 42px;
-            height: 16px;
+            width: 74%;
+            height: 20%;
             border-radius: 8px;
             background: repeating-linear-gradient(165deg, #c68b59 0px, #c68b59 4px, #8d5524 4px, #8d5524 7px);
             border: 1px solid #5c3a21;
-            z-index: 24;
+            z-index: 35;
             pointer-events: none;
         }
         .salt-boat-2d {
@@ -1965,7 +2067,7 @@
                     </div>
                     <div class="item-pool-selector" id="opt-item-pool-wrap">
                         <div class="item-pool-header">
-                            <span class="item-pool-title">사용할 아이템 <strong id="opt-item-pool-count">(11/11)</strong></span>
+                            <span class="item-pool-title">사용할 아이템 <strong id="opt-item-pool-count">(13/13)</strong></span>
                             <div class="item-pool-actions">
                                 <button type="button" class="item-pool-mini-btn" id="btn-item-pool-all" onclick="setAllItemPoolSelection(true)">전체선택</button>
                                 <button type="button" class="item-pool-mini-btn" id="btn-item-pool-none" onclick="setAllItemPoolSelection(false)">전체해제</button>
@@ -2085,8 +2187,8 @@
                         <div class="card-icon-badge">🎒</div>
                         <span class="card-tag">아이템</span>
                     </div>
-                    <h4>11종 특수 아이템 도감</h4>
-                    <p>유도 미사일, 결투신청, 폭탄해체하기, 염전으로 보내기, 방패, 금기어 조작 및 동물 소환 스펙 & 밸런스 분석</p>
+                    <h4>13종 특수 아이템 도감</h4>
+                    <p>유도 미사일, 결투신청, 공격반사, 떠넘기기, 폭탄해체하기, 염전으로 보내기, 방패, 금기어 조작 및 동물 소환 스펙 & 밸런스 분석</p>
                     <span class="card-action">자세히 보기 &rarr;</span>
                 </a>
 
@@ -2186,8 +2288,8 @@
                         <p style="font-size:0.88rem; line-height:1.6;">게임 시작 전 서로에게 지정한 비밀 단어! 일상 대화 속에 교묘한 낚시 질문을 던져 상대방이 금기어를 외치게 유도하세요. 발화 즉시 의자가 격발되어 시원한 수영장으로 날아갑니다.</p>
                     </div>
                     <div style="background:rgba(255,255,255,0.03); padding:18px; border-radius:14px; border:1px solid rgba(255,255,255,0.06);">
-                        <h3 style="font-size:1.05rem; font-weight:700; color:var(--toss-blue); margin-bottom:8px;">⚡ 11종 전략 특수 아이템</h3>
-                        <p style="font-size:0.88rem; line-height:1.6;">유도 미사일, 결투신청(1:1 링 3판 2선승 복싱 & 패배 시 30초 눈탱이 밤탱이 기절), 폭탄해체하기, 염전으로 보내기, 이지스 방패, 금기어 변경/추가/삭제, 상어/악어/부산갈매기 소환 등 전세를 뒤집는 전략 아이템으로 역전승을 거두세요.</p>
+                        <h3 style="font-size:1.05rem; font-weight:700; color:var(--toss-blue); margin-bottom:8px;">⚡ 13종 전략 특수 아이템</h3>
+                        <p style="font-size:0.88rem; line-height:1.6;">유도 미사일, 결투신청(1:1 링 3판 2선승 복싱 & 패배 시 30초 눈탱이 밤탱이 기절), 공격반사, 떠넘기기, 폭탄해체하기, 염전으로 보내기, 이지스 방패, 금기어 변경/추가/삭제, 상어/악어/부산갈매기 소환 등 전세를 뒤집는 전략 아이템으로 역전승을 거두세요.</p>
                     </div>
                     <div style="background:rgba(255,255,255,0.03); padding:18px; border-radius:14px; border:1px solid rgba(255,255,255,0.06);">
                         <h3 style="font-size:1.05rem; font-weight:700; color:var(--toss-blue); margin-bottom:8px;">📱 모바일 앱 전환 완벽 복구</h3>
@@ -2207,7 +2309,7 @@
                     <li>• <strong>1단계 (대기실 & 맞춤 룰셋 구성):</strong> 방장은 참가자당 금기어 개수(1~3개), 침묵 방지(AFK) 자동 발사 타이머(최소 30초 이상), 특수 아이템 보급 주기 및 게임에서 사용할 아이템 종류를 모임 성격에 맞게 자유롭게 선택할 수 있습니다. 4자리 숫자 방 코드 또는 초대 링크 복사로 친구들을 간편하게 초대하세요.</li>
                     <li>• <strong>2단계 (비밀 금기어 교차 등록):</strong> 게임이 시작되면 본인을 제외한 다른 참가자들에게 부여할 금기어를 직접 입력합니다. 공정한 게임 밸런스를 위해 <strong>2글자 이상 25글자 이하의 단어</strong>로 제한되며, 초성(ㅋㅋ, ㅎㅎ 등) 및 특수기호(?!, ^^ 등)도 자유롭게 설정할 수 있습니다. 단, 띄어쓰기(공백)와 시스템 예약어(???) 및 동일 대상 중복 단어는 단일 검증 엔진(WordValidator)에 의해 자동으로 차단됩니다.</li>
                     <li>• <strong>3단계 (실시간 채팅 & 부분 문자열 격발 판정):</strong> 상단 전광판에는 다른 모든 참가자의 금기어가 투명하게 공개되지만, 정작 <strong>내 머리 위에 걸린 금기어는 나에게만 `?`로 가려져 보이지 않습니다.</strong> 채팅 메시지에 내 금기어가 부분 문자열(Substring)로 포함되는 순간(예: 금기어가 '치킨'일 때 '양념치킨 먹고 싶다' 입력), 서버가 0.05초 내에 감지하여 의자를 수영장으로 발사합니다.</li>
-                    <li>• <strong>4단계 (특수 아이템 공방 & 결과 리포트):</strong> 보급 주기에 따라 지급되는 11종의 아이템(유도 미사일, 결투신청, 폭탄해체하기, 염전으로 보내기 등)으로 상대를 기절·격리시키거나 내 금기어를 정화할 수 있습니다. 라운드 종료 시 총 비행 횟수, 상어/악어/갈매기 조우 횟수, 미사일·폭탄·결투 패배 및 염전 납치 횟수, 금기어별 발동 통계를 한눈에 확인할 수 있습니다.</li>
+                    <li>• <strong>4단계 (특수 아이템 공방 & 결과 리포트):</strong> 보급 주기에 따라 지급되는 13종의 아이템(유도 미사일, 결투신청, 공격반사, 떠넘기기, 폭탄해체하기, 염전으로 보내기 등)으로 상대를 기절·격리시키거나 공격을 되받아칠 수 있습니다. 라운드 종료 시 총 비행 횟수, 상어/악어/갈매기 조우 횟수, 미사일·폭탄·결투 패배 및 염전 납치 횟수, 금기어별 발동 통계를 한눈에 확인할 수 있습니다.</li>
                 </ul>
 
                 <h3 style="font-size:1.15rem; font-weight:700; color:#fff; margin:24px 0 10px;">🌟 승리를 위한 고수들의 6대 심리 대화 & 아이템 전술</h3>
@@ -2226,7 +2328,7 @@
                 <p style="font-size:0.9rem; color:var(--toss-text-muted); border-top:1px solid var(--toss-card-border); padding-top:16px;">
                     더 깊이 있는 전략과 기술 아카이브가 궁금하신가요?
                     <a href="/guide/rules" style="color:var(--toss-blue); font-weight:600;">게임 규칙 매뉴얼</a>,
-                    <a href="/guide/items" style="color:var(--toss-blue); font-weight:600;">11종 아이템 도감</a>,
+                    <a href="/guide/items" style="color:var(--toss-blue); font-weight:600;">13종 아이템 도감</a>,
                     <a href="/guide/strategy" style="color:var(--toss-blue); font-weight:600;">심리전 공략집</a>,
                     <a href="/words" style="color:var(--toss-blue); font-weight:600;">금기어 백과 100선</a>,
                     <a href="/history" style="color:var(--toss-blue); font-weight:600;">예능의 역사</a>,
@@ -2291,6 +2393,7 @@
             </div>
             <div id="stage-top-right-hud" class="stage-top-right-hud">
                 <div id="item-timer" class="item-timer-pill hidden"></div>
+                <div id="my-buff-hud" class="my-buff-hud hidden"></div>
                 <div id="salt-progress-hud" class="salt-progress-hud hidden"></div>
             </div>
             <div class="pool" id="pool">
@@ -2348,9 +2451,9 @@
 
     <!-- Target Selection Modal -->
     <div id="modal-target-selection" class="modal-overlay hidden">
-        <div class="modal" style="width: 320px;">
-            <h2>타깃 선택</h2>
-            <p style="font-size:0.9rem; color:#ccc; margin-bottom:15px; text-align:center;">
+        <div class="modal" style="width: 320px; max-height: 90vh; overflow-y: auto;">
+            <h2 id="target-modal-title">타깃 선택</h2>
+            <p id="target-modal-desc" style="font-size:0.9rem; color:#ccc; margin-bottom:15px; text-align:center;">
                 아이템을 사용할 대상을 선택하세요.
             </p>
             <div id="target-selection-list"></div>
@@ -2600,9 +2703,9 @@
     <!-- Salt Farm Minigame Modal -->
     <div id="modal-salt-farm" class="modal-overlay hidden">
         <div class="modal salt-modal">
-            <h2 style="color:#7dd3fc; margin-bottom:6px; font-size:1.25rem;">🧂 외딴섬 염전 노역장</h2>
+            <h2 style="color:#7dd3fc; margin-bottom:6px; font-size:1.25rem;">🧂 퍼플섬 염전 노역장</h2>
             <p id="salt-modal-desc" style="font-size:0.84rem; color:#cbd5e1; margin-bottom:8px; line-height:1.45;">
-                복면 괴한들에게 납치되어 신안 염전 섬에 도착했습니다!<br>
+                복면 괴한들에게 납치되어 퍼플섬 염전에 도착했습니다!<br>
                 가는 소금은 1번에, 굵은 소금은 표시된 횟수만큼 <strong style="color:#38bdf8;">왕복 드래그(↔)</strong>로 긁어 모두 채취하세요!
             </p>
             <div class="salt-modal-progress-wrap">
@@ -3129,12 +3232,14 @@
             { id: 'word_change', label: '🃏 변경권' },
             { id: 'word_add', label: '➕ 추가권' },
             { id: 'word_delete', label: '✂️ 삭제권' },
-            { id: 'call_shark', label: '🦈 상어부르기' },
-            { id: 'call_gator', label: '🐊 악어부르기' },
-            { id: 'call_gull', label: '🦅 부산갈매기부르기' },
+            { id: 'call_shark', label: '🦈 상어소환' },
+            { id: 'call_gator', label: '🐊 악어소환' },
+            { id: 'call_gull', label: '🦅 부산갈매기소환' },
             { id: 'bomb_defuse', label: '💣 폭탄해체하기' },
             { id: 'salt_farm', label: '🧂 염전으로 보내기' },
-            { id: 'duel', label: '🥊 결투신청' }
+            { id: 'duel', label: '🥊 결투신청' },
+            { id: 'reflect', label: '🪞 공격반사' },
+            { id: 'scapegoat', label: '🪃 떠넘기기' }
         ];
         const ITEM_LABEL_MAP = Object.fromEntries(ITEM_CATALOG.map(it => [it.id, it.label]));
         const ALL_ITEM_IDS = ITEM_CATALOG.map(it => it.id);
@@ -3327,9 +3432,12 @@
                                 sp.assignedWords = sp.assignedWords.map(() => '???');
                             }
                         }
-                        // 2. Hide other players' items from the guest
-                        if (sp.id !== p.id && sp.items) {
-                            sp.items = [];
+                        // 2. Hide other players' items & private counter-buffs from the guest
+                        if (sp.id !== p.id) {
+                            if (sp.items) sp.items = [];
+                            delete sp.reflectBuff;
+                            delete sp.scapegoatTargetId;
+                            delete sp.scapegoatTargetName;
                         }
                     });
                     
@@ -3386,6 +3494,14 @@
             if (typeof clearAllActiveBombs === 'function') clearAllActiveBombs();
             if (typeof clearAllSaltFarms === 'function') clearAllSaltFarms();
             if (typeof clearAllActiveDuels === 'function') clearAllActiveDuels();
+            if (Array.isArray(state.players)) {
+                state.players.forEach(p => {
+                    p.reflectBuff = false;
+                    p.scapegoatTargetId = null;
+                    p.scapegoatTargetName = null;
+                });
+            }
+            if (typeof renderMyBuffHud === 'function') renderMyBuffHud();
             pendingItemUse = null;
         }
 
@@ -3704,11 +3820,14 @@
                             if (!existingPlayer.previousIds) existingPlayer.previousIds = [];
                             if (!existingPlayer.previousIds.includes(oldId)) existingPlayer.previousIds.push(oldId);
                             existingPlayer.id = guestId;
-                            // Update references in word maps
+                            // Update references in word maps & scapegoat targets
                             state.players.forEach(p => {
                                 if (p.words && p.words[oldId]) {
                                     p.words[guestId] = p.words[oldId];
                                     delete p.words[oldId];
+                                }
+                                if (p.scapegoatTargetId === oldId) {
+                                    p.scapegoatTargetId = guestId;
                                 }
                             });
                         }
@@ -3832,6 +3951,9 @@
                         Object.assign(existing, inc);
                         if (!inc.activeBomb) existing.activeBomb = null;
                         if (!inc.activeDuel) existing.activeDuel = null;
+                        existing.reflectBuff = !!inc.reflectBuff;
+                        existing.scapegoatTargetId = inc.scapegoatTargetId || null;
+                        existing.scapegoatTargetName = inc.scapegoatTargetName || null;
                         if (!inc.saltFarm) {
                             existing.saltFarm = null;
                         } else if (existing.id === state.myId && typeof saltPanActive === 'boolean' && saltPanActive && prevSalt) {
@@ -3845,6 +3967,7 @@
                 if (typeof syncSaltModalFromState === 'function') syncSaltModalFromState();
                 if (typeof syncDuelModalFromState === 'function') syncDuelModalFromState();
                 if (typeof renderSaltProgressHud === 'function') renderSaltProgressHud();
+                if (typeof renderMyBuffHud === 'function') renderMyBuffHud();
                 if (currentBombModal && !currentBombModal.animating) {
                     const bombTarget = findPlayerById(currentBombModal.targetId);
                     if (!bombTarget || !bombTarget.activeBomb || bombTarget.activeBomb.bombId !== currentBombModal.bombId || bombTarget.status === PlayerState.STATUS.DEAD_BOMB) {
@@ -4012,8 +4135,11 @@
 
         // 모바일에서 앱 전환 후 복귀 시 좀비 소켓(Half-Open) 점검 및 세션 보존형 즉시 재접속
         let pingCheckPending = false;
-        function handleAppForegroundRestore() {
+        let appHiddenSince = 0;
+        function handleAppForegroundRestore(forceProbe = false) {
             if (typeof document !== 'undefined' && document.visibilityState && document.visibilityState !== 'visible') return;
+            const hiddenElapsedMs = appHiddenSince > 0 ? (Date.now() - appHiddenSince) : 0;
+            appHiddenSince = 0;
             if (!currentMode || currentMode === MODE_BOT || !roomCode) return;
             requestWakeLock();
             if (currentMode === MODE_HOST) {
@@ -4024,6 +4150,9 @@
                 if (typeof socket.connect === 'function') socket.connect();
                 return;
             }
+            // Only probe/recycle socket if the app was genuinely backgrounded (>=2s) or network/bfcache restored;
+            // prevents window focus/zoom/resize events from closing healthy active sockets!
+            if (!forceProbe && hiddenElapsedMs < 2000) return;
             if (pingCheckPending) return;
             pingCheckPending = true;
             let pongReceived = false;
@@ -4036,7 +4165,7 @@
                         socket.disconnect().connect();
                     }
                 }
-            }, 1500);
+            }, 5000);
             socket.emit('PING_CHECK', () => {
                 pongReceived = true;
                 pingCheckPending = false;
@@ -4047,11 +4176,121 @@
             });
         }
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') handleAppForegroundRestore();
+            if (document.visibilityState === 'hidden') {
+                appHiddenSince = Date.now();
+            } else if (document.visibilityState === 'visible') {
+                handleAppForegroundRestore(false);
+            }
         });
-        window.addEventListener('pageshow', handleAppForegroundRestore);
-        window.addEventListener('focus', handleAppForegroundRestore);
-        window.addEventListener('online', handleAppForegroundRestore);
+        window.addEventListener('pageshow', (e) => handleAppForegroundRestore(!!(e && e.persisted)));
+        window.addEventListener('focus', () => {
+            if (!currentMode || currentMode === MODE_BOT || !roomCode) return;
+            requestWakeLock();
+            if (currentMode === MODE_HOST) catchUpHostTimersOnResume();
+        });
+        window.addEventListener('online', () => handleAppForegroundRestore(true));
+
+        // 모바일·패드(iOS/iPadOS/Android)에서 핀치·트랙패드 확대 시 사이트 전체가 확대되어 채팅창이 사라지는 현상 원천 차단
+        // → 인게임에서 확대/축소 제스처 발생 시 페이지 스케일은 1:1 고정하고 3D 맵 카메라만 확대/축소!
+        let globalPinchStartDist = 0;
+        let globalPinchBaseRadius = 24;
+        let globalGestureBaseRadius = 24;
+
+        function canRouteZoomTo3DStage() {
+            if (!document.body || document.body.classList.contains('state-lobby')) return false;
+            if (typeof currentViewMode === 'string' && currentViewMode !== '3D') return false;
+            if (!window.ThreeStageManager || !window.ThreeStageManager.isInitialized() || !window.ThreeStageManager.isVisible()) return false;
+            const openModal = document.querySelector('.modal-overlay:not(.hidden)');
+            if (openModal) return false;
+            return true;
+        }
+
+        function measureTwoFingerDist(touches) {
+            if (!touches || touches.length < 2) return 0;
+            const dx = touches[0].clientX - touches[1].clientX;
+            const dy = touches[0].clientY - touches[1].clientY;
+            return Math.hypot(dx, dy);
+        }
+
+        document.addEventListener('touchstart', (e) => {
+            if (!document.body || document.body.classList.contains('state-lobby')) return;
+            if (e.touches && e.touches.length >= 2) {
+                e.__agyPinchHandled = true;
+                if (e.cancelable) e.preventDefault();
+                if (canRouteZoomTo3DStage()) {
+                    globalPinchStartDist = measureTwoFingerDist(e.touches);
+                    globalPinchBaseRadius = window.ThreeStageManager.getTargetZoomRadius();
+                } else {
+                    globalPinchStartDist = 0;
+                }
+            }
+        }, { passive: false, capture: true });
+
+        document.addEventListener('touchmove', (e) => {
+            if (!document.body || document.body.classList.contains('state-lobby')) return;
+            if (e.touches && e.touches.length >= 2) {
+                e.__agyPinchHandled = true;
+                if (e.cancelable) e.preventDefault();
+                if (globalPinchStartDist > 0 && canRouteZoomTo3DStage()) {
+                    const curDist = measureTwoFingerDist(e.touches);
+                    if (curDist > 4) {
+                        const factor = globalPinchStartDist / curDist;
+                        window.ThreeStageManager.setZoomRadius(globalPinchBaseRadius * factor);
+                    }
+                }
+            }
+        }, { passive: false, capture: true });
+
+        document.addEventListener('touchend', (e) => {
+            if (!e.touches || e.touches.length < 2) {
+                globalPinchStartDist = 0;
+            }
+        }, { passive: true, capture: true });
+
+        document.addEventListener('touchcancel', () => {
+            globalPinchStartDist = 0;
+        }, { passive: true, capture: true });
+
+        // iOS / iPadOS Safari 전용 핀치 제스처 이벤트 차단 및 3D 맵 전용 줌 라우팅
+        document.addEventListener('gesturestart', (e) => {
+            if (!document.body || document.body.classList.contains('state-lobby')) return;
+            e.__agyGestureHandled = true;
+            if (e.cancelable) e.preventDefault();
+            if (canRouteZoomTo3DStage()) {
+                globalGestureBaseRadius = window.ThreeStageManager.getTargetZoomRadius();
+            }
+        }, { passive: false, capture: true });
+
+        document.addEventListener('gesturechange', (e) => {
+            if (!document.body || document.body.classList.contains('state-lobby')) return;
+            e.__agyGestureHandled = true;
+            if (e.cancelable) e.preventDefault();
+            if (canRouteZoomTo3DStage() && e.scale && e.scale > 0) {
+                window.ThreeStageManager.setZoomRadius(globalGestureBaseRadius / e.scale);
+            }
+        }, { passive: false, capture: true });
+
+        document.addEventListener('gestureend', (e) => {
+            if (!document.body || document.body.classList.contains('state-lobby')) return;
+            if (e.cancelable) e.preventDefault();
+        }, { passive: false, capture: true });
+
+        // 패드 트랙패드 핀치 / Ctrl+휠 브라우저 전체 확대 차단 → 3D 맵 줌으로만 전달
+        window.addEventListener('wheel', (e) => {
+            if (!document.body || document.body.classList.contains('state-lobby')) return;
+            if (e.ctrlKey) {
+                if (e.cancelable) e.preventDefault();
+                if (canRouteZoomTo3DStage()) {
+                    window.ThreeStageManager.zoomByDelta(e.deltaY * 0.05);
+                }
+            }
+        }, { passive: false, capture: true });
+
+        // 모바일·패드 더블탭 전체 화면 확대 방지
+        document.addEventListener('dblclick', (e) => {
+            if (!document.body || document.body.classList.contains('state-lobby')) return;
+            if (e.cancelable) e.preventDefault();
+        }, { passive: false });
 
         function leaveRoom() {
             releaseWakeLock();
@@ -4104,10 +4343,14 @@
             switchView('lobby-view');
         }
 
-        // 브라우저 탭 닫기 / 새로고침 시 방 나가기 즉시 전송 (모바일 bfcache persisted 전환은 제외)
+        // 브라우저 탭 닫기 / 새로고침 시 처리 (게임 진행 중 실수로 당겨서 새로고침 등 발생 시에는 서버 유예 타이머를 통해 재접속 허용)
         function handlePageUnload(e) {
             if (e && e.persisted) return;
             if (!socket || !roomCode) return;
+            const roomStatus = state && state.room && state.room.status;
+            if (roomStatus === 'word_setting' || roomStatus === 'playing') {
+                return;
+            }
             if (currentMode === MODE_HOST) {
                 socket.emit('HOST_CLOSE_ROOM', { roomCode });
             } else if (currentMode === MODE_GUEST) {
@@ -4229,9 +4472,14 @@
             
             els.chairsContainer.style.gap = `${Math.floor(gap)}px`;
         }
+        let stageResizeRaf = null;
         window.addEventListener('resize', () => {
-            updateStageGap();
-            if (window.ThreeStageManager) window.ThreeStageManager.handleResize();
+            if (stageResizeRaf) return;
+            stageResizeRaf = requestAnimationFrame(() => {
+                stageResizeRaf = null;
+                updateStageGap();
+                if (window.ThreeStageManager) window.ThreeStageManager.handleResize();
+            });
         });
 
         function getAvatarSvg(gender) {
@@ -4379,6 +4627,7 @@
                 <div class="chair-base" id="chair-${p.id}"><div class="chair-back"></div></div>
                 <div class="character-wrapper status-${p.status}" id="char-wrap-${p.id}">
                     <div class="speech-bubble" id="bubble-${p.id}"></div>
+                    <div class="self-buff-badge hidden" id="buff-badge-${p.id}"></div>
                     <div class="badge-count ${p.splashCount > 0 ? '' : 'hidden'}" id="badge-${p.id}">${p.splashCount}</div>
                     <div class="name-tag" id="name-${p.id}">${p.name}</div>
                     ${getAvatarSvg(p.gender)}
@@ -4389,7 +4638,7 @@
         function rebindChairSlotIds(slot, oldId, newId) {
             if (!slot || !oldId || oldId === newId) return;
             slot.dataset.playerId = newId;
-            ['ready', 'reconn', 'chair', 'char-wrap', 'bubble', 'badge', 'name'].forEach(prefix => {
+            ['ready', 'reconn', 'chair', 'char-wrap', 'bubble', 'buff-badge', 'badge', 'name'].forEach(prefix => {
                 const el = slot.querySelector(`[id="${prefix}-${oldId}"]`);
                 if (el) el.id = `${prefix}-${newId}`;
             });
@@ -4460,6 +4709,24 @@
                 if (nameTag) {
                     nameTag.textContent = p.name;
                 }
+
+                const buffBadge = document.getElementById(`buff-badge-${p.id}`);
+                if (buffBadge) {
+                    if (p.id === state.myId && state.room && state.room.status === 'playing' && (p.reflectBuff || p.scapegoatTargetId)) {
+                        const tags = [];
+                        if (p.reflectBuff) tags.push('🪞반사');
+                        if (p.scapegoatTargetId) {
+                            const tp = findPlayerById(p.scapegoatTargetId);
+                            const tName = tp ? tp.name : (p.scapegoatTargetName || '대상');
+                            tags.push(`🪃➔${tName}`);
+                        }
+                        buffBadge.textContent = tags.join(' · ');
+                        buffBadge.classList.remove('hidden');
+                    } else {
+                        buffBadge.textContent = '';
+                        buffBadge.classList.add('hidden');
+                    }
+                }
             });
 
             // Remove only slots belonging to players who actually left
@@ -4474,6 +4741,7 @@
                 window.ThreeStageManager.syncPlayers(state.players);
             }
             if (typeof renderSaltProgressHud === 'function') renderSaltProgressHud();
+            if (typeof renderMyBuffHud === 'function') renderMyBuffHud();
         }
 
         // --- 2D / 3D View Mode Controller ---
@@ -5013,6 +5281,59 @@
             }
         }
 
+        function renderMyBuffHud() {
+            const hud = document.getElementById('my-buff-hud');
+            if (!hud) return;
+            const me = findPlayerById(state.myId);
+            if (!state.room || state.room.status !== 'playing' || !me || (!me.reflectBuff && !me.scapegoatTargetId)) {
+                hud.innerHTML = '';
+                hud.classList.add('hidden');
+                return;
+            }
+            const pills = [];
+            if (me.reflectBuff) {
+                pills.push(`<div class="my-buff-pill reflect">🪞 공격반사 대기중 (1회)</div>`);
+            }
+            if (me.scapegoatTargetId) {
+                const tp = findPlayerById(me.scapegoatTargetId);
+                const valid = !!(tp && !tp.isDisconnected);
+                const tName = escapeHtmlText(tp ? tp.name : (me.scapegoatTargetName || '대상'));
+                pills.push(`<div class="my-buff-pill scapegoat" style="${valid ? '' : 'opacity:0.7;'}">🪃 떠넘기기 ➔ ${tName}${valid ? '' : ' (이탈)'}</div>`);
+            }
+            hud.innerHTML = pills.join('');
+            hud.classList.remove('hidden');
+        }
+
+        function sendPrivateSysMessage(playerId, text) {
+            if (!text) return;
+            if (playerId === state.myId) {
+                sysChat(text);
+            } else if (currentMode === MODE_HOST && socket) {
+                socket.emit('SEND_TO_GUEST', { guestId: playerId, type: 'EVENT_SYS', payload: { text } });
+            }
+        }
+
+        function broadcastPublicSysMessage(text) {
+            if (!text) return;
+            if (currentMode === MODE_HOST) {
+                broadcast({ type: 'EVENT_SYS', payload: { text } });
+            }
+            sysChat(text);
+        }
+
+        function playCounterTriggerVisual(actorId, kind) {
+            try {
+                if (kind === 'reflect') {
+                    playTone(880, 'triangle', 0.14, 0.22);
+                    setTimeout(() => playTone(1320, 'sine', 0.2, 0.2), 55);
+                } else {
+                    playTone(660, 'sine', 0.12, 0.2);
+                    setTimeout(() => playTone(990, 'triangle', 0.18, 0.2), 60);
+                }
+            } catch (e) {}
+            createShieldEffect(actorId);
+        }
+
         function renderInventory() {
             const bar = document.getElementById('inventory-bar');
             const itemsContainer = document.getElementById('inventory-items');
@@ -5020,17 +5341,38 @@
             
             if (state.room.status !== 'playing' || !state.room.itemEnabled) {
                 bar.classList.add('hidden');
+                renderMyBuffHud();
                 return;
             }
             
             bar.classList.remove('hidden');
             const me = findPlayerById(state.myId);
+            renderMyBuffHud();
+
+            if (me && me.reflectBuff) {
+                const chip = document.createElement('span');
+                chip.className = 'item-btn reflect';
+                chip.style.cssText = 'cursor:default; font-weight:700; box-shadow:0 0 8px rgba(103,232,249,0.35);';
+                chip.textContent = '🪞 반사 ON';
+                itemsContainer.appendChild(chip);
+            }
+            if (me && me.scapegoatTargetId) {
+                const tp = findPlayerById(me.scapegoatTargetId);
+                const tName = tp ? tp.name : (me.scapegoatTargetName || '대상');
+                const chip = document.createElement('span');
+                chip.className = 'item-btn scapegoat';
+                chip.style.cssText = 'cursor:default; font-weight:700; box-shadow:0 0 8px rgba(251,191,36,0.35);';
+                chip.textContent = `🪃 떠넘김➔${tName}`;
+                itemsContainer.appendChild(chip);
+            }
             
             if (!me || !me.items || me.items.length === 0) {
-                const emptyMsg = document.createElement('span');
-                emptyMsg.style.cssText = 'font-size:0.75rem; color:#666; font-style:italic;';
-                emptyMsg.textContent = '아이템 없음';
-                itemsContainer.appendChild(emptyMsg);
+                if (itemsContainer.children.length === 0) {
+                    const emptyMsg = document.createElement('span');
+                    emptyMsg.style.cssText = 'font-size:0.75rem; color:#666; font-style:italic;';
+                    emptyMsg.textContent = '아이템 없음';
+                    itemsContainer.appendChild(emptyMsg);
+                }
                 return;
             }
             
@@ -5061,6 +5403,18 @@
             }
             if (item === 'shield') {
                 alert('🛡️ 방패는 직접 사용할 수 없는 패시브 아이템입니다.\n치명적인 공격(상어, 악어, 부산갈매기, 미사일)을 받았을 때 자동으로 1회 막아줍니다.');
+            } else if (item === 'reflect') {
+                if (me.reflectBuff) {
+                    return sysChat('🪞 이미 공격반사 버프가 활성화되어 있습니다! (피격 시 1회 자동 발동)');
+                }
+                if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
+                    executeItem(state.myId, item, index, null, null);
+                } else {
+                    socket.emit('SEND_TO_HOST', { roomCode, type: 'USE_ITEM', payload: { item, index, targetId: null, extraData: null } });
+                }
+            } else if (item === 'scapegoat') {
+                pendingItemUse = { item, index };
+                openTargetModal();
             } else if (item === 'call_shark' || item === 'call_gator' || item === 'call_gull') {
                 const animal = item.replace('call_', '');
                 const waitingList = (state.room && state.room.waitingAnimals) || [];
@@ -5301,11 +5655,23 @@
             const list = document.getElementById('target-selection-list');
             list.innerHTML = '';
             const item = pendingItemUse ? pendingItemUse.item : null;
+            const titleEl = document.getElementById('target-modal-title');
+            const descEl = document.getElementById('target-modal-desc');
+            if (titleEl) {
+                titleEl.textContent = item === 'scapegoat' ? '🪃 떠넘기기 대상 지정' : '타깃 선택';
+            }
+            if (descEl) {
+                descEl.textContent = item === 'scapegoat'
+                    ? '내가 공격받았을 때 대신 피격될 플레이어 1명을 미리 지정하세요.'
+                    : '아이템을 사용할 대상을 선택하세요.';
+            }
             
             let targets;
             if (item === 'word_change') {
                 // Word change can target anyone EXCEPT yourself
                 targets = state.players.filter(p => p.id !== state.myId);
+            } else if (item === 'scapegoat') {
+                targets = state.players.filter(p => p.id !== state.myId && !p.isDisconnected);
             } else if (item === 'salt_farm') {
                 targets = state.players.filter(p => p.id !== state.myId && PlayerState.canBeTargetedBySaltFarm(p) && !(typeof hasPendingSaltAbduction === 'function' && hasPendingSaltAbduction(p.id)));
             } else if (item === 'duel') {
@@ -5320,7 +5686,9 @@
                     ? '현재 자리에 착석 중인 타깃이 없습니다.'
                     : (item === 'salt_farm'
                         ? '현재 염전에 보낼 수 있는 타깃이 없습니다.'
-                        : (item === 'duel' ? '현재 결투를 신청할 수 있는 착석 상태의 상대가 없습니다.' : '타깃이 없습니다.'));
+                        : (item === 'duel'
+                            ? '현재 결투를 신청할 수 있는 착석 상태의 상대가 없습니다.'
+                            : (item === 'scapegoat' ? '떠넘기기를 지정할 다른 플레이어가 없습니다.' : '타깃이 없습니다.')));
                 list.innerHTML = `<span style="color:#aaa; text-align:center; padding: 12px 0;">${emptyText}</span>`;
             } else {
                 targets.forEach(p => {
@@ -5371,6 +5739,13 @@
                 if (!target || !PlayerState.canBeTargetedByDuel(target)) {
                     pendingItemUse = null;
                     alert('해당 플레이어가 자리에 없거나 다른 이벤트 진행 중이어서 결투를 신청할 수 없습니다.');
+                    return;
+                }
+            } else if (item === 'scapegoat') {
+                const target = state.players.find(p => p.id === targetId);
+                if (!target || target.id === state.myId || target.isDisconnected) {
+                    pendingItemUse = null;
+                    alert('유효한 떠넘기기 대상을 선택해주세요.');
                     return;
                 }
             }
@@ -5543,6 +5918,104 @@
             }
         }
 
+        // ─── Unified Counter / Redirect Resolution Pipeline (SSOT) ──────────────
+        // Resolves `reflect` (🪞 공격반사) and `scapegoat` (🪃 떠넘기기) on Host.
+        // Uses `extraData.isReflected = true` to strictly prevent infinite counter loops!
+        function isScapegoatProxyValidForAttack(proxy, item, sender, originalTarget) {
+            if (!proxy || proxy.isDisconnected || proxy.id === originalTarget.id) return false;
+            if (item === 'missile') {
+                return !PlayerState.isAtSaltFarm(proxy) && !PlayerState.isDueling(proxy);
+            }
+            if (item === 'bomb_defuse') {
+                return PlayerState.canBeTargetedByBomb(proxy);
+            }
+            if (item === 'duel') {
+                return proxy.id === sender.id || PlayerState.canBeTargetedByDuel(proxy);
+            }
+            if (item === 'salt_farm') {
+                return !PlayerState.isAtSaltFarm(proxy) && !(typeof hasPendingSaltAbduction === 'function' && hasPendingSaltAbduction(proxy.id));
+            }
+            return true;
+        }
+
+        function emitCounterFxOnHost(actorId, kind) {
+            const fxPayload = { kind, actorId };
+            if (currentMode === MODE_HOST) {
+                broadcast({ type: 'EVENT_ITEM', payload: { senderId: actorId, item: 'counter_fx', targetId: actorId, extraData: fxPayload } });
+            }
+            playCounterTriggerVisual(actorId, kind);
+        }
+
+        function resolveIncomingAttackOnHost(sender, originalTarget, item, extraData = null) {
+            if (!sender || !originalTarget || sender.id === originalTarget.id) {
+                return { kind: 'normal', sender, target: originalTarget, extraData };
+            }
+            if (extraData && extraData.isReflected) {
+                return { kind: 'normal', sender, target: originalTarget, extraData };
+            }
+
+            // 1. 🪞 공격반사 (Passive/Buff Reflection, 1-time consumption)
+            if (originalTarget.reflectBuff) {
+                originalTarget.reflectBuff = false;
+                emitCounterFxOnHost(originalTarget.id, 'reflect');
+
+                if (item === 'duel') {
+                    broadcastPublicSysMessage(`🪞 [공격반사 발동!] ${originalTarget.name}님이 ${sender.name}님의 결투 신청을 무효화하고 선공격 결투로 되받아칩니다!`);
+                    return {
+                        kind: 'duel_reflected',
+                        challenger: originalTarget,
+                        defender: sender,
+                        extraData: { ...(extraData || {}), isReflected: true }
+                    };
+                }
+
+                const itemLabel = ITEM_LABEL_MAP[item] || item;
+                broadcastPublicSysMessage(`🪞 [공격반사 발동!] ${originalTarget.name}님이 ${sender.name}님의 [${itemLabel}] 공격을 시전자에게 그대로 반사했습니다!`);
+                return {
+                    kind: 'redirected',
+                    sender: originalTarget,
+                    target: sender,
+                    extraData: { ...(extraData || {}), isReflected: true, reflectedFromId: originalTarget.id }
+                };
+            }
+
+            // 2. 🪃 떠넘기기 (Designated Proxy Redirect, 1-time consumption)
+            if (originalTarget.scapegoatTargetId) {
+                const proxyId = originalTarget.scapegoatTargetId;
+                const savedProxyName = originalTarget.scapegoatTargetName || '대상';
+                originalTarget.scapegoatTargetId = null;
+                originalTarget.scapegoatTargetName = null;
+
+                const proxy = findPlayerById(proxyId);
+                if (!isScapegoatProxyValidForAttack(proxy, item, sender, originalTarget)) {
+                    sendPrivateSysMessage(originalTarget.id, `⚠️ [떠넘기기 예외] 지정해 둔 대상(${savedProxyName})이 이탈했거나 현재 피격 불가능한 상태여서 떠넘기기가 무효화되었습니다.`);
+                    return { kind: 'normal', sender, target: originalTarget, extraData };
+                }
+
+                emitCounterFxOnHost(originalTarget.id, 'scapegoat');
+                const itemLabel = ITEM_LABEL_MAP[item] || item;
+
+                if (item === 'duel' && proxy.id === sender.id) {
+                    broadcastPublicSysMessage(`🪃 [떠넘기기 발동!] ${originalTarget.name}님이 결투 대상을 시전자 ${sender.name}님 본인에게 떠넘겨 ${sender.name}님이 30초간 기절합니다!`);
+                    return {
+                        kind: 'duel_self_ko',
+                        victim: sender,
+                        extraData: { ...(extraData || {}), isReflected: true }
+                    };
+                }
+
+                broadcastPublicSysMessage(`🪃 [떠넘기기 발동!] ${originalTarget.name}님이 받은 [${itemLabel}] 공격을 미리 지정해 둔 ${proxy.name}님에게 대신 떠넘겼습니다!`);
+                return {
+                    kind: 'redirected',
+                    sender,
+                    target: proxy,
+                    extraData: { ...(extraData || {}), isReflected: true, redirectedFromId: originalTarget.id }
+                };
+            }
+
+            return { kind: 'normal', sender, target: originalTarget, extraData };
+        }
+
         function executeItem(senderId, item, clientIndex, targetId, extraData = null) {
             // Host logic to process item use
             const sender = findPlayerById(senderId);
@@ -5555,54 +6028,60 @@
 
             // Authoritative Host check: action/summon items cannot be used while incapacitated or away
             if (!PlayerState.canUseActionItems(sender) && item !== 'word_change' && item !== 'word_add' && item !== 'word_delete') {
-                if (actualSenderId === state.myId) {
-                    sysChat('행동 불능 상태에서는 공격 및 소환 아이템을 사용할 수 없습니다.');
-                } else if (currentMode === MODE_HOST) {
-                    socket.emit('SEND_TO_GUEST', { guestId: actualSenderId, type: 'EVENT_SYS', payload: { text: '행동 불능 상태에서는 공격 및 소환 아이템을 사용할 수 없습니다.' } });
+                sendPrivateSysMessage(actualSenderId, '행동 불능 상태에서는 공격 및 소환 아이템을 사용할 수 없습니다.');
+                return;
+            }
+
+            // New Defense / Counter Buff Items (1-time buff registration)
+            if (item === 'reflect') {
+                if (sender.reflectBuff) {
+                    sendPrivateSysMessage(actualSenderId, '🪞 이미 공격반사 버프가 활성화되어 있습니다!');
+                    return;
                 }
+                sender.items.splice(realIndex, 1);
+                sender.reflectBuff = true;
+                sendPrivateSysMessage(actualSenderId, '🪞 [공격반사 활성화] 다음 상대방 공격 1회를 반사합니다! (결투 피격 시 내가 선공 전환)');
+                playCounterTriggerVisual(actualSenderId, 'reflect');
+                if (currentMode === MODE_HOST) broadcastState();
+                if (actualSenderId === state.myId) renderInventory();
+                renderStage();
+                return;
+            } else if (item === 'scapegoat') {
+                const proxyTarget = findPlayerById(targetId);
+                if (!proxyTarget || proxyTarget.id === actualSenderId || proxyTarget.isDisconnected) {
+                    sendPrivateSysMessage(actualSenderId, '유효한 떠넘기기 대상을 선택할 수 없습니다.');
+                    return;
+                }
+                sender.items.splice(realIndex, 1);
+                sender.scapegoatTargetId = proxyTarget.id;
+                sender.scapegoatTargetName = proxyTarget.name;
+                sendPrivateSysMessage(actualSenderId, `🪃 [떠넘기기 대기] 다음 피격 시 [${proxyTarget.name}]님에게 공격 효과를 대신 적용합니다! (1회 소모)`);
+                playCounterTriggerVisual(actualSenderId, 'scapegoat');
+                if (currentMode === MODE_HOST) broadcastState();
+                if (actualSenderId === state.myId) renderInventory();
+                renderStage();
                 return;
             }
             
-            // Validation for missile: target must be currently sitting in their chair
+            // Pre-consumption validation for targeted/summon items
             if (item === 'missile') {
                 const target = findPlayerById(targetId);
                 if (!target || !PlayerState.canBeTargetedByMissile(target)) {
-                    if (actualSenderId === state.myId) {
-                        sysChat('해당 플레이어가 자리에 없어 미사일을 발사할 수 없습니다.');
-                    } else if (currentMode === MODE_HOST) {
-                        socket.emit('SEND_TO_GUEST', { guestId: actualSenderId, type: 'EVENT_SYS', payload: { text: '해당 플레이어가 자리에 없어 미사일을 발사할 수 없습니다.' } });
-                    }
+                    sendPrivateSysMessage(actualSenderId, '해당 플레이어가 자리에 없어 미사일을 발사할 수 없습니다.');
                     return; // Abort without consuming item!
                 }
                 targetId = target.id;
-                // Authoritatively check and consume shield at launch time so all clients see identical outcome
-                const blockedByShield = !!(target.items && target.items.includes('shield'));
-                if (blockedByShield) {
-                    target.items.splice(target.items.indexOf('shield'), 1);
-                    if (targetId === state.myId) renderInventory();
-                }
-                extraData = { ...(extraData || {}), blockedByShield };
             } else if (item === 'duel') {
                 const target = findPlayerById(targetId);
                 if (!target || target.id === actualSenderId || !PlayerState.canBeTargetedByDuel(sender) || !PlayerState.canBeTargetedByDuel(target) || (typeof isAnyDuelActiveOnHost === 'function' && isAnyDuelActiveOnHost())) {
-                    const msg = '현재 결투를 시작할 수 없는 상태입니다. (상대가 자리에 없거나 다른 결투가 진행 중)';
-                    if (actualSenderId === state.myId) {
-                        sysChat(msg);
-                    } else if (currentMode === MODE_HOST) {
-                        socket.emit('SEND_TO_GUEST', { guestId: actualSenderId, type: 'EVENT_SYS', payload: { text: msg } });
-                    }
+                    sendPrivateSysMessage(actualSenderId, '현재 결투를 시작할 수 없는 상태입니다. (상대가 자리에 없거나 다른 결투가 진행 중)');
                     return; // Abort without consuming item!
                 }
                 targetId = target.id;
             } else if (item === 'salt_farm') {
                 const target = findPlayerById(targetId);
                 if (!target || target.id === actualSenderId || !PlayerState.canBeTargetedBySaltFarm(target) || (typeof hasPendingSaltAbduction === 'function' && hasPendingSaltAbduction(target.id))) {
-                    const msg = '해당 플레이어는 이미 염전에 끌려가는 중이거나 노역 중입니다.';
-                    if (actualSenderId === state.myId) {
-                        sysChat(msg);
-                    } else if (currentMode === MODE_HOST) {
-                        socket.emit('SEND_TO_GUEST', { guestId: actualSenderId, type: 'EVENT_SYS', payload: { text: msg } });
-                    }
+                    sendPrivateSysMessage(actualSenderId, '해당 플레이어는 이미 염전에 끌려가는 중이거나 노역 중입니다.');
                     return; // Abort without consuming item!
                 }
                 targetId = target.id;
@@ -5611,45 +6090,76 @@
                 if (safeWire !== 'red' && safeWire !== 'blue') return;
                 const target = findPlayerById(targetId);
                 if (!target || target.id === actualSenderId || !PlayerState.canBeTargetedByBomb(target)) {
-                    const msg = '해당 플레이어가 자리에 없거나 이미 폭탄이 설치되어 있어 사용할 수 없습니다.';
-                    if (actualSenderId === state.myId) {
-                        sysChat(msg);
-                    } else if (currentMode === MODE_HOST) {
-                        socket.emit('SEND_TO_GUEST', { guestId: actualSenderId, type: 'EVENT_SYS', payload: { text: msg } });
-                    }
+                    sendPrivateSysMessage(actualSenderId, '해당 플레이어가 자리에 없거나 이미 폭탄이 설치되어 있어 사용할 수 없습니다.');
                     return; // Abort without consuming item!
                 }
+                targetId = target.id;
+            } else if (item === 'word_change') {
+                const target = findPlayerById(targetId);
+                if (!target || !extraData || typeof extraData.newWord !== 'string') return;
                 targetId = target.id;
             } else if (item === 'call_shark' || item === 'call_gator' || item === 'call_gull') {
                 const animal = item.replace('call_', '');
                 if (!state.room.waitingAnimals) state.room.waitingAnimals = [];
                 if (state.room.waitingAnimals.includes(animal)) {
                     const nameMap = { shark: '상어', gator: '악어', gull: '부산갈매기' };
-                    const msg = `이미 ${nameMap[animal] || '동물'}가 대기 중입니다!`;
-                    if (actualSenderId === state.myId) {
-                        sysChat(msg);
-                    } else if (currentMode === MODE_HOST) {
-                        socket.emit('SEND_TO_GUEST', { guestId: actualSenderId, type: 'EVENT_SYS', payload: { text: msg } });
-                    }
+                    sendPrivateSysMessage(actualSenderId, `이미 ${nameMap[animal] || '동물'}가 대기 중입니다!`);
                     return; // Abort without consuming item!
                 }
             } else if (item === 'word_delete' && !extraData) {
                 const allWords = sender.words ? Object.values(sender.words).flat() : [];
                 if (allWords.length === 0) {
-                    const msg = '현재 지울 수 있는 금기어가 없습니다.';
-                    if (actualSenderId === state.myId) {
-                        sysChat(msg);
-                    } else if (currentMode === MODE_HOST) {
-                        socket.emit('SEND_TO_GUEST', { guestId: actualSenderId, type: 'EVENT_SYS', payload: { text: msg } });
-                    }
+                    sendPrivateSysMessage(actualSenderId, '현재 지울 수 있는 금기어가 없습니다.');
                     return; // Abort without consuming item!
                 }
             }
             
             // Consume item
             sender.items.splice(realIndex, 1);
-            if (currentMode === MODE_HOST) broadcastState(); // Sync removed item
             if (actualSenderId === state.myId) renderInventory(); // Update local UI for Host/Bot
+
+            // Run unified counter/redirect pipeline (`공격반사` & `떠넘기기`) for immediate targeted opponent attacks
+            let effectiveSender = sender;
+            if (item === 'missile' || item === 'duel' || item === 'bomb_defuse' || item === 'word_change') {
+                const origTarget = findPlayerById(targetId);
+                const resolved = resolveIncomingAttackOnHost(sender, origTarget, item, extraData);
+                renderStage();
+                renderInventory();
+                if (resolved.kind === 'duel_reflected') {
+                    if (currentMode === MODE_HOST) broadcastState();
+                    startDuelOnHost(resolved.challenger.id, resolved.defender.id);
+                    return;
+                }
+                if (resolved.kind === 'duel_self_ko') {
+                    const victim = resolved.victim;
+                    if (victim) {
+                        if (victim.stats) victim.stats.duel = (victim.stats.duel || 0) + 1;
+                        applyDuelStun(victim.id, DUEL_STUN_MS);
+                    }
+                    if (currentMode === MODE_HOST) broadcastState();
+                    return;
+                }
+                effectiveSender = resolved.sender || sender;
+                targetId = resolved.target ? resolved.target.id : targetId;
+                extraData = resolved.extraData;
+            }
+            const effectiveSenderId = effectiveSender.id;
+
+            if (item === 'missile') {
+                const finalTarget = findPlayerById(targetId);
+                if (!finalTarget) {
+                    if (currentMode === MODE_HOST) broadcastState();
+                    return;
+                }
+                const blockedByShield = !!(finalTarget.items && finalTarget.items.includes('shield'));
+                if (blockedByShield) {
+                    finalTarget.items.splice(finalTarget.items.indexOf('shield'), 1);
+                    if (finalTarget.id === state.myId) renderInventory();
+                }
+                extraData = { ...(extraData || {}), blockedByShield };
+            }
+            
+            if (currentMode === MODE_HOST) broadcastState(); // Sync removed item & updated buffs
             
             if (item === 'word_delete' && !extraData) {
                 const allWords = Object.values(sender.words).flat();
@@ -5663,11 +6173,20 @@
                 }
             } else if (item === 'bomb_defuse') {
                 const target = findPlayerById(targetId);
+                if (!target) return;
+                if (!PlayerState.canBeTargetedByBomb(target)) {
+                    if (target.stats) target.stats.bomb = (target.stats.bomb || 0) + 1;
+                    applyBombStun(target.id, 10000);
+                    if (currentMode === MODE_HOST) broadcastState();
+                    return;
+                }
                 const BOMB_DURATION_MS = 20000;
                 const bombId = 'bomb-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
                 const expiresAt = Date.now() + BOMB_DURATION_MS;
-                const secretSafeWire = extraData.safeWire;
-                target.activeBomb = { bombId, senderId: actualSenderId, expiresAt };
+                const secretSafeWire = (extraData && extraData.reflectedFromId)
+                    ? (Math.random() < 0.5 ? 'red' : 'blue')
+                    : extraData.safeWire;
+                target.activeBomb = { bombId, senderId: effectiveSenderId, expiresAt };
                 const timeoutId = setTimeout(() => {
                     resolveBombChoice(bombId, target.id, null, true);
                 }, BOMB_DURATION_MS);
@@ -5681,7 +6200,7 @@
                 }
                 activeBombs[bombId] = {
                     bombId,
-                    senderId: actualSenderId,
+                    senderId: effectiveSenderId,
                     targetId: target.id,
                     safeWire: secretSafeWire,
                     expiresAt,
@@ -5689,8 +6208,7 @@
                     timeoutId,
                     botTimerId
                 };
-                // Never include safeWire in broadcast payload; include durationMs for zero clock skew
-                extraData = { bombId, expiresAt, durationMs: BOMB_DURATION_MS };
+                extraData = { bombId, expiresAt, durationMs: BOMB_DURATION_MS, isReflected: !!(extraData && extraData.isReflected) };
                 if (currentMode === MODE_HOST) broadcastState();
             } else if (item === 'call_shark' || item === 'call_gator' || item === 'call_gull') {
                 const animal = item.replace('call_', '');
@@ -5701,22 +6219,21 @@
                 extraData = { animal };
                 if (currentMode === MODE_HOST) broadcastState();
             } else if (item === 'salt_farm') {
-                // Silent item use: consume item cleanly and schedule random abduction within 1 minute with ZERO immediate alert.
                 scheduleSilentSaltAbduction(actualSenderId, targetId);
                 return;
             } else if (item === 'duel') {
-                startDuelOnHost(actualSenderId, targetId);
+                startDuelOnHost(effectiveSenderId, targetId);
                 return;
             }
             
             // Broadcast event to trigger animation
             if (currentMode === MODE_HOST) {
-                broadcast({ type: 'EVENT_ITEM', payload: { senderId: actualSenderId, senderIsBot: sender.isBot || false, item, targetId, extraData } });
+                broadcast({ type: 'EVENT_ITEM', payload: { senderId: effectiveSenderId, senderIsBot: sender.isBot || false, item, targetId, extraData } });
             }
             
             // Local fallback for Host/Bot
             if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
-                playItemEvent(actualSenderId, item, targetId, extraData);
+                playItemEvent(effectiveSenderId, item, targetId, extraData);
             }
         }
         
@@ -5808,6 +6325,10 @@
         // ────────────────────────────────────────────────────────────────────────
 
         function playItemEvent(senderId, item, targetId, extraData = null) {
+            if (item === 'counter_fx' && extraData) {
+                playCounterTriggerVisual(extraData.actorId || targetId || senderId, extraData.kind || 'reflect');
+                return;
+            }
             if (item === 'bomb_result' && extraData) {
                 if (typeof handleBombResult === 'function') handleBombResult(extraData);
                 return;
@@ -5912,9 +6433,12 @@
                     }
                 }
                 if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
-                    const allWords = Object.values(target.words).flat();
-                    if (allWords.length > extraData.wordIdx) {
-                        allWords[extraData.wordIdx] = extraData.newWord;
+                    const allWords = Object.values(target.words || {}).flat();
+                    if (allWords.length === 0) {
+                        allWords.push(extraData.newWord);
+                    } else {
+                        const safeIdx = Math.min(Math.max(0, Number(extraData.wordIdx) || 0), allWords.length - 1);
+                        allWords[safeIdx] = extraData.newWord;
                     }
                     target.words = { 'system': allWords }; // Replace the entire map to prevent appending
                     if (!target.assignedWords) target.assignedWords = [];
@@ -5973,7 +6497,8 @@
                     gull: { name: '부산갈매기', icon: '🦅', desc: '하늘에 거대한 부산갈매기를 소환했습니다! 조심하세요!!' }
                 };
                 const info = nameMap[animal] || { name: animal, icon: '⚠️', desc: '소환되었습니다!' };
-                sysChat(`${info.icon} ${sender.name}님이 [${animal === 'shark' ? '🦈 상어부르기' : (animal === 'gator' ? '🐊 악어부르기' : '🦅 부산갈매기부르기')}]를 사용하여 ${info.desc}`);
+                const summonLabel = ITEM_LABEL_MAP['call_' + animal] || (animal === 'shark' ? '🦈 상어소환' : (animal === 'gator' ? '🐊 악어소환' : '🦅 부산갈매기소환'));
+                sysChat(`${info.icon} ${sender.name}님이 [${summonLabel}]을(를) 사용하여 ${info.desc}`);
                 spawnWaitingAnimal(animal);
             } else if (item === 'bomb_defuse') {
                 if (!target || !extraData) return;
@@ -6667,7 +7192,7 @@
                 pendingSaltAbductions.splice(idx, 1);
                 return;
             }
-            const target = findPlayerById(entry.targetId);
+            let target = findPlayerById(entry.targetId);
             if (!target) {
                 pendingSaltAbductions.splice(idx, 1);
                 return;
@@ -6677,6 +7202,57 @@
                 entry.timerId = setTimeout(() => triggerSaltAbductionOnHost(abductionId), 1000);
                 return;
             }
+
+            // Intercept with `공격반사` or `떠넘기기` at strike time (once only via entry.isReflected)
+            if (!entry.isReflected) {
+                const origSender = findPlayerById(entry.senderId);
+                if (target.reflectBuff && origSender && origSender.id !== target.id) {
+                    target.reflectBuff = false;
+                    entry.isReflected = true;
+                    emitCounterFxOnHost(target.id, 'reflect');
+                    broadcastPublicSysMessage(`🪞 [공격반사 발동!] ${target.name}님이 복면 괴한들의 퍼플섬 염전 납치 습격을 시전자 ${origSender.name}님에게 그대로 반사했습니다!`);
+                    renderStage();
+                    renderInventory();
+                    if (origSender.isDisconnected || PlayerState.isAtSaltFarm(origSender)) {
+                        pendingSaltAbductions.splice(idx, 1);
+                        if (currentMode === MODE_HOST) broadcastState();
+                        return;
+                    }
+                    entry.senderId = target.id;
+                    entry.targetId = origSender.id;
+                    if (!PlayerState.isHealthySeated(origSender) || origSender.activeBomb) {
+                        if (currentMode === MODE_HOST) broadcastState();
+                        entry.timerId = setTimeout(() => triggerSaltAbductionOnHost(abductionId), 1000);
+                        return;
+                    }
+                    target = origSender;
+                } else if (target.scapegoatTargetId) {
+                    const proxyId = target.scapegoatTargetId;
+                    const savedProxyName = target.scapegoatTargetName || '대상';
+                    target.scapegoatTargetId = null;
+                    target.scapegoatTargetName = null;
+                    const proxy = findPlayerById(proxyId);
+                    if (proxy && !proxy.isDisconnected && proxy.id !== target.id && !PlayerState.isAtSaltFarm(proxy)) {
+                        entry.isReflected = true;
+                        emitCounterFxOnHost(target.id, 'scapegoat');
+                        broadcastPublicSysMessage(`🪃 [떠넘기기 발동!] ${target.name}님이 퍼플섬 염전 납치 습격을 미리 지정해 둔 ${proxy.name}님에게 대신 떠넘겼습니다!`);
+                        renderStage();
+                        renderInventory();
+                        entry.targetId = proxy.id;
+                        if (!PlayerState.isHealthySeated(proxy) || proxy.activeBomb) {
+                            if (currentMode === MODE_HOST) broadcastState();
+                            entry.timerId = setTimeout(() => triggerSaltAbductionOnHost(abductionId), 1000);
+                            return;
+                        }
+                        target = proxy;
+                    } else {
+                        sendPrivateSysMessage(target.id, `⚠️ [떠넘기기 예외] 지정해 둔 대상(${savedProxyName})이 이탈했거나 유효하지 않아 떠넘기기가 무효화되었습니다.`);
+                        renderStage();
+                        renderInventory();
+                    }
+                }
+            }
+
             pendingSaltAbductions.splice(idx, 1);
 
             target.flySequenceId = (target.flySequenceId || 0) + 1;
@@ -6711,7 +7287,7 @@
             }
 
             playSaltAbductSound();
-            sysChat(`🕶️ 갑자기 복면 쓴 두 명이 저 멀리서 밧줄과 까만 비닐봉다리를 들고 나타나 ${target.name}님을 납치해 배를 타고 염전 섬으로 데려갑니다!`);
+            sysChat(`🕶️ 갑자기 복면 쓴 두 명이 저 멀리서 밧줄과 까만 비닐봉다리를 들고 나타나 ${target.name}님을 납치해 배를 타고 퍼플섬 염전으로 데려갑니다!`);
             renderSaltProgressHud();
             updateChatUI();
 
@@ -7731,7 +8307,8 @@
         }
 
         function clearAllActiveDuels() {
-            Object.keys(activeDuels).forEach(dId => {
+            const clearedIds = Object.keys(activeDuels);
+            clearedIds.forEach(dId => {
                 const d = activeDuels[dId];
                 if (d) {
                     if (d.roundTimerId) clearTimeout(d.roundTimerId);
@@ -7740,15 +8317,29 @@
                 }
                 delete activeDuels[dId];
             });
-            state.players.forEach(p => {
-                if (p.activeDuel) p.activeDuel = null;
-            });
+            if (Array.isArray(state.players)) {
+                state.players.forEach(p => {
+                    if (p.activeDuel) p.activeDuel = null;
+                    if (p.status === PlayerState.STATUS.DUELING && state.room && state.room.status === 'playing') {
+                        p.status = PlayerState.STATUS.IDLE;
+                    }
+                });
+            }
+            if (currentMode === MODE_HOST && clearedIds.length > 0 && state.room && state.room.status === 'playing') {
+                clearedIds.forEach(dId => {
+                    broadcast({ type: 'EVENT_ITEM', payload: { senderId: state.myId, item: 'duel_abort', targetId: null, extraData: { duelId: dId, reason: '' } } });
+                });
+            }
             clearDuelClientTimers();
             clientDuelState = null;
             const arena3D = getDuelArena3D();
             if (arena3D) arena3D.setVisible(false);
             const modal = document.getElementById('modal-duel-arena');
             if (modal) modal.classList.add('hidden');
+            if (state.room && state.room.status === 'playing') {
+                renderStage();
+                updateChatUI();
+            }
         }
 
         function cleanupDuelsForPlayer(playerId) {
@@ -10420,6 +11011,10 @@
         window.endGame = endGame;
         window.closeStatsModal = closeStatsModal;
         window.state = state;
+        window.broadcastState = broadcastState;
+        window.renderInventory = renderInventory;
+        window.clearAllActiveDuels = clearAllActiveDuels;
+        window.clearAllActiveBombs = clearAllActiveBombs;
         window.triggerFly = triggerFly;
         window.els = els;
         window.chatState = chatState;
@@ -10493,6 +11088,7 @@
 
         function isVirtualKeyboardOpen() {
             if (!isMobileLayout()) return false;
+            if (window.visualViewport && window.visualViewport.scale > 1.05) return false;
             const m = readViewportMetrics();
             // iOS Safari: layout viewport keeps its size, visual viewport shrinks.
             if (m.layoutH - (m.visualH + m.offsetTop) > KEYBOARD_OCCLUSION_PX) return true;

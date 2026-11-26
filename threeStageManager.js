@@ -136,8 +136,11 @@
         updateCameraPosition();
 
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-        renderer.setSize(w, h);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        const initMaxBuf = 2560;
+        const initRawDpr = Math.min(window.devicePixelRatio || 1, 2);
+        const initSafeDpr = Math.max(0.5, Math.min(initRawDpr, initMaxBuf / Math.max(w, h, 1)));
+        renderer.setPixelRatio(initSafeDpr);
+        renderer.setSize(w, h, false);
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -145,15 +148,23 @@
         canvas.style.width = '100%';
         canvas.style.height = '100%';
         canvas.style.display = 'block';
+        canvas.style.touchAction = 'none';
+        canvas.addEventListener('webglcontextlost', (ev) => {
+            ev.preventDefault();
+            console.warn('[ThreeStageManager] WebGL context lost; awaiting automatic restore.');
+        }, false);
+        canvas.addEventListener('webglcontextrestored', () => {
+            onResize({ immediate: true });
+        }, false);
         containerEl.appendChild(canvas);
 
         setupLights();
         buildEnvironment();
         buildAnimals();
         setupControls(canvas);
-        window.addEventListener('resize', onResize);
+        window.addEventListener('resize', () => scheduleResize());
         if (typeof ResizeObserver !== 'undefined') {
-            resizeObserver = new ResizeObserver(() => onResize());
+            resizeObserver = new ResizeObserver(() => scheduleResize());
             resizeObserver.observe(containerEl);
         }
 
@@ -410,7 +421,7 @@
         group.add(peak);
 
         if (isSaltIsland) {
-            // Shinan Purple Island lavender bushes & coastal flower clusters
+            // Purple Island lavender bushes & coastal flower clusters
             const bushMatA = createMat(0xc084fc, 0.78);
             const bushMatB = createMat(0x9333ea, 0.82);
             [
@@ -460,7 +471,7 @@
                 group.add(mound);
             });
 
-            // Iconic Shinan Purple Island village houses (lavender walls + vivid purple roofs)
+            // Iconic Purple Island village houses (lavender walls + vivid purple roofs)
             const wallMat = createMat(0xf3e8ff, 0.78);
             const roofMat = createMat(0x6d28d9, 0.7);
             const shack = new THREE.Mesh(new THREE.BoxGeometry(6.2, 4.2, 5.2), wallMat);
@@ -2192,30 +2203,39 @@
 
         function onWheel(e) {
             userHasZoomed = true;
-            targetSpherical.radius += e.deltaY * 0.02;
-            targetSpherical.radius = Math.max(12, Math.min(54, targetSpherical.radius));
-            e.preventDefault();
+            const step = e.ctrlKey ? 0.05 : 0.02;
+            targetSpherical.radius += e.deltaY * step;
+            targetSpherical.radius = Math.max(9, Math.min(56, targetSpherical.radius));
+            if (e.cancelable) e.preventDefault();
         }
 
         function onTouchStart(e) {
-            if (e.touches.length === 2) {
+            if (e.touches.length >= 2) {
                 isDragging = false;
-                touchStartDist = getTouchDistance(e);
-                initialRadius = targetSpherical.radius;
+                if (e.cancelable) e.preventDefault();
+                if (!e.__agyPinchHandled) {
+                    touchStartDist = getTouchDistance(e);
+                    initialRadius = targetSpherical.radius;
+                }
             } else if (e.touches.length === 1) {
                 onPointerDown(e);
             }
         }
 
         function onTouchMove(e) {
-            if (e.touches.length === 2 && touchStartDist > 0) {
-                const curDist = getTouchDistance(e);
-                if (curDist > 0) {
-                    userHasZoomed = true;
-                    const factor = touchStartDist / curDist;
-                    targetSpherical.radius = Math.max(12, Math.min(54, initialRadius * factor));
+            if (e.touches.length >= 2) {
+                isDragging = false;
+                if (e.cancelable) e.preventDefault();
+                if (!e.__agyPinchHandled && touchStartDist > 0) {
+                    const curDist = getTouchDistance(e);
+                    if (curDist > 0) {
+                        userHasZoomed = true;
+                        const factor = touchStartDist / curDist;
+                        targetSpherical.radius = Math.max(9, Math.min(56, initialRadius * factor));
+                    }
                 }
-            } else if (e.touches.length === 1 && !touchStartDist) {
+            } else if (e.touches.length === 1 && !touchStartDist && isDragging) {
+                if (e.cancelable) e.preventDefault();
                 onPointerMove(e);
             }
         }
@@ -2229,14 +2249,46 @@
             }
         }
 
+        let gestureBaseRadius = 28;
+        function onGestureStart(e) {
+            isDragging = false;
+            if (e.cancelable) e.preventDefault();
+            gestureBaseRadius = targetSpherical.radius;
+        }
+        function onGestureChange(e) {
+            isDragging = false;
+            if (e.cancelable) e.preventDefault();
+            if (!e.__agyGestureHandled && e.scale && e.scale > 0) {
+                userHasZoomed = true;
+                targetSpherical.radius = Math.max(9, Math.min(56, gestureBaseRadius / e.scale));
+            }
+        }
+
         canvas.addEventListener('mousedown', onPointerDown);
         window.addEventListener('mousemove', onPointerMove);
         window.addEventListener('mouseup', onPointerUp);
 
-        canvas.addEventListener('touchstart', onTouchStart, { passive: true });
-        window.addEventListener('touchmove', onTouchMove, { passive: true });
+        canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+        canvas.addEventListener('touchmove', onTouchMove, { passive: false });
         window.addEventListener('touchend', onTouchEnd);
+        window.addEventListener('touchcancel', onTouchEnd);
+        canvas.addEventListener('gesturestart', onGestureStart, { passive: false });
+        canvas.addEventListener('gesturechange', onGestureChange, { passive: false });
+        canvas.addEventListener('gestureend', (e) => { if (e.cancelable) e.preventDefault(); }, { passive: false });
         canvas.addEventListener('wheel', onWheel, { passive: false });
+    }
+
+    let resizeRafPending = false;
+    let lastBufferW = 0;
+    let lastBufferH = 0;
+
+    function scheduleResize() {
+        if (resizeRafPending) return;
+        resizeRafPending = true;
+        requestAnimationFrame(() => {
+            resizeRafPending = false;
+            onResize({ immediate: true });
+        });
     }
 
     function updateCameraPosition() {
@@ -2304,7 +2356,18 @@
 
         camera.aspect = aspect;
         camera.updateProjectionMatrix();
-        renderer.setSize(w, h);
+
+        const MAX_BUFFER_DIM = 2560;
+        const rawDpr = Math.min(window.devicePixelRatio || 1, 2);
+        const safeDpr = Math.max(0.5, Math.min(rawDpr, MAX_BUFFER_DIM / Math.max(w, h, 1)));
+        const nextBufW = Math.max(1, Math.round(w * safeDpr));
+        const nextBufH = Math.max(1, Math.round(h * safeDpr));
+        if (nextBufW !== lastBufferW || nextBufH !== lastBufferH) {
+            lastBufferW = nextBufW;
+            lastBufferH = nextBufH;
+            renderer.setPixelRatio(safeDpr);
+            renderer.setSize(w, h, false);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -2401,6 +2464,8 @@
         const m = slot.avatarMeshes;
         const setNormalSkinAndHair = () => {
             if (!m) return;
+            if (m.headGroup) m.headGroup.visible = true;
+            if (m.alienAntennaGroup) m.alienAntennaGroup.visible = true;
             if (m.skinMat) m.skinMat.color.setHex(m.originalSkinHex || 0xffdbac);
             if (m.cheeks) m.cheeks.forEach(c => { c.visible = true; });
             if (m.normalHairGroup) m.normalHairGroup.visible = true;
@@ -3522,19 +3587,43 @@
 
     function buildVictimBindRigs3D() {
         const bagGroup = new THREE.Group();
-        const bagMat = createMat(0x0b0c10, 0.26);
-        const hood = new THREE.Mesh(new THREE.SphereGeometry(0.56, 14, 12), bagMat);
-        hood.scale.set(1.02, 1.24, 1.02);
-        hood.position.set(0, 2.08, 0);
+        bagGroup.name = 'saltVictimBag';
+        const bagMat = createMat(0x0a0b10, 0.28);
+        // Full-head & full-face black plastic bag enclosing headGroup (y=0.67..1.95, z=-0.58..0.64) completely
+        const hood = new THREE.Mesh(new THREE.SphereGeometry(0.74, 18, 16), bagMat);
+        hood.scale.set(1.06, 1.24, 1.12);
+        hood.position.set(0, 1.38, 0.05);
+        hood.renderOrder = 15;
         bagGroup.add(hood);
-        const knot = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.32, 6), bagMat);
-        knot.position.set(0, 2.75, 0);
-        bagGroup.add(knot);
+
+        const neckSkirt = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.66, 0.34, 16), bagMat);
+        neckSkirt.position.set(0, 0.68, 0.03);
+        neckSkirt.renderOrder = 15;
+        bagGroup.add(neckSkirt);
+
+        const neckTie = new THREE.Mesh(new THREE.TorusGeometry(0.47, 0.048, 8, 18), createMat(0x1f2430, 0.45));
+        neckTie.rotation.x = Math.PI / 2;
+        neckTie.position.set(0, 0.77, 0.03);
+        neckTie.renderOrder = 16;
+        bagGroup.add(neckTie);
+
+        const knotA = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.38, 7), bagMat);
+        knotA.position.set(-0.08, 2.34, 0.02);
+        knotA.rotation.z = 0.22;
+        knotA.renderOrder = 15;
+        bagGroup.add(knotA);
+
+        const knotB = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.32, 6), bagMat);
+        knotB.position.set(0.11, 2.31, 0.02);
+        knotB.rotation.z = -0.28;
+        knotB.renderOrder = 15;
+        bagGroup.add(knotB);
+
         bagGroup.visible = false;
 
         const ropeGroup = new THREE.Group();
         const ropeMat = createMat(0xd4a373, 0.85);
-        [0.95, 1.22, 1.48].forEach(ry => {
+        [0.86, 1.12, 1.36].forEach(ry => {
             const coil = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.055, 8, 16), ropeMat);
             coil.rotation.x = Math.PI / 2;
             coil.position.set(0, ry, 0);
@@ -3561,6 +3650,10 @@
             disposeObjectGroup(anim.victimRope);
         }
         if (anim.slot) {
+            if (anim.slot.avatarMeshes) {
+                if (anim.slot.avatarMeshes.headGroup) anim.slot.avatarMeshes.headGroup.visible = true;
+                if (anim.slot.avatarMeshes.alienAntennaGroup) anim.slot.avatarMeshes.alienAntennaGroup.visible = true;
+            }
             if (anim.mode === 'abduct') {
                 anim.slot.charGroup.visible = false;
                 anim.slot.hinge.rotation.x = 0;
@@ -3743,6 +3836,12 @@
                     if (abdA.prop) abdA.prop.visible = false;
                     victimBag.visible = true;
                     victimBag.position.y = THREE.MathUtils.lerp(0.85, 0, Math.min(1, p * 2.5));
+                    if (p >= 0.2 && slot.avatarMeshes && slot.avatarMeshes.alienAntennaGroup) {
+                        slot.avatarMeshes.alienAntennaGroup.visible = false;
+                    }
+                    if (p >= 0.45 && slot.avatarMeshes && slot.avatarMeshes.headGroup) {
+                        slot.avatarMeshes.headGroup.visible = false;
+                    }
                     if (p >= 0.3) {
                         if (abdB.prop) abdB.prop.visible = false;
                         victimRope.visible = true;
@@ -4149,8 +4248,14 @@
                 dCamera.lookAt(0, 2.08, -0.45);
 
                 dRenderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-                dRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-                dRenderer.setSize(w, h);
+                const dRawDpr = Math.min(window.devicePixelRatio || 1, 2);
+                const dSafeDpr = Math.max(0.5, Math.min(dRawDpr, 1920 / Math.max(w, h, 1)));
+                dRenderer.setPixelRatio(dSafeDpr);
+                dRenderer.setSize(w, h, false);
+                dRenderer.domElement.style.width = '100%';
+                dRenderer.domElement.style.height = '100%';
+                dRenderer.domElement.style.touchAction = 'none';
+                dRenderer.domElement.addEventListener('webglcontextlost', (ev) => { ev.preventDefault(); }, false);
                 dContainer.innerHTML = '';
                 dContainer.appendChild(dRenderer.domElement);
 
@@ -4188,6 +4293,9 @@
             }
         }
 
+        let dLastBufW = 0;
+        let dLastBufH = 0;
+
         function handleResize() {
             if (!dInitialized || !dRenderer || !dCamera || !dContainer) return;
             const w = dContainer.clientWidth;
@@ -4197,7 +4305,16 @@
             // Slightly wider horizontal framing on narrow mobile screens
             dCamera.fov = (w / h < 1.55) ? 58 : 50;
             dCamera.updateProjectionMatrix();
-            dRenderer.setSize(w, h);
+            const dRawDpr = Math.min(window.devicePixelRatio || 1, 2);
+            const dSafeDpr = Math.max(0.5, Math.min(dRawDpr, 1920 / Math.max(w, h, 1)));
+            const bw = Math.max(1, Math.round(w * dSafeDpr));
+            const bh = Math.max(1, Math.round(h * dSafeDpr));
+            if (bw !== dLastBufW || bh !== dLastBufH) {
+                dLastBufW = bw;
+                dLastBufH = bh;
+                dRenderer.setPixelRatio(dSafeDpr);
+                dRenderer.setSize(w, h, false);
+            }
         }
 
         function clearParticles() {
@@ -4798,6 +4915,22 @@
         }
     }
 
+    function zoomByDelta(deltaRadius) {
+        if (!isInitialized) return;
+        const d = Number(deltaRadius);
+        if (!Number.isFinite(d)) return;
+        userHasZoomed = true;
+        targetSpherical.radius = Math.max(9, Math.min(56, targetSpherical.radius + d));
+    }
+
+    function setZoomRadius(nextRadius) {
+        if (!isInitialized) return;
+        const r = Number(nextRadius);
+        if (!Number.isFinite(r) || r <= 0) return;
+        userHasZoomed = true;
+        targetSpherical.radius = Math.max(9, Math.min(56, r));
+    }
+
     return {
         init: init,
         setVisible: setVisible,
@@ -4810,6 +4943,9 @@
         showSpeechBubble: showSpeechBubble,
         updateRoamingAnimal: updateRoamingAnimal,
         handleResize: onResize,
+        zoomByDelta: zoomByDelta,
+        setZoomRadius: setZoomRadius,
+        getTargetZoomRadius: () => targetSpherical.radius,
         duelArena: duelArena,
         getCameraState: () => ({
             fov: camera ? camera.fov : BASE_FOV,

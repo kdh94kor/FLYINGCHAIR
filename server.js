@@ -202,14 +202,14 @@ const VALID_GUEST_TYPES = new Set([
   'BOMB_CUT_WIRE', 'EVENT_BOMB_RESULT'
 ]);
 
-function sanitizeGuestPayload(data) {
+function sanitizeGuestPayload(data, maxBytes = 8192) {
   if (!data || typeof data !== 'object') return null;
   const { type, payload } = data;
   if (typeof type !== 'string' || !VALID_GUEST_TYPES.has(type)) return null;
   if (payload !== undefined && typeof payload !== 'object') return null;
   if (payload) {
     const json = JSON.stringify(payload);
-    if (json.length > 4096) return null; // 4KB cap on payload
+    if (json.length > maxBytes) return null;
   }
   return { type, payload: payload || null };
 }
@@ -352,7 +352,7 @@ io.on('connection', (socket) => {
 
   // Host sends data to a specific Guest
   socket.on('SEND_TO_GUEST', (data) => {
-    const cleaned = sanitizeGuestPayload(data);
+    const cleaned = sanitizeGuestPayload(data, 65536);
     if (!cleaned) return;
     if (typeof data.guestId !== 'string' || data.guestId.length > 64) return;
     io.to(data.guestId).emit('DATA_FROM_HOST', { type: cleaned.type, payload: cleaned.payload });
@@ -368,7 +368,7 @@ io.on('connection', (socket) => {
 
   // Host broadcasts data to all Guests in the room
   socket.on('BROADCAST_TO_ROOM', (data) => {
-    const cleaned = sanitizeGuestPayload(data);
+    const cleaned = sanitizeGuestPayload(data, 65536);
     if (!cleaned) return;
     const roomCode = sanitizeRoomCode(data.roomCode);
     if (!roomCode) return;
