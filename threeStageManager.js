@@ -4144,11 +4144,12 @@
         activeOctopusAnims.push({
             mode: 'dive',
             slot,
+            startPerf: performance.now(),
             elapsed: 0,
             total: 4.1 * scale,
             scale,
             shoreX: slot.x,
-            shoreZ: -3.2,
+            shoreZ: 2.55,
             deepX: THREE.MathUtils.clamp(slot.x * 0.45, -4.5, 4.5),
             deepZ: -17.5,
             gearRig,
@@ -4200,13 +4201,14 @@
         activeOctopusAnims.push({
             mode: 'show',
             slot,
+            startPerf: performance.now(),
             elapsed: 0,
             total: 6.8 * scale,
             scale,
             deepX,
             deepZ,
             centerX: 0,
-            centerZ: 9.2,
+            centerZ: 8.6,
             octoMesh,
             chojangMesh,
             surfaceSplashDone: false,
@@ -4241,13 +4243,16 @@
 
     function updateActiveOctopusAnims(time, delta) {
         if (activeOctopusAnims.length === 0) return;
+        const CHAR_GROUND_STAND_OFFSET = 0.84; // Foot soles sit at y = -0.83 relative to charGroup
+        const nowPerf = performance.now();
         for (let i = activeOctopusAnims.length - 1; i >= 0; i--) {
             const anim = activeOctopusAnims[i];
             if (!anim || anim.finished) {
                 activeOctopusAnims.splice(i, 1);
                 continue;
             }
-            anim.elapsed += delta;
+            if (!anim.startPerf) anim.startPerf = nowPerf;
+            anim.elapsed = Math.max(0, (nowPerf - anim.startPerf) * 0.001);
             const s = anim.scale || 1;
             const t = anim.elapsed / s; // normalized logical seconds 0..total_base
             const { slot } = anim;
@@ -4255,16 +4260,17 @@
 
             if (anim.mode === 'dive') {
                 if (t < 1.1) {
-                    // Phase 1: Walk to water's edge and put on mask, snorkel & catch bag
+                    // Phase 1: Walk down beach to shoreline wearing mask, snorkel & catch bag
                     const p = clamp01(t / 1.1);
                     const px = slot.x;
-                    const py = THREE.MathUtils.lerp(2.4, 0.85, p) + Math.abs(Math.sin(t * 10)) * 0.12;
                     const pz = THREE.MathUtils.lerp(slot.z + 0.1, anim.shoreZ, p);
+                    const groundStandY = getBeachHeight(px, pz) + CHAR_GROUND_STAND_OFFSET;
+                    const py = THREE.MathUtils.lerp(2.4, groundStandY, smoothstep(0.0, 0.35, p)) + Math.abs(Math.sin(t * 11)) * 0.09;
                     slot.charGroup.position.set(px, py, pz);
                     slot.charGroup.rotation.set(0, Math.PI, 0);
                     if (m) {
-                        m.leftLeg.rotation.x = Math.sin(t * 11) * 0.55;
-                        m.rightLeg.rotation.x = -Math.sin(t * 11) * 0.55;
+                        m.leftLeg.rotation.set(Math.sin(t * 11) * 0.55, 0, 0);
+                        m.rightLeg.rotation.set(-Math.sin(t * 11) * 0.55, 0, 0);
                         if (p >= 0.45) {
                             if (anim.gearRig.maskGroup) anim.gearRig.maskGroup.visible = true;
                             if (anim.gearRig.bagGroup) anim.gearRig.bagGroup.visible = true;
@@ -4330,30 +4336,36 @@
                     }
                     if (anim.octoMesh) anim.octoMesh.rotation.y = Math.sin(time * 9) * 0.3;
                 } else if (t < 3.0) {
-                    // Phase 2: Swim & walk ashore straight to center front of all users
+                    // Phase 2: Swim & walk ashore onto beach sand cleanly (no ground leg clipping)
                     const p = clamp01((t - 1.5) / 1.5);
                     const ease = p * p * (3 - 2 * p);
                     const px = THREE.MathUtils.lerp(anim.deepX, anim.centerX, ease);
-                    const py = p < 0.55
-                        ? THREE.MathUtils.lerp(0.15, 0.72, p / 0.55)
-                        : THREE.MathUtils.lerp(0.72, 1.05, (p - 0.55) / 0.45) + Math.abs(Math.sin(t * 11)) * 0.1;
                     const pz = THREE.MathUtils.lerp(anim.deepZ, anim.centerZ, ease);
+                    let py;
+                    if (pz < 2.1) {
+                        py = 0.15 + Math.sin(t * 8) * 0.08;
+                    } else {
+                        const landBlend = smoothstep(2.1, 3.2, pz);
+                        const walkStandY = getBeachHeight(px, pz) + CHAR_GROUND_STAND_OFFSET + Math.abs(Math.sin(t * 12)) * 0.09;
+                        py = THREE.MathUtils.lerp(0.15, walkStandY, landBlend);
+                    }
                     slot.charGroup.position.set(px, py, pz);
                     slot.charGroup.rotation.set(0, 0, 0);
                     if (m) {
                         m.rightArm.rotation.set(-2.15, 0, -0.25);
                         m.leftArm.rotation.set(Math.sin(t * 9) * 0.3, 0, 0.2);
-                        m.leftLeg.rotation.x = Math.sin(t * 12) * 0.5;
-                        m.rightLeg.rotation.x = -Math.sin(t * 12) * 0.5;
+                        m.leftLeg.rotation.set(Math.sin(t * 12) * 0.5, 0, 0);
+                        m.rightLeg.rotation.set(-Math.sin(t * 12) * 0.5, 0, 0);
                     }
                 } else if (t < 5.6) {
-                    // Phase 3: Center stage! Hold octopus in right hand, pull Chojang from pocket in left hand, take a bite & squeeze Chojang into mouth!
+                    // Phase 3: Center front on sand! Feet rest cleanly on y = getBeachHeight(0, 8.6) = 1.2
                     const p = clamp01((t - 3.0) / 2.6);
-                    slot.charGroup.position.set(anim.centerX, 1.05, anim.centerZ);
+                    const centerStandY = getBeachHeight(anim.centerX, anim.centerZ) + CHAR_GROUND_STAND_OFFSET;
+                    slot.charGroup.position.set(anim.centerX, centerStandY, anim.centerZ);
                     slot.charGroup.rotation.set(0, 0, 0);
                     if (m) {
-                        m.leftLeg.rotation.x = 0;
-                        m.rightLeg.rotation.x = 0;
+                        m.leftLeg.rotation.set(0, 0, 0);
+                        m.rightLeg.rotation.set(0, 0, 0);
                         if (p < 0.25) {
                             // Pull chojang from pocket while showing off octopus
                             m.rightArm.rotation.set(-1.95, 0, -0.35);
@@ -4382,22 +4394,24 @@
                         }
                     }
                 } else if (t < 6.8) {
-                    // Phase 4: Walk cleanly back to own seat
+                    // Phase 4: Walk cleanly back to own seat across flat sand
                     const p = clamp01((t - 5.6) / 1.2);
                     const ease = p * p * (3 - 2 * p);
                     if (anim.chojangMesh) anim.chojangMesh.visible = false;
                     if (anim.octoMesh) anim.octoMesh.visible = false;
                     const px = THREE.MathUtils.lerp(anim.centerX, slot.x, ease);
-                    const py = THREE.MathUtils.lerp(1.05, 2.4, ease) + Math.abs(Math.sin(t * 10)) * 0.08;
                     const pz = THREE.MathUtils.lerp(anim.centerZ, slot.z + 0.1, ease);
+                    const standY = getBeachHeight(px, pz) + CHAR_GROUND_STAND_OFFSET;
+                    const seatBlend = smoothstep(0.72, 1.0, p);
+                    const py = THREE.MathUtils.lerp(standY, 2.4, seatBlend) + (1 - seatBlend) * Math.abs(Math.sin(t * 11)) * 0.08;
                     slot.charGroup.position.set(px, py, pz);
                     slot.charGroup.rotation.set(0, 0, 0);
                     if (m) {
                         if (m.headGroup) m.headGroup.rotation.set(0, 0, 0);
                         m.rightArm.rotation.set(Math.sin(t * 10) * 0.3, 0, 0);
                         m.leftArm.rotation.set(-Math.sin(t * 10) * 0.3, 0, 0);
-                        m.leftLeg.rotation.x = Math.sin(t * 11) * 0.45;
-                        m.rightLeg.rotation.x = -Math.sin(t * 11) * 0.45;
+                        m.leftLeg.rotation.set(Math.sin(t * 11) * 0.45, 0, 0);
+                        m.rightLeg.rotation.set(-Math.sin(t * 11) * 0.45, 0, 0);
                     }
                 } else {
                     finishOctopusAnimImmediate(anim);
@@ -5413,6 +5427,704 @@
         targetSpherical.radius = Math.max(9, Math.min(56, r));
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // 14-C. 3D Underwater Octopus Haerujil Arena ("낙지잡아와")
+    // ─────────────────────────────────────────────────────────────
+    const octopusArena = (function () {
+        let oScene = null;
+        let oCamera = null;
+        let oRenderer = null;
+        let oContainer = null;
+        let oResizeObs = null;
+        let oRafId = null;
+        let oClock = null;
+        let oVisible = false;
+        let oInitialized = false;
+        let oLastBufW = 0;
+        let oLastBufH = 0;
+
+        let diverRoot = null;
+        let diverChar = null;
+        let gearRig = null;
+        let emergeRoot = null;
+        let octoProp = null;
+        let bombProp = null;
+        let ambientBubbles = [];
+        let kelpMeshes = [];
+        const oParticles = [];
+
+        const oState = {
+            mode: 'waiting', // 'waiting' | 'caught' | 'bomb_explode' | 'drowning'
+            peeking: false,
+            peekKind: 'octopus',
+            peekStartPerf: 0,
+            peekElapsed: 0,
+            peekDuration: 0.23,
+            whiffEndPerf: 0,
+            whiffTimer: 0,
+            explodeStartPerf: 0,
+            explodeElapsed: 0,
+            drownStartPerf: 0,
+            drownElapsed: 0,
+            drownDuration: 2.8,
+            gurgleSpawned: false,
+            shakeTime: 0,
+            shakeMag: 0,
+            lastStepPerf: 0
+        };
+
+        function buildUnderwaterBomb3D() {
+            const g = new THREE.Group();
+            const bodyMat = createMat(0x111827, 0.35, 0.55);
+            const bandMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+            const collarMat = createMat(0x64748b, 0.3, 0.7);
+
+            const body = new THREE.Mesh(new THREE.SphereGeometry(0.32, 18, 16), bodyMat);
+            g.add(body);
+
+            const badge = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 10), bandMat);
+            badge.scale.set(0.4, 1.0, 1.0);
+            badge.position.set(-0.30, 0.02, 0);
+            g.add(badge);
+
+            const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.12, 10), collarMat);
+            collar.position.set(0, 0.31, 0);
+            g.add(collar);
+
+            const curve = new THREE.QuadraticBezierCurve3(
+                new THREE.Vector3(0, 0.36, 0),
+                new THREE.Vector3(0.09, 0.52, 0.03),
+                new THREE.Vector3(0.18, 0.48, 0.05)
+            );
+            const fuse = new THREE.Mesh(
+                new THREE.TubeGeometry(curve, 8, 0.024, 6, false),
+                createMat(0xd97706, 0.65)
+            );
+            g.add(fuse);
+
+            const spark = new THREE.Mesh(
+                new THREE.OctahedronGeometry(0.09, 0),
+                new THREE.MeshBasicMaterial({ color: 0xfacc15 })
+            );
+            spark.position.set(0.18, 0.48, 0.05);
+            g.add(spark);
+            g.userData.spark = spark;
+            return g;
+        }
+
+        function buildUnderwaterEnv() {
+            const seabedGeo = new THREE.PlaneGeometry(16, 10, 20, 12);
+            seabedGeo.rotateX(-Math.PI / 2);
+            const pos = seabedGeo.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+                const vx = pos.getX(i);
+                const vz = pos.getZ(i);
+                pos.setY(i, Math.sin(vx * 0.8) * 0.08 + Math.cos(vz * 0.9) * 0.06);
+            }
+            seabedGeo.computeVertexNormals();
+            const seabed = new THREE.Mesh(
+                seabedGeo,
+                createMat(0x1f3a4d, 0.95, 0.02)
+            );
+            seabed.position.set(0, -1.32, 0);
+            oScene.add(seabed);
+
+            // Sun rays filtering down from surface
+            for (let r = 0; r < 4; r++) {
+                const ray = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.65 + r * 0.08, 4.4, 12, 1, true),
+                    new THREE.MeshBasicMaterial({
+                        color: 0x7dd3fc,
+                        transparent: true,
+                        opacity: 0.065,
+                        side: THREE.DoubleSide,
+                        depthWrite: false
+                    })
+                );
+                ray.position.set(-1.9 + r * 1.25, 0.9, -0.9);
+                ray.rotation.z = -0.18;
+                oScene.add(ray);
+            }
+
+            // Underwater Pipe on the right (where octopus & bomb emerge toward -X)
+            const pipeGroup = new THREE.Group();
+            pipeGroup.position.set(1.62, -0.22, 0);
+            const pipeBodyMat = createMat(0x64748b, 0.42, 0.45);
+            const pipeLipMat = createMat(0x94a3b8, 0.35, 0.55);
+            const pipeCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 1.9, 22), pipeBodyMat);
+            pipeCyl.rotation.z = Math.PI / 2;
+            pipeCyl.position.x = 0.25;
+            pipeGroup.add(pipeCyl);
+
+            const pipeLip = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.26, 22), pipeLipMat);
+            pipeLip.rotation.z = Math.PI / 2;
+            pipeLip.position.x = -0.68;
+            pipeGroup.add(pipeLip);
+
+            const pipeBore = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.39, 0.39, 0.3, 20),
+                new THREE.MeshBasicMaterial({ color: 0x020617 })
+            );
+            pipeBore.rotation.z = Math.PI / 2;
+            pipeBore.position.x = -0.69;
+            pipeGroup.add(pipeBore);
+            oScene.add(pipeGroup);
+
+            // Rocks beside/under pipe
+            [
+                [1.85, -1.12, -0.5, 0.55],
+                [2.35, -1.05, 0.2, 0.72],
+                [-2.2, -1.16, -0.6, 0.48],
+                [0.45, -1.24, -0.8, 0.34]
+            ].forEach(([rx, ry, rz, rs]) => {
+                const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(rs, 0), createMat(0x334155, 0.9));
+                rock.position.set(rx, ry, rz);
+                rock.scale.set(1.2, 0.75, 1.0);
+                oScene.add(rock);
+            });
+
+            // Swaying 3D kelp stalks
+            kelpMeshes = [];
+            const kelpMat = createMat(0x10b981, 0.7);
+            [-2.45, -2.15, 2.28, 2.55].forEach((kx, idx) => {
+                const pivot = new THREE.Group();
+                pivot.position.set(kx, -1.32, idx % 2 === 0 ? -0.4 : 0.35);
+                const stalk = new THREE.Mesh(new THREE.ConeGeometry(0.11, 1.5 + (idx % 2) * 0.45, 7), kelpMat);
+                stalk.position.y = 0.75;
+                pivot.add(stalk);
+                oScene.add(pivot);
+                kelpMeshes.push({ pivot, phase: idx * 1.4 });
+            });
+
+            // Ambient drifting bubbles
+            ambientBubbles = [];
+            const bMat = new THREE.MeshBasicMaterial({ color: 0xe0f2fe, transparent: true, opacity: 0.45 });
+            const bGeo = new THREE.SphereGeometry(0.045, 8, 8);
+            for (let b = 0; b < 14; b++) {
+                const bm = new THREE.Mesh(bGeo, bMat);
+                const sx = -2.4 + Math.random() * 4.8;
+                const sy = -1.2 + Math.random() * 2.8;
+                const sz = -0.8 + Math.random() * 1.2;
+                bm.position.set(sx, sy, sz);
+                bm.scale.setScalar(0.6 + Math.random() * 0.9);
+                bm.userData = { baseX: sx, speed: 0.45 + Math.random() * 0.55, phase: Math.random() * 6.28 };
+                oScene.add(bm);
+                ambientBubbles.push(bm);
+            }
+
+            // Emerging prop container
+            emergeRoot = new THREE.Group();
+            emergeRoot.position.set(1.18, -0.22, 0.02);
+            oScene.add(emergeRoot);
+
+            octoProp = buildCaughtOctopus3D();
+            octoProp.scale.setScalar(1.25);
+            octoProp.rotation.set(0, -Math.PI / 2, 0);
+            octoProp.visible = false;
+            emergeRoot.add(octoProp);
+
+            bombProp = buildUnderwaterBomb3D();
+            bombProp.visible = false;
+            emergeRoot.add(bombProp);
+        }
+
+        function init(domContainer) {
+            if (oInitialized) {
+                if (domContainer && oRenderer && oRenderer.domElement.parentNode !== domContainer) {
+                    oContainer = domContainer;
+                    oContainer.innerHTML = '';
+                    oContainer.appendChild(oRenderer.domElement);
+                    handleResize();
+                }
+                return true;
+            }
+            if (typeof THREE === 'undefined' || !domContainer) return false;
+            try {
+                oContainer = domContainer;
+                oScene = new THREE.Scene();
+                oScene.background = new THREE.Color(0x042847);
+                oScene.fog = new THREE.FogExp2(0x052c4d, 0.068);
+
+                const w = oContainer.clientWidth || 440;
+                const h = oContainer.clientHeight || 248;
+                oCamera = new THREE.PerspectiveCamera(46, w / h, 0.1, 60);
+                oCamera.position.set(0, 0.25, 4.35);
+                oCamera.lookAt(0.05, -0.05, 0);
+
+                oRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
+                const rawDpr = Math.min(window.devicePixelRatio || 1, 2);
+                const safeDpr = Math.max(0.5, Math.min(rawDpr, 1920 / Math.max(w, h, 1)));
+                oRenderer.setPixelRatio(safeDpr);
+                oRenderer.setSize(w, h, false);
+                oRenderer.domElement.style.width = '100%';
+                oRenderer.domElement.style.height = '100%';
+                oRenderer.domElement.style.display = 'block';
+                oRenderer.domElement.style.touchAction = 'none';
+                oRenderer.domElement.addEventListener('webglcontextlost', (ev) => { ev.preventDefault(); }, false);
+                oContainer.innerHTML = '';
+                oContainer.appendChild(oRenderer.domElement);
+
+                const hemi = new THREE.HemisphereLight(0x7dd3fc, 0x082f49, 1.0);
+                oScene.add(hemi);
+                const keyLight = new THREE.DirectionalLight(0xe0f2fe, 1.15);
+                keyLight.position.set(1.5, 6.0, 3.5);
+                oScene.add(keyLight);
+                const fillLight = new THREE.PointLight(0x38bdf8, 0.85, 14);
+                fillLight.position.set(0, 2.0, 1.8);
+                oScene.add(fillLight);
+
+                buildUnderwaterEnv();
+                oClock = new THREE.Clock();
+                if (typeof ResizeObserver !== 'undefined') {
+                    oResizeObs = new ResizeObserver(() => handleResize());
+                    oResizeObs.observe(oContainer);
+                }
+                oInitialized = true;
+                return true;
+            } catch (err) {
+                console.warn('[OctopusArena3D] WebGL fallback to 2D:', err);
+                oInitialized = false;
+                return false;
+            }
+        }
+
+        function handleResize() {
+            if (!oInitialized || !oRenderer || !oCamera || !oContainer) return;
+            const w = oContainer.clientWidth;
+            const h = oContainer.clientHeight;
+            if (w <= 10 || h <= 10) return;
+            oCamera.aspect = w / h;
+            oCamera.fov = (w / h < 1.45) ? 54 : 46;
+            oCamera.updateProjectionMatrix();
+            const rawDpr = Math.min(window.devicePixelRatio || 1, 2);
+            const safeDpr = Math.max(0.5, Math.min(rawDpr, 1920 / Math.max(w, h, 1)));
+            const bw = Math.max(1, Math.round(w * safeDpr));
+            const bh = Math.max(1, Math.round(h * safeDpr));
+            if (bw !== oLastBufW || bh !== oLastBufH) {
+                oLastBufW = bw;
+                oLastBufH = bh;
+                oRenderer.setPixelRatio(safeDpr);
+                oRenderer.setSize(w, h, false);
+            }
+        }
+
+        function clearParticles() {
+            while (oParticles.length > 0) {
+                const p = oParticles.pop();
+                if (p.mesh && oScene) {
+                    oScene.remove(p.mesh);
+                    disposeObjectGroup(p.mesh);
+                }
+            }
+        }
+
+        function spawnBubbles(wx, wy, wz, count, big = false) {
+            if (!oScene) return;
+            for (let i = 0; i < count; i++) {
+                const r = (big ? 0.065 : 0.04) + Math.random() * (big ? 0.07 : 0.035);
+                const mat = new THREE.MeshBasicMaterial({ color: 0xe0f2fe, transparent: true, opacity: 0.85 });
+                const mesh = new THREE.Mesh(new THREE.SphereGeometry(r, 8, 8), mat);
+                mesh.position.set(wx + (Math.random() - 0.5) * 0.25, wy + (Math.random() - 0.5) * 0.15, wz + (Math.random() - 0.5) * 0.25);
+                oScene.add(mesh);
+                oParticles.push({
+                    kind: 'bubble',
+                    mesh,
+                    vx: (Math.random() - 0.5) * (big ? 0.9 : 0.4),
+                    vy: (big ? 1.1 : 0.7) + Math.random() * 0.9,
+                    vz: (Math.random() - 0.5) * 0.4,
+                    age: 0,
+                    life: big ? (1.1 + Math.random() * 0.6) : (0.7 + Math.random() * 0.4)
+                });
+            }
+        }
+
+        function spawnBombExplosion3D(wx, wy, wz) {
+            if (!oScene) return;
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0xfde047, side: THREE.DoubleSide, transparent: true, opacity: 0.95 });
+            const ring = new THREE.Mesh(new THREE.RingGeometry(0.15, 0.34, 24), ringMat);
+            ring.position.set(wx, wy, wz);
+            oScene.add(ring);
+            oParticles.push({ kind: 'ring', mesh: ring, age: 0, life: 0.65, maxScale: 4.5 });
+
+            const cols = [0xffffff, 0xfacc15, 0xf97316, 0xef4444, 0x262626];
+            for (let i = 0; i < 24; i++) {
+                const mat = new THREE.MeshBasicMaterial({ color: cols[i % cols.length], transparent: true, opacity: 1 });
+                const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.11 + Math.random() * 0.08, 8, 8), mat);
+                mesh.position.set(wx, wy, wz);
+                const ang = (i / 24) * Math.PI * 2 + Math.random() * 0.3;
+                const spd = 1.6 + Math.random() * 2.4;
+                oScene.add(mesh);
+                oParticles.push({
+                    kind: 'spark',
+                    mesh,
+                    vx: Math.cos(ang) * spd,
+                    vy: Math.sin(ang) * spd + 0.5,
+                    vz: (Math.random() - 0.5) * 1.4,
+                    age: 0,
+                    life: 0.72
+                });
+            }
+        }
+
+        function setupHunt(opts) {
+            if (!oInitialized || !oScene) return;
+            clearParticles();
+
+            if (diverRoot) {
+                oScene.remove(diverRoot);
+                disposeObjectGroup(diverRoot);
+                diverRoot = null;
+                diverChar = null;
+                gearRig = null;
+            }
+
+            diverRoot = new THREE.Group();
+            diverRoot.position.set(-1.18, -0.18, 0);
+            diverRoot.rotation.set(0, 0, -0.35);
+
+            diverChar = buildCharacterMesh({
+                name: (opts && opts.diverName) || '잠수부',
+                gender: (opts && opts.diverGender) || 'M',
+                splashCount: 0
+            }, 0);
+            diverChar.labelSprite.visible = false;
+            diverChar.group.rotation.set(0, Math.PI / 2, 0);
+            diverChar.group.scale.setScalar(0.84);
+            diverChar.leftLeg.rotation.set(0.18, 0, 0);
+            diverChar.rightLeg.rotation.set(-0.18, 0, 0);
+            diverChar.leftArm.rotation.set(-0.75, 0, 0.25);
+            diverChar.rightArm.rotation.set(-0.95, 0, -0.2);
+
+            gearRig = buildDiveGearRig3D();
+            if (diverChar.headGroup) {
+                gearRig.maskGroup.visible = true;
+                diverChar.headGroup.add(gearRig.maskGroup);
+            }
+            if (diverChar.group) {
+                gearRig.bagGroup.visible = true;
+                diverChar.group.add(gearRig.bagGroup);
+            }
+
+            diverRoot.add(diverChar.group);
+            oScene.add(diverRoot);
+
+            if (octoProp) octoProp.visible = false;
+            if (bombProp) bombProp.visible = false;
+
+            oState.mode = 'waiting';
+            oState.peeking = false;
+            oState.peekKind = 'octopus';
+            oState.peekStartPerf = 0;
+            oState.peekElapsed = 0;
+            oState.whiffEndPerf = 0;
+            oState.whiffTimer = 0;
+            oState.explodeStartPerf = 0;
+            oState.explodeElapsed = 0;
+            oState.drownStartPerf = 0;
+            oState.drownElapsed = 0;
+            oState.gurgleSpawned = false;
+            oState.shakeTime = 0;
+            oState.lastStepPerf = performance.now();
+            if (oCamera) {
+                oCamera.position.set(0, 0.25, 4.35);
+                oCamera.lookAt(0.05, -0.05, 0);
+            }
+        }
+
+        function triggerPeek(opts) {
+            oState.peeking = true;
+            oState.peekKind = (opts && opts.kind === 'bomb') ? 'bomb' : 'octopus';
+            oState.peekStartPerf = performance.now();
+            oState.peekElapsed = 0;
+            oState.peekDuration = ((opts && opts.durationMs) || 230) / 1000;
+            spawnBubbles(0.82, -0.22, 0, 5, false);
+        }
+
+        function hidePeek() {
+            oState.peeking = false;
+            if (octoProp && oState.mode !== 'caught') octoProp.visible = false;
+            if (bombProp) bombProp.visible = false;
+        }
+
+        function triggerWhiff() {
+            oState.whiffEndPerf = performance.now() + 340;
+            oState.whiffTimer = 0.34;
+            spawnBubbles(-0.35, -0.08, 0, 6, false);
+        }
+
+        function triggerCatch() {
+            oState.mode = 'caught';
+            oState.peeking = false;
+            if (bombProp) bombProp.visible = false;
+            if (octoProp) octoProp.visible = true;
+            spawnBubbles(0.15, -0.1, 0, 14, true);
+        }
+
+        function triggerBombExplode() {
+            oState.mode = 'bomb_explode';
+            oState.peeking = false;
+            oState.explodeStartPerf = performance.now();
+            oState.explodeElapsed = 0;
+            oState.shakeTime = 0.55;
+            oState.shakeMag = 0.16;
+            if (octoProp) octoProp.visible = false;
+            if (bombProp) bombProp.visible = false;
+            spawnBombExplosion3D(0.28, -0.18, 0);
+            if (diverChar) {
+                if (diverChar.skinMat) diverChar.skinMat.color.setHex(0x1e1e1e);
+                if (diverChar.cheeks) diverChar.cheeks.forEach(c => { c.visible = false; });
+                if (diverChar.normalHairGroup) diverChar.normalHairGroup.visible = false;
+                if (diverChar.bombCharredHairGroup) diverChar.bombCharredHairGroup.visible = true;
+                diverChar.normalFaceGroup.visible = false;
+                diverChar.deadFaceGroup.visible = false;
+                if (diverChar.bombFaceGroup) diverChar.bombFaceGroup.visible = true;
+            }
+        }
+
+        function playDrownDeath(opts) {
+            oState.mode = 'drowning';
+            oState.peeking = false;
+            oState.drownStartPerf = performance.now();
+            oState.drownElapsed = 0;
+            oState.drownDuration = ((opts && opts.durationMs) || 2800) / 1000;
+            oState.gurgleSpawned = false;
+            if (octoProp) octoProp.visible = false;
+            if (bombProp) bombProp.visible = false;
+        }
+
+        function updateParticles(dt) {
+            for (let i = oParticles.length - 1; i >= 0; i--) {
+                const p = oParticles[i];
+                p.age += dt;
+                const u = clamp01(p.age / p.life);
+                if (p.kind === 'ring') {
+                    const s = 1 + (p.maxScale - 1) * (1 - Math.pow(1 - u, 3));
+                    p.mesh.scale.setScalar(s);
+                    p.mesh.material.opacity = (1 - u) * 0.92;
+                } else if (p.kind === 'bubble') {
+                    p.mesh.position.x += (p.vx + Math.sin(p.age * 10) * 0.25) * dt;
+                    p.mesh.position.y += p.vy * dt;
+                    p.mesh.position.z += p.vz * dt;
+                    p.mesh.material.opacity = (1 - u) * 0.85;
+                } else {
+                    p.mesh.position.x += p.vx * dt;
+                    p.mesh.position.y += p.vy * dt;
+                    p.mesh.position.z += p.vz * dt;
+                    p.mesh.material.opacity = 1 - u;
+                    p.mesh.scale.setScalar(Math.max(0.15, 1 - u * 0.7));
+                }
+                if (p.age >= p.life) {
+                    oScene.remove(p.mesh);
+                    disposeObjectGroup(p.mesh);
+                    oParticles.splice(i, 1);
+                }
+            }
+        }
+
+        function stepOctopusScene(nowPerf) {
+            if (!oInitialized) return;
+            const dt = oState.lastStepPerf > 0
+                ? Math.min(0.15, Math.max(0.001, (nowPerf - oState.lastStepPerf) * 0.001))
+                : 0.016;
+            oState.lastStepPerf = nowPerf;
+            const nowSec = nowPerf * 0.001;
+
+            updateParticles(dt);
+
+            // Sway kelp & drift ambient bubbles
+            kelpMeshes.forEach(k => {
+                k.pivot.rotation.z = Math.sin(nowSec * 1.8 + k.phase) * 0.16;
+            });
+            ambientBubbles.forEach(bm => {
+                bm.position.y += bm.userData.speed * dt;
+                bm.position.x = bm.userData.baseX + Math.sin(nowSec * 2.2 + bm.userData.phase) * 0.12;
+                if (bm.position.y > 1.75) bm.position.y = -1.25;
+            });
+
+            // Wall-clock elapsed sync so animations stay locked to server/audio timers even at low FPS
+            if (oState.peeking) {
+                oState.peekElapsed = Math.max(0, (nowPerf - (oState.peekStartPerf || nowPerf)) * 0.001);
+            }
+            oState.whiffTimer = oState.whiffEndPerf > nowPerf ? (oState.whiffEndPerf - nowPerf) * 0.001 : 0;
+
+            // Emerging octopus / bomb inside pipe
+            if (oState.mode === 'caught' && octoProp && emergeRoot) {
+                emergeRoot.position.set(0.05, -0.04 + Math.sin(nowSec * 10) * 0.05, 0.08);
+                octoProp.visible = true;
+                octoProp.rotation.y = -Math.PI / 2 + Math.sin(nowSec * 12) * 0.28;
+                if (bombProp) bombProp.visible = false;
+            } else if (oState.peeking && emergeRoot) {
+                const p = Math.sin(clamp01(oState.peekElapsed / Math.max(0.05, oState.peekDuration)) * Math.PI);
+                emergeRoot.position.set(THREE.MathUtils.lerp(1.22, 0.24, p), -0.22, 0.04);
+                if (oState.peekKind === 'bomb') {
+                    if (octoProp) octoProp.visible = false;
+                    if (bombProp) {
+                        bombProp.visible = p > 0.04;
+                        bombProp.rotation.z = Math.sin(nowSec * 25) * 0.12;
+                        if (bombProp.userData.spark) {
+                            const sp = 0.8 + Math.abs(Math.sin(nowSec * 38)) * 0.85;
+                            bombProp.userData.spark.scale.setScalar(sp);
+                        }
+                    }
+                } else {
+                    if (bombProp) bombProp.visible = false;
+                    if (octoProp) {
+                        octoProp.visible = p > 0.04;
+                        octoProp.rotation.z = Math.sin(nowSec * 22) * 0.15;
+                    }
+                }
+            } else if (emergeRoot) {
+                if (octoProp) octoProp.visible = false;
+                if (bombProp) bombProp.visible = false;
+            }
+
+            // Animate 3D Diver based on current state
+            if (diverRoot && diverChar) {
+                if (oState.mode === 'waiting') {
+                    diverRoot.position.set(-1.18, -0.18 + Math.sin(nowSec * 2.4) * 0.06, 0);
+                    diverRoot.rotation.set(0, 0, -0.35 + Math.sin(nowSec * 1.9) * 0.04);
+                    diverChar.leftLeg.rotation.set(Math.sin(nowSec * 5.2) * 0.25, 0, 0);
+                    diverChar.rightLeg.rotation.set(-Math.sin(nowSec * 5.2) * 0.25, 0, 0);
+                    if (oState.whiffTimer > 0) {
+                        const lunge = Math.sin((oState.whiffTimer / 0.34) * Math.PI);
+                        diverChar.rightArm.rotation.set(-1.55 - lunge * 0.3, 0, -0.1);
+                        diverRoot.position.x = -1.18 + lunge * 0.38;
+                    } else {
+                        diverChar.leftArm.rotation.set(-0.75, 0, 0.25);
+                        diverChar.rightArm.rotation.set(-0.95, 0, -0.2);
+                    }
+                } else if (oState.mode === 'caught') {
+                    diverRoot.position.set(-0.82, -0.04 + Math.sin(nowSec * 8) * 0.06, 0);
+                    diverRoot.rotation.set(0, 0, -0.22);
+                    diverChar.rightArm.rotation.set(-1.52, 0, -0.15);
+                    diverChar.leftArm.rotation.set(-2.35, 0, 0.35);
+                } else if (oState.mode === 'bomb_explode') {
+                    oState.explodeElapsed = Math.max(0, (nowPerf - (oState.explodeStartPerf || nowPerf)) * 0.001);
+                    const u = clamp01(oState.explodeElapsed / 0.7);
+                    diverRoot.position.set(THREE.MathUtils.lerp(-1.0, -1.95, u), -0.25 + Math.sin(u * Math.PI) * 0.35, 0);
+                    diverRoot.rotation.set(0, 0, 0.45 * u);
+                    diverChar.leftArm.rotation.set(-2.2, 0, 0.65);
+                    diverChar.rightArm.rotation.set(-2.2, 0, -0.65);
+                } else if (oState.mode === 'drowning') {
+                    oState.drownElapsed = Math.max(0, (nowPerf - (oState.drownStartPerf || nowPerf)) * 0.001);
+                    const dur = Math.max(0.4, oState.drownDuration);
+                    const u = clamp01(oState.drownElapsed / dur);
+                    const gurgleSplit = 0.57;
+
+                    if (u < gurgleSplit) {
+                        // Phase A: Face flushes bright red & panicky thrashing for air!
+                        const flush = clamp01(u / gurgleSplit);
+                        const baseCol = new THREE.Color(diverChar.originalSkinHex || 0xffdbac);
+                        const redCol = new THREE.Color(0xff1e38);
+                        if (diverChar.skinMat) {
+                            diverChar.skinMat.color.copy(baseCol).lerp(redCol, flush);
+                        }
+                        if (diverChar.headGroup) {
+                            diverChar.headGroup.scale.setScalar(1.0 + flush * 0.14);
+                            diverChar.headGroup.rotation.set(Math.sin(nowSec * 24) * 0.22, 0, Math.cos(nowSec * 28) * 0.25);
+                        }
+                        const thrash = Math.sin(nowSec * 36);
+                        diverRoot.position.set(-1.18 + Math.sin(nowSec * 26) * 0.09, -0.12 + Math.cos(nowSec * 28) * 0.10, 0);
+                        diverRoot.rotation.set(Math.sin(nowSec * 20) * 0.24, 0, -0.25 + Math.sin(nowSec * 24) * 0.35);
+                        diverChar.leftArm.rotation.set(-1.85 + thrash * 0.95, 0, 0.55);
+                        diverChar.rightArm.rotation.set(-1.85 - thrash * 0.95, 0, -0.55);
+                        diverChar.leftLeg.rotation.set(thrash * 0.85, 0, 0);
+                        diverChar.rightLeg.rotation.set(-thrash * 0.85, 0, 0);
+                        if (Math.random() < 0.22) spawnBubbles(-0.85, 0.15, 0, 1, false);
+                    } else {
+                        // Phase B: "꼬르륵..." bubble burst & limp sink to seabed
+                        if (!oState.gurgleSpawned) {
+                            oState.gurgleSpawned = true;
+                            spawnBubbles(-0.82, 0.22, 0, 24, true);
+                            if (diverChar.skinMat) diverChar.skinMat.color.setHex(0xc82333);
+                            if (diverChar.headGroup) {
+                                diverChar.headGroup.scale.setScalar(1.0);
+                                diverChar.headGroup.rotation.set(0, 0, 0);
+                            }
+                            if (diverChar.normalFaceGroup) diverChar.normalFaceGroup.visible = false;
+                            if (diverChar.deadFaceGroup) diverChar.deadFaceGroup.visible = true;
+                        }
+                        const sinkU = clamp01((u - gurgleSplit) / (1 - gurgleSplit));
+                        const ease = sinkU * sinkU * (3 - 2 * sinkU);
+                        diverRoot.position.set(-1.22, THREE.MathUtils.lerp(-0.14, -1.06, ease), 0);
+                        diverRoot.rotation.set(0, 0, THREE.MathUtils.lerp(-0.25, Math.PI * 0.52, ease));
+                        diverChar.leftArm.rotation.set(THREE.MathUtils.lerp(-1.4, -0.25, ease), 0, 0.45);
+                        diverChar.rightArm.rotation.set(THREE.MathUtils.lerp(-1.4, -0.25, ease), 0, -0.45);
+                        diverChar.leftLeg.rotation.set(0.12, 0, 0);
+                        diverChar.rightLeg.rotation.set(-0.12, 0, 0);
+                    }
+                }
+            }
+
+            if (oCamera) {
+                if (oState.shakeTime > 0) {
+                    oState.shakeTime = Math.max(0, oState.shakeTime - dt);
+                    const s = (oState.shakeTime / 0.55) * oState.shakeMag;
+                    oCamera.position.set((Math.random() - 0.5) * s, 0.25 + (Math.random() - 0.5) * s, 4.35);
+                } else {
+                    oCamera.position.set(0, 0.25, 4.35);
+                }
+                oCamera.lookAt(0.05, -0.05, 0);
+            }
+        }
+
+        function animateOctopus() {
+            if (!oVisible || !oInitialized) {
+                oRafId = null;
+                return;
+            }
+            oRafId = requestAnimationFrame(animateOctopus);
+            stepOctopusScene(performance.now());
+            oRenderer.render(oScene, oCamera);
+        }
+
+        function setVisible(show) {
+            oVisible = !!show;
+            if (show) {
+                if (oClock) oClock.getDelta();
+                oState.lastStepPerf = performance.now();
+                handleResize();
+                if (!oRafId) oRafId = requestAnimationFrame(animateOctopus);
+            } else {
+                if (oRafId) {
+                    cancelAnimationFrame(oRafId);
+                    oRafId = null;
+                }
+                clearParticles();
+                oState.mode = 'waiting';
+                oState.peeking = false;
+            }
+        }
+
+        return {
+            init: init,
+            setVisible: setVisible,
+            handleResize: handleResize,
+            setupHunt: setupHunt,
+            triggerPeek: triggerPeek,
+            hidePeek: hidePeek,
+            triggerWhiff: triggerWhiff,
+            triggerCatch: triggerCatch,
+            triggerBombExplode: triggerBombExplode,
+            playDrownDeath: playDrownDeath,
+            getDebugState: () => {
+                if (oVisible && oInitialized && (performance.now() - oState.lastStepPerf) > 50) {
+                    stepOctopusScene(performance.now());
+                }
+                return {
+                    initialized: oInitialized,
+                    visible: oVisible,
+                    mode: oState.mode,
+                    peeking: oState.peeking,
+                    peekKind: oState.peekKind,
+                    gurgleSpawned: oState.gurgleSpawned,
+                    drownElapsed: Number(oState.drownElapsed.toFixed(2)),
+                    diverSkinHex: (diverChar && diverChar.skinMat) ? diverChar.skinMat.color.getHexString() : null
+                };
+            }
+        };
+    }());
+
     return {
         init: init,
         setVisible: setVisible,
@@ -5432,6 +6144,7 @@
         setZoomRadius: setZoomRadius,
         getTargetZoomRadius: () => targetSpherical.radius,
         duelArena: duelArena,
+        octopusArena: octopusArena,
         getCameraState: () => ({
             fov: camera ? camera.fov : BASE_FOV,
             aspect: camera ? camera.aspect : 1,
