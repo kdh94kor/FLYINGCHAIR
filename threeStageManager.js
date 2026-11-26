@@ -4537,7 +4537,7 @@
             slot,
             startPerf: performance.now(),
             elapsed: 0,
-            total: 8.6 * scale,
+            total: 12.4 * scale,
             scale,
             deepX,
             deepZ,
@@ -4720,8 +4720,8 @@
                         m.leftLeg.rotation.set(Math.sin(t * 12) * 0.5, 0, 0);
                         m.rightLeg.rotation.set(-Math.sin(t * 12) * 0.5, 0, 0);
                     }
-                } else if (t < 7.5) {
-                    // Phase 3: Center front on flat sand — Dangle 1 tentacle, squirt red chojang, bite & tear diagonally, wild chew
+                } else if (t < 11.3) {
+                    // Phase 3: Center front on flat sand — 2x prolonged Dangle 1 tentacle, squirt red chojang, bite & tear diagonally, wild chew
                     const centerStandY = getBeachHeight(anim.centerX, anim.centerZ) + CHAR_GROUND_STAND_OFFSET;
                     slot.charGroup.position.set(anim.centerX, centerStandY, anim.centerZ);
                     slot.charGroup.rotation.set(0, 0, 0);
@@ -4729,10 +4729,10 @@
                         m.leftLeg.rotation.set(0, 0, 0);
                         m.rightLeg.rotation.set(0, 0, 0);
 
-                        if (t < 4.8) {
-                            // 3a: Hold by 1 tentacle, dangle downward, squirt red chojang all over it
+                        if (t < 5.9) {
+                            // 3a: Hold by 1 tentacle, dangle downward, squirt red chojang all over it (2.2s)
                             anim.phaseName = 'chojang_squirt';
-                            const sub = clamp01((t - 3.7) / 1.1);
+                            const sub = clamp01((t - 3.7) / 2.2);
                             m.rightArm.rotation.set(-1.55, -0.22, 0.18);
                             m.leftArm.rotation.set(-1.62, 0.42, -0.35);
                             if (m.headGroup) m.headGroup.rotation.set(0.12, -0.1, 0);
@@ -4744,16 +4744,16 @@
                                 }
                                 if (anim.chojangMesh.userData.squirtStream) {
                                     const ss = anim.chojangMesh.userData.squirtStream;
-                                    ss.visible = sub > 0.12;
+                                    ss.visible = sub > 0.08;
                                     ss.scale.set(0.85 + Math.sin(t * 28) * 0.22, 1.0, 0.85 + Math.cos(t * 28) * 0.22);
                                 }
                             }
                             if (anim.octoMesh && anim.octoMesh.userData.chojangCoatGroup) {
                                 const coat = anim.octoMesh.userData.chojangCoatGroup;
-                                coat.visible = sub > 0.18;
+                                coat.visible = sub > 0.12;
                                 coat.scale.setScalar(0.25 + sub * 0.78);
                             }
-                            if (sub > 0.15 && (nowPerf - anim.lastSauceDropPerf > 90 * s)) {
+                            if (sub > 0.10 && (nowPerf - anim.lastSauceDropPerf > 90 * s)) {
                                 anim.lastSauceDropPerf = nowPerf;
                                 spawnChojangDrop(
                                     anim.centerX + 0.18 + (Math.random() - 0.5) * 0.25,
@@ -4764,10 +4764,10 @@
                                     (Math.random() - 0.5) * 0.9
                                 );
                             }
-                        } else if (t < 6.2) {
-                            // 3b: Clamp teeth onto sauced octopus, yank head UP-LEFT & hand DOWN-RIGHT to tear flesh!
+                        } else if (t < 8.7) {
+                            // 3b: Clamp teeth onto sauced octopus, yank head UP-LEFT & hand DOWN-RIGHT to tear flesh (2.8s)
                             anim.phaseName = 'bite_tear';
-                            const u = clamp01((t - 4.8) / 1.4);
+                            const u = clamp01((t - 5.9) / 2.8);
                             if (anim.chojangMesh) {
                                 if (anim.chojangMesh.userData.squirt) anim.chojangMesh.userData.squirt.visible = false;
                                 if (anim.chojangMesh.userData.squirtStream) anim.chojangMesh.userData.squirtStream.visible = false;
@@ -4828,7 +4828,7 @@
                                 if (m.headGroup) m.headGroup.rotation.set(-0.44, -0.2, 0.22);
                             }
                         } else {
-                            // 3c: Wild chomping chew with big jaw & cheek movement
+                            // 3c: Wild chomping chew with big jaw & cheek movement (2.6s)
                             anim.phaseName = 'chew';
                             m.rightArm.rotation.set(-1.18, -0.08, 0.25);
                             m.leftArm.rotation.set(-0.55, 0, 0.32);
@@ -4836,7 +4836,7 @@
                             if (m.normalMouth) m.normalMouth.visible = false;
                             if (anim.eatMouthGroup) {
                                 anim.eatMouthGroup.visible = true;
-                                anim.eatMouthGroup.userData.biteChunk.visible = t < 7.25;
+                                anim.eatMouthGroup.userData.biteChunk.visible = t < 10.9;
                                 const chew = 0.5 + 0.5 * Math.sin(t * 20);
                                 anim.eatMouthGroup.userData.cavity.scale.set(1.15 + chew * 0.22, 0.42 + chew * 1.15, 0.38);
                                 anim.eatMouthGroup.userData.lowerJaw.position.y = -0.025 - chew * 0.075;
@@ -4854,10 +4854,10 @@
                             }
                         }
                     }
-                } else if (t < 8.6) {
+                } else if (t < 12.4) {
                     // Phase 4: Walk cleanly back to own seat across flat sand
                     anim.phaseName = 'walk_seat';
-                    const p = clamp01((t - 7.5) / 1.1);
+                    const p = clamp01((t - 11.3) / 1.1);
                     const ease = p * p * (3 - 2 * p);
                     if (anim.chojangMesh) anim.chojangMesh.visible = false;
                     if (anim.octoMesh) anim.octoMesh.visible = false;
@@ -5958,11 +5958,11 @@
             peekKind: 'octopus',
             peekStartPerf: 0,
             peekElapsed: 0,
-            peekDuration: 0.285,
+            peekDuration: 0.40,
             lastPeekProgress: 0,
             grabStartPerf: 0,
             grabEndPerf: 0,
-            grabDuration: 0.34,
+            grabDuration: 0.28,
             whiffEndPerf: 0,
             whiffTimer: 0,
             explodeStartPerf: 0,
@@ -5976,11 +5976,12 @@
             lastStepPerf: 0
         };
 
-        // Fast emerge (0..0.42) followed by ~22% slower retract (0.42..1.0) so players can react cleanly
+        // Fast pop-out (0..0.24), clear visual hold (0.24..0.56), smooth retract (0.56..1.0)
         function evalOctopusPeekCurve(u) {
             const c = clamp01(u);
-            if (c < 0.42) return Math.sin((c / 0.42) * (Math.PI / 2));
-            return Math.cos(((c - 0.42) / 0.58) * (Math.PI / 2));
+            if (c < 0.24) return Math.sin((c / 0.24) * (Math.PI / 2));
+            if (c < 0.56) return 0.94 + Math.sin(((c - 0.24) / 0.32) * Math.PI) * 0.06;
+            return 0.94 * Math.cos(((c - 0.56) / 0.44) * (Math.PI / 2));
         }
 
         function buildUnderwaterBomb3D() {
@@ -6124,16 +6125,17 @@
 
             // Emerging prop container
             emergeRoot = new THREE.Group();
-            emergeRoot.position.set(1.18, -0.22, 0.02);
+            emergeRoot.position.set(0.86, -0.22, 0.06);
             oScene.add(emergeRoot);
 
             octoProp = buildCaughtOctopus3D();
-            octoProp.scale.setScalar(1.25);
+            octoProp.scale.setScalar(1.38);
             octoProp.rotation.set(0, -Math.PI / 2, 0);
             octoProp.visible = false;
             emergeRoot.add(octoProp);
 
             bombProp = buildUnderwaterBomb3D();
+            bombProp.scale.setScalar(1.18);
             bombProp.visible = false;
             emergeRoot.add(bombProp);
         }
@@ -6248,6 +6250,26 @@
             }
         }
 
+        function spawnGrabBurst(wx, wy, wz) {
+            if (!oScene) return;
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, transparent: true, opacity: 0.95 });
+            const ring = new THREE.Mesh(new THREE.RingGeometry(0.14, 0.28, 20), ringMat);
+            ring.position.set(wx, wy, wz);
+            oScene.add(ring);
+            oParticles.push({ kind: 'ring', mesh: ring, age: 0, life: 0.24, maxScale: 2.6 });
+            spawnBubbles(wx - 0.15, wy + 0.05, wz, 10, false);
+        }
+
+        function spawnPeekFlash(kind) {
+            if (!oScene) return;
+            const col = kind === 'bomb' ? 0xef4444 : 0x22c55e;
+            const ringMat = new THREE.MeshBasicMaterial({ color: col, side: THREE.DoubleSide, transparent: true, opacity: 0.95 });
+            const ring = new THREE.Mesh(new THREE.RingGeometry(0.16, 0.34, 22), ringMat);
+            ring.position.set(0.84, -0.22, 0.08);
+            oScene.add(ring);
+            oParticles.push({ kind: 'ring', mesh: ring, age: 0, life: 0.28, maxScale: 2.2 });
+        }
+
         function spawnBombExplosion3D(wx, wy, wz) {
             if (!oScene) return;
             const ringMat = new THREE.MeshBasicMaterial({ color: 0xfde047, side: THREE.DoubleSide, transparent: true, opacity: 0.95 });
@@ -6345,13 +6367,19 @@
         }
 
         function triggerPeek(opts) {
+            const now = performance.now();
             oState.peeking = true;
             oState.peekKind = (opts && opts.kind === 'bomb') ? 'bomb' : 'octopus';
-            oState.peekStartPerf = performance.now();
+            oState.peekStartPerf = now;
             oState.peekElapsed = 0;
             oState.lastPeekProgress = 0;
-            oState.peekDuration = ((opts && opts.durationMs) || 285) / 1000;
-            spawnBubbles(0.82, -0.22, 0, 5, false);
+            oState.peekDuration = ((opts && opts.durationMs) || 400) / 1000;
+            spawnPeekFlash(oState.peekKind);
+            spawnBubbles(0.82, -0.22, 0, 7, false);
+            if (oVisible && oRenderer && oScene && oCamera) {
+                stepOctopusScene(now);
+                oRenderer.render(oScene, oCamera);
+            }
         }
 
         function hidePeek() {
@@ -6365,10 +6393,10 @@
             if (!oInitialized || oState.mode !== 'waiting') return;
             const now = performance.now();
             oState.grabStartPerf = now;
-            oState.grabEndPerf = now + 340;
+            oState.grabEndPerf = now + 280;
             oState.whiffEndPerf = oState.grabEndPerf;
-            oState.whiffTimer = 0.34;
-            spawnBubbles(-0.35, -0.08, 0, 6, false);
+            oState.whiffTimer = 0.28;
+            spawnGrabBurst(0.02, -0.18, 0.08);
             if (oVisible && oRenderer && oScene && oCamera) {
                 stepOctopusScene(now);
                 oRenderer.render(oScene, oCamera);
@@ -6485,11 +6513,11 @@
             } else if (oState.peeking && emergeRoot) {
                 const p = evalOctopusPeekCurve(oState.peekElapsed / Math.max(0.05, oState.peekDuration));
                 oState.lastPeekProgress = p;
-                emergeRoot.position.set(THREE.MathUtils.lerp(1.22, 0.24, p), -0.22, 0.04);
+                emergeRoot.position.set(THREE.MathUtils.lerp(0.86, 0.02, p), -0.22, 0.06);
                 if (oState.peekKind === 'bomb') {
                     if (octoProp) octoProp.visible = false;
                     if (bombProp) {
-                        bombProp.visible = p > 0.04;
+                        bombProp.visible = p > 0.01;
                         bombProp.rotation.z = Math.sin(nowSec * 25) * 0.12;
                         if (bombProp.userData.spark) {
                             const sp = 0.8 + Math.abs(Math.sin(nowSec * 38)) * 0.85;
@@ -6499,7 +6527,7 @@
                 } else {
                     if (bombProp) bombProp.visible = false;
                     if (octoProp) {
-                        octoProp.visible = p > 0.04;
+                        octoProp.visible = p > 0.01;
                         octoProp.rotation.z = Math.sin(nowSec * 22) * 0.15;
                     }
                 }
@@ -6517,24 +6545,32 @@
                     diverChar.leftLeg.rotation.set(Math.sin(nowSec * 5.2) * 0.25, 0, 0);
                     diverChar.rightLeg.rotation.set(-Math.sin(nowSec * 5.2) * 0.25, 0, 0);
                     if (oState.grabEndPerf > nowPerf) {
-                        const gu = clamp01((nowPerf - (oState.grabStartPerf || nowPerf)) / 340);
-                        const lunge = gu < 0.18
-                            ? (0.55 + (gu / 0.18) * 0.45)
-                            : Math.cos(((gu - 0.18) / 0.82) * (Math.PI / 2));
-                        diverRoot.position.x = -1.18 + lunge * 0.44;
-                        diverRoot.rotation.z = -0.35 - lunge * 0.12;
-                        diverChar.rightArm.rotation.set(-1.55 - lunge * 0.48, 0, -0.08);
-                        diverChar.leftArm.rotation.set(-0.95 - lunge * 0.35, 0, 0.18);
+                        const gu = clamp01((nowPerf - (oState.grabStartPerf || nowPerf)) / 280);
+                        const lunge = gu < 0.14
+                            ? (0.85 + (gu / 0.14) * 0.15)
+                            : Math.cos(((gu - 0.14) / 0.86) * (Math.PI / 2));
+                        diverRoot.position.x = -1.18 + lunge * 0.82;
+                        diverRoot.rotation.z = -0.35 - lunge * 0.24;
+                        diverChar.rightArm.rotation.set(-1.55 - lunge * 0.22, 0, -0.04);
+                        diverChar.leftArm.rotation.set(-1.45 - lunge * 0.20, 0, 0.08);
+                        diverChar.rightArm.scale.set(1, 1 + lunge * 0.38, 1);
+                        diverChar.leftArm.scale.set(1, 1 + lunge * 0.25, 1);
                     } else {
+                        diverChar.rightArm.scale.set(1, 1, 1);
+                        diverChar.leftArm.scale.set(1, 1, 1);
                         diverChar.leftArm.rotation.set(-0.75, 0, 0.25);
                         diverChar.rightArm.rotation.set(-0.95, 0, -0.2);
                     }
                 } else if (oState.mode === 'caught') {
+                    diverChar.rightArm.scale.set(1, 1, 1);
+                    diverChar.leftArm.scale.set(1, 1, 1);
                     diverRoot.position.set(-0.82, -0.04 + Math.sin(nowSec * 8) * 0.06, 0);
                     diverRoot.rotation.set(0, 0, -0.22);
                     diverChar.rightArm.rotation.set(-1.52, 0, -0.15);
                     diverChar.leftArm.rotation.set(-2.35, 0, 0.35);
                 } else if (oState.mode === 'bomb_explode') {
+                    diverChar.rightArm.scale.set(1, 1, 1);
+                    diverChar.leftArm.scale.set(1, 1, 1);
                     oState.explodeElapsed = Math.max(0, (nowPerf - (oState.explodeStartPerf || nowPerf)) * 0.001);
                     const u = clamp01(oState.explodeElapsed / 0.7);
                     diverRoot.position.set(THREE.MathUtils.lerp(-1.0, -1.95, u), -0.25 + Math.sin(u * Math.PI) * 0.35, 0);
@@ -6542,6 +6578,8 @@
                     diverChar.leftArm.rotation.set(-2.2, 0, 0.65);
                     diverChar.rightArm.rotation.set(-2.2, 0, -0.65);
                 } else if (oState.mode === 'drowning') {
+                    diverChar.rightArm.scale.set(1, 1, 1);
+                    diverChar.leftArm.scale.set(1, 1, 1);
                     oState.drownElapsed = Math.max(0, (nowPerf - (oState.drownStartPerf || nowPerf)) * 0.001);
                     const dur = Math.max(0.4, oState.drownDuration);
                     const u = clamp01(oState.drownElapsed / dur);
