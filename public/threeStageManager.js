@@ -986,11 +986,14 @@
         const normalFaceGroup = new THREE.Group();
         const deadFaceGroup = new THREE.Group();
         const bombFaceGroup = new THREE.Group();
+        const duelFaceGroup = new THREE.Group();
         deadFaceGroup.visible = false;
         bombFaceGroup.visible = false;
+        duelFaceGroup.visible = false;
         headGroup.add(normalFaceGroup);
         headGroup.add(deadFaceGroup);
         headGroup.add(bombFaceGroup);
+        headGroup.add(duelFaceGroup);
         const cheeks = [];
 
         [-1, 1].forEach(side => {
@@ -1114,6 +1117,62 @@
         bombMouthInner.position.set(0, -0.155, 0.578);
         bombFaceGroup.add(bombMouthInner);
 
+        // Duel-Defeat Swollen Black-and-Blue Eye ("눈탱이 밤탱이") + Lump + Dizzy Stars
+        const duelEx = isAlien ? 0.22 : 0.205;
+        const bruiseOuter = new THREE.Mesh(
+            new THREE.SphereGeometry(0.185, 14, 12),
+            createMat(0x3b0764, 0.78)
+        );
+        bruiseOuter.scale.set(1.18, 1.12, 0.42);
+        bruiseOuter.position.set(-duelEx, 0.035, 0.515);
+        duelFaceGroup.add(bruiseOuter);
+
+        const bruiseInner = new THREE.Mesh(
+            new THREE.SphereGeometry(0.135, 12, 10),
+            createMat(0x6d28d9, 0.65)
+        );
+        bruiseInner.scale.set(1.12, 1.0, 0.48);
+        bruiseInner.position.set(-duelEx, 0.035, 0.542);
+        duelFaceGroup.add(bruiseInner);
+
+        const swollenShutEye = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.038, 0.035), pupilMat);
+        swollenShutEye.position.set(-duelEx, 0.035, 0.605);
+        swollenShutEye.rotation.z = -0.12;
+        duelFaceGroup.add(swollenShutEye);
+
+        // Other eye: dizzy X
+        const dx1 = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.034, 0.03), pupilMat);
+        dx1.position.set(duelEx, 0.03, 0.56);
+        dx1.rotation.z = Math.PI / 4;
+        duelFaceGroup.add(dx1);
+        const dx2 = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.034, 0.03), pupilMat);
+        dx2.position.set(duelEx, 0.03, 0.56);
+        dx2.rotation.z = -Math.PI / 4;
+        duelFaceGroup.add(dx2);
+
+        // Swollen bruised cheek bump + crooked mouth
+        const cheekLump = new THREE.Mesh(new THREE.SphereGeometry(0.115, 10, 8), createMat(0xc0392b, 0.6));
+        cheekLump.scale.set(1.2, 0.95, 0.65);
+        cheekLump.position.set(-0.34, -0.09, 0.49);
+        duelFaceGroup.add(cheekLump);
+
+        const duelMouth = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.032, 0.03), pupilMat);
+        duelMouth.position.set(0.02, -0.15, 0.57);
+        duelMouth.rotation.z = -0.22;
+        duelFaceGroup.add(duelMouth);
+
+        // Orbiting yellow dizzy stars above head
+        const duelStarsRing = new THREE.Group();
+        duelStarsRing.position.set(0, isAlien ? 0.92 : 0.78, 0);
+        const starMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
+        for (let st = 0; st < 3; st++) {
+            const ang = (st / 3) * Math.PI * 2;
+            const star = new THREE.Mesh(new THREE.OctahedronGeometry(0.085, 0), starMat);
+            star.position.set(Math.cos(ang) * 0.46, 0, Math.sin(ang) * 0.46);
+            duelStarsRing.add(star);
+        }
+        duelFaceGroup.add(duelStarsRing);
+
         // Torso
         const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.48, 0.95, 16), createMat(bodyColor, 0.6));
         torso.position.y = 0.45;
@@ -1205,6 +1264,8 @@
             normalFaceGroup: normalFaceGroup,
             deadFaceGroup: deadFaceGroup,
             bombFaceGroup: bombFaceGroup,
+            duelFaceGroup: duelFaceGroup,
+            duelStarsRing: duelStarsRing,
             headBombGroup: headBombGroup,
             headBombLed: headBombLed,
             torso: torso,
@@ -2345,6 +2406,7 @@
             if (m.normalHairGroup) m.normalHairGroup.visible = true;
             if (m.bombCharredHairGroup) m.bombCharredHairGroup.visible = false;
             if (m.bombFaceGroup) m.bombFaceGroup.visible = false;
+            if (m.duelFaceGroup) m.duelFaceGroup.visible = false;
         };
 
         if (status === 'flying') {
@@ -2377,10 +2439,22 @@
             setNormalSkinAndHair();
             hinge.rotation.x = -1.3;
             charGroup.visible = false;
-        } else if (status === 'salt-farm') {
+        } else if (status === 'salt-farm' || status === 'dueling') {
             setNormalSkinAndHair();
             hinge.rotation.x = 0;
             charGroup.visible = false;
+        } else if (status === 'dead-duel') {
+            setNormalSkinAndHair();
+            charGroup.visible = true;
+            hinge.rotation.x = 0;
+            charGroup.position.set(slot.x, 2.4, slot.z + 0.1);
+            charGroup.rotation.set(0, 0, 0);
+            if (m) {
+                m.headGroup.rotation.set(0.08, 0, -0.16);
+                m.normalFaceGroup.visible = false;
+                m.deadFaceGroup.visible = false;
+                if (m.duelFaceGroup) m.duelFaceGroup.visible = true;
+            }
         } else if (status === 'dead-missile') {
             setNormalSkinAndHair();
             charGroup.visible = true;
@@ -2405,6 +2479,7 @@
                 m.headGroup.rotation.set(0, 0, 0);
                 m.normalFaceGroup.visible = false;
                 m.deadFaceGroup.visible = false;
+                if (m.duelFaceGroup) m.duelFaceGroup.visible = false;
                 if (m.bombFaceGroup) m.bombFaceGroup.visible = true;
             }
         } else {
@@ -2428,6 +2503,7 @@
             m.normalFaceGroup.visible = true;
             m.deadFaceGroup.visible = false;
             if (m.bombFaceGroup) m.bombFaceGroup.visible = false;
+            if (m.duelFaceGroup) m.duelFaceGroup.visible = false;
             m.leftLeg.rotation.set(-Math.PI / 2, 0, 0);
             m.rightLeg.rotation.set(-Math.PI / 2, 0, 0);
             m.leftArm.rotation.set(-Math.PI / 3.5, 0, 0);
@@ -3276,6 +3352,10 @@
                     if (slot.avatarMeshes.headBombLed) {
                         slot.avatarMeshes.headBombLed.material.color.setHex(Math.sin(time * 16) > 0 ? 0xff2e43 : 0x550000);
                     }
+                }
+                if (slot.player.status === 'dead-duel' && slot.avatarMeshes.duelStarsRing) {
+                    slot.avatarMeshes.duelStarsRing.rotation.y = time * 3.6;
+                    slot.avatarMeshes.headGroup.rotation.z = -0.14 + Math.sin(time * 3.2) * 0.06;
                 }
                 if (slot.player.status === 'dead-bomb' && Math.random() < delta * 6) {
                     if (!sharedSmokeGeo) sharedSmokeGeo = new THREE.SphereGeometry(0.22, 6, 6);

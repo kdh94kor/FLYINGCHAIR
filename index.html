@@ -83,8 +83,8 @@
         body { background-color: var(--bg-main); color: var(--text-main); height: 100vh; height: 100dvh; display: flex; overflow: hidden; padding-top: 70px; box-sizing: border-box; }
 
         /* Layout */
-        .sidebar { width: 25%; min-width: 250px; background-color: var(--bg-panel); border-right: 2px solid var(--bg-darker); display: flex; flex-direction: column; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.3); z-index: 20; transition: width 0.3s, min-width 0.3s, padding 0.3s; position: relative; }
-        body.state-playing .sidebar { width: 60px; min-width: 60px; padding: 15px 5px; align-items: center; cursor: pointer; }
+        .sidebar { width: 25%; min-width: 250px; background-color: var(--bg-panel); border-right: 2px solid var(--bg-darker); display: flex; flex-direction: column; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.3); z-index: 20; transition: width 0.3s, min-width 0.3s, padding 0.3s; position: relative; overflow-y: auto; }
+        body.state-playing .sidebar { width: 60px; min-width: 60px; padding: 15px 5px; align-items: center; cursor: pointer; overflow: hidden; }
         body.state-playing .sidebar > *:not(#btn-sidebar-leave) { display: none !important; }
         
         #btn-sidebar-leave { display: none; width: 100%; text-align: center; font-size: 0.8rem; padding: 10px 0; background: var(--accent); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
@@ -134,6 +134,97 @@
         .stepper span { min-width: 28px; text-align: center; font-size: 1.1rem; font-weight: bold; color: var(--accent); }
         .stepper-btn { width: 28px; height: 28px; border: none; border-radius: 6px; background: #444; color: #fff; font-size: 1.2rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
         .stepper-btn:hover { background: var(--accent); }
+
+        /* Room Creation Custom Item Pool Selector */
+        .item-pool-selector {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            background: rgba(0, 0, 0, 0.22);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 8px;
+            padding: 8px;
+        }
+        .item-pool-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .item-pool-title {
+            font-size: 0.78rem;
+            color: #ddd;
+            font-weight: 700;
+        }
+        .item-pool-title strong {
+            color: #38bdf8;
+            font-variant-numeric: tabular-nums;
+        }
+        .item-pool-actions {
+            display: flex;
+            gap: 4px;
+        }
+        .item-pool-mini-btn {
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            background: rgba(255, 255, 255, 0.06);
+            color: #ccc;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+        }
+        .item-pool-mini-btn:hover {
+            background: rgba(255, 255, 255, 0.14);
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        .item-pool-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 5px;
+            width: 100%;
+        }
+        .item-pool-chip {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 6px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.03);
+            color: #888;
+            font-size: 0.74rem;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            min-width: 0;
+            transition: all 0.15s ease;
+        }
+        .item-pool-chip.selected {
+            border-color: rgba(56, 189, 248, 0.55);
+            background: rgba(56, 189, 248, 0.14);
+            color: #f1f5f9;
+        }
+        .item-pool-chip:hover {
+            border-color: rgba(56, 189, 248, 0.75);
+        }
+        .option-row .item-pool-chip input[type="checkbox"] {
+            width: 14px;
+            height: 14px;
+            margin: 0;
+            accent-color: #38bdf8;
+            flex-shrink: 0;
+        }
+        .item-pool-chip-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            line-height: 1.2;
+        }
 
         /* Stage */
         .stage { flex: 1; position: relative; background: linear-gradient(to bottom, #87CEEB, #e0f6ff); overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
@@ -216,12 +307,13 @@
         .speech-bubble.show { opacity: 1; }
 
         .avatar-svg { width: 100%; height: 100%; drop-shadow: 2px 2px 2px rgba(0,0,0,0.3); overflow: visible; }
-        .exp-idle, .exp-fly, .exp-water, .exp-dead, .exp-bomb, .avatar-bomb-hair { display: none; }
+        .exp-idle, .exp-fly, .exp-water, .exp-dead, .exp-bomb, .exp-duel, .avatar-bomb-hair { display: none; }
         .status-idle .exp-idle, .status-walking .exp-idle { display: block; }
         .status-flying .exp-fly { display: block; }
         .status-swimming .exp-water { display: block; }
         .status-dead .exp-dead, .status-dead-gator .exp-dead, .status-dead-missile .exp-dead, .status-snatched .exp-dead { display: block; }
-        .status-salt-farm:not(.salt-abducting) { opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+        .status-salt-farm:not(.salt-abducting), .status-dueling { opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+        .status-dead-duel .exp-duel { display: block; }
         .status-dead-bomb .avatar-normal-hair { display: none; }
         .status-dead-bomb .avatar-bomb-hair { display: block; }
         .status-dead-bomb .avatar-face-skin { fill: #202020 !important; }
@@ -407,6 +499,331 @@
         .item-btn.call_gull { background: rgba(241, 196, 15, 0.25); border-color: rgba(241, 196, 15, 0.6); color: #f1c40f; }
         .item-btn.bomb_defuse { background: rgba(255, 107, 53, 0.25); border-color: rgba(255, 107, 53, 0.65); color: #ff7f50; }
         .item-btn.salt_farm { background: rgba(56, 189, 248, 0.22); border-color: rgba(56, 189, 248, 0.65); color: #7dd3fc; }
+        .item-btn.duel { background: rgba(244, 63, 94, 0.24); border-color: rgba(244, 63, 94, 0.7); color: #fda4af; }
+
+        /* Duel Arena Ring Modal (fits safely within 90vh mobile & desktop) */
+        .duel-modal {
+            width: min(94vw, 540px);
+            max-width: 94vw;
+            max-height: 90vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: thin;
+            background: linear-gradient(180deg, #1e152a 0%, #11131f 100%);
+            border: 2px solid rgba(244, 63, 94, 0.68);
+            box-shadow: 0 16px 42px rgba(0, 0, 0, 0.75);
+            padding: 14px 16px 16px;
+            text-align: center;
+        }
+        .duel-top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .duel-round-pill {
+            background: rgba(244, 63, 94, 0.2);
+            border: 1px solid rgba(244, 63, 94, 0.55);
+            color: #fda4af;
+            font-size: 0.78rem;
+            font-weight: 800;
+            padding: 3px 10px;
+            border-radius: 999px;
+            letter-spacing: 0.4px;
+        }
+        .duel-timer-pill {
+            background: rgba(250, 204, 21, 0.16);
+            border: 1px solid rgba(250, 204, 21, 0.55);
+            color: #fde047;
+            font-size: 0.82rem;
+            font-weight: 800;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-variant-numeric: tabular-nums;
+        }
+        .duel-timer-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 999px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        .duel-timer-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #f43f5e, #f59e0b, #facc15);
+            transition: width 0.1s linear;
+        }
+        .duel-scoreboard {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 7px 10px;
+            margin-bottom: 10px;
+        }
+        .duel-score-side {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            min-width: 0;
+        }
+        .duel-score-name {
+            font-size: 0.82rem;
+            font-weight: 800;
+            color: #f8fafc;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .duel-score-pips {
+            display: flex;
+            gap: 5px;
+            margin-top: 3px;
+        }
+        .duel-pip {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 1.5px solid rgba(255, 255, 255, 0.35);
+            background: rgba(255, 255, 255, 0.08);
+            transition: all 0.25s ease;
+        }
+        .duel-pip.won {
+            background: #f43f5e;
+            border-color: #fda4af;
+            box-shadow: 0 0 8px rgba(244, 63, 94, 0.85);
+        }
+        .duel-ring-stage {
+            position: relative;
+            width: 100%;
+            height: 186px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: radial-gradient(circle at 50% 18%, #3b2654 0%, #161829 68%, #0d0f1a 100%);
+            border: 2px solid #475569;
+            margin-bottom: 10px;
+            user-select: none;
+        }
+        .duel-ring-stage.slowmo-mode {
+            box-shadow: inset 0 0 38px rgba(56, 189, 248, 0.42);
+            border-color: #38bdf8;
+        }
+        @keyframes duel-ring-shake {
+            0%, 100% { transform: translate(0, 0); }
+            15% { transform: translate(-8px, -4px) rotate(-1.2deg); }
+            35% { transform: translate(8px, 4px) rotate(1.2deg); }
+            55% { transform: translate(-6px, 3px); }
+            75% { transform: translate(5px, -3px); }
+        }
+        .duel-ring-stage.hit-shake {
+            animation: duel-ring-shake 0.42s ease-out;
+        }
+        .duel-ring-mat {
+            position: absolute;
+            bottom: 0;
+            left: -4%;
+            width: 108%;
+            height: 58px;
+            background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 72%, #1e3a8a 100%);
+            border-top: 4px solid #f8fafc;
+        }
+        .duel-post {
+            position: absolute;
+            bottom: 36px;
+            width: 12px;
+            height: 112px;
+            border-radius: 4px;
+            z-index: 3;
+        }
+        .duel-post.left { left: 10px; background: linear-gradient(90deg, #dc2626, #ef4444); }
+        .duel-post.right { right: 10px; background: linear-gradient(90deg, #2563eb, #3b82f6); }
+        .duel-rope {
+            position: absolute;
+            left: 16px;
+            right: 16px;
+            height: 3px;
+            z-index: 2;
+            border-radius: 2px;
+        }
+        .duel-rope.r1 { bottom: 122px; background: #ef4444; }
+        .duel-rope.r2 { bottom: 94px; background: #f8fafc; }
+        .duel-rope.r3 { bottom: 66px; background: #3b82f6; }
+        .duel-slowmo-badge {
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(14, 165, 233, 0.9);
+            color: #fff;
+            font-size: 0.72rem;
+            font-weight: 900;
+            padding: 2px 10px;
+            border-radius: 999px;
+            letter-spacing: 1.2px;
+            z-index: 20;
+            box-shadow: 0 0 14px rgba(56, 189, 248, 0.9);
+        }
+        .duel-fighter {
+            position: absolute;
+            bottom: 18px;
+            width: 88px;
+            height: 102px;
+            z-index: 8;
+            transition: transform 0.25s ease, left 0.25s ease, right 0.25s ease;
+        }
+        .duel-fighter.left-corner { left: 18%; }
+        .duel-fighter.right-corner { right: 18%; }
+        @keyframes duel-guard-bob {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+        .duel-fighter.idle-bob .duel-avatar-holder {
+            animation: duel-guard-bob 0.65s infinite ease-in-out;
+        }
+        .duel-fighter.slowmo-anim {
+            transition: transform 0.85s cubic-bezier(0.16, 0.84, 0.28, 1);
+        }
+        .duel-avatar-holder {
+            width: 78px;
+            height: 78px;
+            margin: 0 auto;
+            position: relative;
+        }
+        .duel-avatar-holder .exp-idle { display: block; }
+        .duel-fighter.hit-stunned .duel-avatar-holder .exp-idle { display: none; }
+        .duel-fighter.hit-stunned .duel-avatar-holder .exp-duel { display: block; }
+        .duel-role-tag {
+            position: absolute;
+            top: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.68rem;
+            font-weight: 800;
+            padding: 1px 7px;
+            border-radius: 8px;
+            white-space: nowrap;
+            z-index: 12;
+        }
+        .duel-role-tag.atk { background: #e11d48; color: #fff; }
+        .duel-role-tag.def { background: #0284c7; color: #fff; }
+        .duel-glove {
+            position: absolute;
+            top: 44px;
+            width: 22px;
+            height: 20px;
+            border-radius: 50% 50% 44% 44%;
+            background: radial-gradient(circle at 35% 30%, #fb7185, #be123c);
+            border: 1.5px solid #4c0519;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.45);
+            z-index: 11;
+            transition: transform 0.82s cubic-bezier(0.16, 0.84, 0.28, 1);
+        }
+        .duel-fighter.right-corner .duel-glove {
+            background: radial-gradient(circle at 35% 30%, #60a5fa, #1d4ed8);
+            border-color: #172554;
+        }
+        .duel-glove.g-left { left: 2px; }
+        .duel-glove.g-right { right: 2px; }
+        .duel-fx-banner {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.5);
+            font-size: 1.35rem;
+            font-weight: 900;
+            padding: 5px 14px;
+            border-radius: 12px;
+            z-index: 25;
+            pointer-events: none;
+            opacity: 0;
+            transition: transform 0.28s cubic-bezier(0.18, 1.3, 0.4, 1), opacity 0.2s;
+            white-space: nowrap;
+        }
+        .duel-fx-banner.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+        .duel-fx-banner.hit {
+            background: radial-gradient(circle, #fef08a 0%, #f97316 60%, #dc2626 100%);
+            color: #fff;
+            text-shadow: 0 2px 6px rgba(0,0,0,0.85);
+            box-shadow: 0 0 24px rgba(249, 115, 22, 0.95);
+        }
+        .duel-fx-banner.dodge {
+            background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+            color: #fff;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.65);
+            box-shadow: 0 0 18px rgba(56, 189, 248, 0.85);
+        }
+        .duel-spark {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #fde047;
+            box-shadow: 0 0 8px #f97316;
+            z-index: 24;
+            pointer-events: none;
+            transition: transform 0.55s ease-out, opacity 0.55s ease-out;
+        }
+        .duel-status-box {
+            margin-bottom: 8px;
+        }
+        .duel-role-banner {
+            font-size: 0.92rem;
+            font-weight: 800;
+            color: #f8fafc;
+            margin-bottom: 3px;
+        }
+        .duel-sub-hint {
+            font-size: 0.76rem;
+            color: #94a3b8;
+        }
+        .duel-choice-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .duel-choice-btn {
+            padding: 11px 8px;
+            font-size: 0.9rem;
+            font-weight: 800;
+            border-radius: 10px;
+            border: 2px solid transparent;
+            transition: all 0.15s ease;
+        }
+        .duel-choice-btn.atk-mode {
+            background: rgba(225, 29, 72, 0.22);
+            border-color: rgba(244, 63, 94, 0.55);
+            color: #fecdd3;
+        }
+        .duel-choice-btn.def-mode {
+            background: rgba(2, 132, 199, 0.22);
+            border-color: rgba(56, 189, 248, 0.55);
+            color: #bae6fd;
+        }
+        .duel-choice-btn.selected {
+            transform: translateY(-2px);
+            box-shadow: 0 0 16px rgba(250, 204, 21, 0.65);
+            border-color: #facc15 !important;
+            background: rgba(250, 204, 21, 0.26) !important;
+            color: #fef08a !important;
+        }
+        @media (max-width: 480px) {
+            .duel-modal { padding: 12px; }
+            .duel-ring-stage { height: 164px; }
+            .duel-fighter.left-corner { left: 10%; }
+            .duel-fighter.right-corner { right: 10%; }
+            .duel-choice-btn { padding: 10px 6px; font-size: 0.82rem; }
+        }
 
         /* Stage Top-Right HUD (Never overlaps supply timer & salt progress) */
         .stage-top-right-hud {
@@ -1563,12 +1980,25 @@
             <div class="option-row" id="opt-item-row">
                 <input type="checkbox" id="opt-item-check" onchange="toggleOption('item')">
                 <label for="opt-item-check" class="option-label">아이템 모드</label>
-                <div class="hidden" id="opt-item-input" style="flex-direction:column; margin-top:6px;">
-                    <div style="display:flex; align-items:center; gap:6px;">
-                        <input type="number" id="opt-item-secs" value="300" style="width:65px; padding:5px; text-align:center;" onblur="validateMinTime(this)" onkeyup="if(event.key==='Enter') validateMinTime(this)">
-                        <span style="font-size:0.85rem; color:var(--text-muted);">초 마다 보급</span>
+                <div class="hidden" id="opt-item-input" style="width:100%; flex-direction:column; gap:8px; margin-top:6px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.08);">
+                    <div>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <input type="number" id="opt-item-secs" value="300" style="width:65px; padding:5px; text-align:center;" onblur="validateMinTime(this)" onkeyup="if(event.key==='Enter') validateMinTime(this)">
+                            <span style="font-size:0.85rem; color:var(--text-muted);">초 마다 보급</span>
+                        </div>
+                        <div class="error-msg hidden" style="color:#ff4757; font-size:0.75rem; margin-top:4px;">30초 이하로 불가능합니다</div>
                     </div>
-                    <div class="error-msg hidden" style="color:#ff4757; font-size:0.75rem; margin-top:4px;">30초 이하로 불가능합니다</div>
+                    <div class="item-pool-selector" id="opt-item-pool-wrap">
+                        <div class="item-pool-header">
+                            <span class="item-pool-title">사용할 아이템 <strong id="opt-item-pool-count">(11/11)</strong></span>
+                            <div class="item-pool-actions">
+                                <button type="button" class="item-pool-mini-btn" id="btn-item-pool-all" onclick="setAllItemPoolSelection(true)">전체선택</button>
+                                <button type="button" class="item-pool-mini-btn" id="btn-item-pool-none" onclick="setAllItemPoolSelection(false)">전체해제</button>
+                            </div>
+                        </div>
+                        <div class="item-pool-grid" id="opt-item-pool-list"></div>
+                        <div id="opt-item-pool-error" class="error-msg hidden" style="color:#ff4757; font-size:0.75rem; margin-top:2px;">최소 1개 이상의 아이템을 선택해주세요</div>
+                    </div>
                 </div>
             </div>
 
@@ -1680,8 +2110,8 @@
                         <div class="card-icon-badge">🎒</div>
                         <span class="card-tag">아이템</span>
                     </div>
-                    <h4>10종 특수 아이템 도감</h4>
-                    <p>유도 미사일, 폭탄해체하기, 염전으로 보내기, 방패, 금기어 조작 및 상어/악어/부산갈매기 소환 스펙 & 밸런스 분석</p>
+                    <h4>11종 특수 아이템 도감</h4>
+                    <p>유도 미사일, 결투신청, 폭탄해체하기, 염전으로 보내기, 방패, 금기어 조작 및 동물 소환 스펙 & 밸런스 분석</p>
                     <span class="card-action">자세히 보기 &rarr;</span>
                 </a>
 
@@ -1781,8 +2211,8 @@
                         <p style="font-size:0.88rem; line-height:1.6;">게임 시작 전 서로에게 지정한 비밀 단어! 일상 대화 속에 교묘한 낚시 질문을 던져 상대방이 금기어를 외치게 유도하세요. 발화 즉시 의자가 격발되어 시원한 수영장으로 날아갑니다.</p>
                     </div>
                     <div style="background:rgba(255,255,255,0.03); padding:18px; border-radius:14px; border:1px solid rgba(255,255,255,0.06);">
-                        <h3 style="font-size:1.05rem; font-weight:700; color:var(--toss-blue); margin-bottom:8px;">⚡ 10종 전략 특수 아이템</h3>
-                        <p style="font-size:0.88rem; line-height:1.6;">유도 미사일(30초 기절 및 시간 중첩), 폭탄해체하기(빨간선·파란선 심리전 & 폭발 시 10초 그을림 침묵), 염전으로 보내기(사용 알림 없는 랜덤 납치 & 소금 채취), 이지스 방패, 금기어 변경/추가/삭제, 상어/악어/부산갈매기 소환 등 전세를 뒤집는 전략 아이템으로 역전승을 거두세요.</p>
+                        <h3 style="font-size:1.05rem; font-weight:700; color:var(--toss-blue); margin-bottom:8px;">⚡ 11종 전략 특수 아이템</h3>
+                        <p style="font-size:0.88rem; line-height:1.6;">유도 미사일, 결투신청(1:1 링 3판 2선승 복싱 & 패배 시 30초 눈탱이 밤탱이 기절), 폭탄해체하기, 염전으로 보내기, 이지스 방패, 금기어 변경/추가/삭제, 상어/악어/부산갈매기 소환 등 전세를 뒤집는 전략 아이템으로 역전승을 거두세요.</p>
                     </div>
                     <div style="background:rgba(255,255,255,0.03); padding:18px; border-radius:14px; border:1px solid rgba(255,255,255,0.06);">
                         <h3 style="font-size:1.05rem; font-weight:700; color:var(--toss-blue); margin-bottom:8px;">📱 모바일 앱 전환 완벽 복구</h3>
@@ -1799,10 +2229,10 @@
                     플라잉 체어 온라인은 처음 접속한 유저도 30초 만에 규칙을 이해하고 바로 심리전에 몰입할 수 있도록 직관적인 4단계 진행 구조를 갖추고 있습니다:
                 </p>
                 <ul style="list-style:none; display:flex; flex-direction:column; gap:10px; margin-bottom:20px; padding-left:4px;">
-                    <li>• <strong>1단계 (대기실 & 맞춤 룰셋 구성):</strong> 방장은 참가자당 금기어 개수(1~3개), 침묵 방지(AFK) 자동 발사 타이머(최소 30초 이상), 특수 아이템 보급 주기를 모임 성격에 맞게 자유롭게 설정할 수 있습니다. 4자리 숫자 방 코드 또는 초대 링크 복사로 친구들을 간편하게 초대하세요.</li>
+                    <li>• <strong>1단계 (대기실 & 맞춤 룰셋 구성):</strong> 방장은 참가자당 금기어 개수(1~3개), 침묵 방지(AFK) 자동 발사 타이머(최소 30초 이상), 특수 아이템 보급 주기 및 게임에서 사용할 아이템 종류를 모임 성격에 맞게 자유롭게 선택할 수 있습니다. 4자리 숫자 방 코드 또는 초대 링크 복사로 친구들을 간편하게 초대하세요.</li>
                     <li>• <strong>2단계 (비밀 금기어 교차 등록):</strong> 게임이 시작되면 본인을 제외한 다른 참가자들에게 부여할 금기어를 직접 입력합니다. 공정한 게임 밸런스를 위해 <strong>2글자 이상 25글자 이하의 단어</strong>로 제한되며, 초성(ㅋㅋ, ㅎㅎ 등) 및 특수기호(?!, ^^ 등)도 자유롭게 설정할 수 있습니다. 단, 띄어쓰기(공백)와 시스템 예약어(???) 및 동일 대상 중복 단어는 단일 검증 엔진(WordValidator)에 의해 자동으로 차단됩니다.</li>
                     <li>• <strong>3단계 (실시간 채팅 & 부분 문자열 격발 판정):</strong> 상단 전광판에는 다른 모든 참가자의 금기어가 투명하게 공개되지만, 정작 <strong>내 머리 위에 걸린 금기어는 나에게만 `?`로 가려져 보이지 않습니다.</strong> 채팅 메시지에 내 금기어가 부분 문자열(Substring)로 포함되는 순간(예: 금기어가 '치킨'일 때 '양념치킨 먹고 싶다' 입력), 서버가 0.05초 내에 감지하여 의자를 수영장으로 발사합니다.</li>
-                    <li>• <strong>4단계 (특수 아이템 공방 & 결과 리포트):</strong> 보급 주기에 따라 지급되는 10종의 아이템(유도 미사일, 폭탄해체하기, 염전으로 보내기 등)으로 상대를 기절·격리시키거나 내 금기어를 정화할 수 있습니다. 라운드 종료 시 총 비행 횟수, 상어/악어/갈매기 조우 횟수, 미사일·폭탄 피격 및 염전 납치 횟수, 금기어별 발동 통계를 한눈에 확인할 수 있습니다.</li>
+                    <li>• <strong>4단계 (특수 아이템 공방 & 결과 리포트):</strong> 보급 주기에 따라 지급되는 11종의 아이템(유도 미사일, 결투신청, 폭탄해체하기, 염전으로 보내기 등)으로 상대를 기절·격리시키거나 내 금기어를 정화할 수 있습니다. 라운드 종료 시 총 비행 횟수, 상어/악어/갈매기 조우 횟수, 미사일·폭탄·결투 패배 및 염전 납치 횟수, 금기어별 발동 통계를 한눈에 확인할 수 있습니다.</li>
                 </ul>
 
                 <h3 style="font-size:1.15rem; font-weight:700; color:#fff; margin:24px 0 10px;">🌟 승리를 위한 고수들의 6대 심리 대화 & 아이템 전술</h3>
@@ -1821,7 +2251,7 @@
                 <p style="font-size:0.9rem; color:var(--toss-text-muted); border-top:1px solid var(--toss-card-border); padding-top:16px;">
                     더 깊이 있는 전략과 기술 아카이브가 궁금하신가요?
                     <a href="/guide/rules" style="color:var(--toss-blue); font-weight:600;">게임 규칙 매뉴얼</a>,
-                    <a href="/guide/items" style="color:var(--toss-blue); font-weight:600;">10종 아이템 도감</a>,
+                    <a href="/guide/items" style="color:var(--toss-blue); font-weight:600;">11종 아이템 도감</a>,
                     <a href="/guide/strategy" style="color:var(--toss-blue); font-weight:600;">심리전 공략집</a>,
                     <a href="/words" style="color:var(--toss-blue); font-weight:600;">금기어 백과 100선</a>,
                     <a href="/history" style="color:var(--toss-blue); font-weight:600;">예능의 역사</a>,
@@ -1973,6 +2403,7 @@
                     <li>🚀 미사일 피격: <strong id="stats-missile" style="color:#fff;">0</strong>회</li>
                     <li>💣 폭탄 피격: <strong id="stats-bomb" style="color:#fff;">0</strong>회</li>
                     <li>🧂 염전 끌려감: <strong id="stats-salt" style="color:#fff;">0</strong>회</li>
+                    <li>🥊 결투 패배(밤탱이): <strong id="stats-duel" style="color:#fff;">0</strong>회</li>
                 </ul>
                 <div style="margin-top:15px; border-top:1px solid #444; padding-top:15px;">
                     <h4 style="margin-bottom:5px; color:#aaa;">발동된 금기어 횟수</h4>
@@ -2217,6 +2648,71 @@
         </div>
     </div>
 
+    <!-- Duel Arena Ring Modal -->
+    <div id="modal-duel-arena" class="modal-overlay hidden">
+        <div class="modal duel-modal">
+            <div class="duel-top-bar">
+                <span id="duel-round-badge" class="duel-round-pill">🥊 ROUND 1 / 3 (3판 2선승)</span>
+                <span id="duel-timer-text" class="duel-timer-pill">5.0초</span>
+            </div>
+            <div class="duel-timer-bar">
+                <div id="duel-timer-fill" class="duel-timer-fill"></div>
+            </div>
+            <div class="duel-scoreboard">
+                <div class="duel-score-side">
+                    <div id="duel-p1-name" class="duel-score-name">도전자</div>
+                    <div id="duel-p1-pips" class="duel-score-pips">
+                        <span class="duel-pip"></span><span class="duel-pip"></span>
+                    </div>
+                </div>
+                <div style="font-size:0.85rem; font-weight:900; color:#f43f5e; padding:0 6px;">VS</div>
+                <div class="duel-score-side">
+                    <div id="duel-p2-name" class="duel-score-name">상대</div>
+                    <div id="duel-p2-pips" class="duel-score-pips">
+                        <span class="duel-pip"></span><span class="duel-pip"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="duel-ring-stage" class="duel-ring-stage">
+                <div id="duel-slowmo-badge" class="duel-slowmo-badge hidden">🎬 SLOW MOTION</div>
+                <div class="duel-post left"></div>
+                <div class="duel-post right"></div>
+                <div class="duel-rope r1"></div>
+                <div class="duel-rope r2"></div>
+                <div class="duel-rope r3"></div>
+                <div class="duel-ring-mat"></div>
+
+                <div id="duel-fighter-p1" class="duel-fighter left-corner idle-bob">
+                    <div id="duel-role-p1" class="duel-role-tag atk">선공</div>
+                    <div id="duel-avatar-p1" class="duel-avatar-holder"></div>
+                    <div class="duel-glove g-left"></div>
+                    <div class="duel-glove g-right"></div>
+                </div>
+
+                <div id="duel-fighter-p2" class="duel-fighter right-corner idle-bob">
+                    <div id="duel-role-p2" class="duel-role-tag def">회피</div>
+                    <div id="duel-avatar-p2" class="duel-avatar-holder"></div>
+                    <div class="duel-glove g-left"></div>
+                    <div class="duel-glove g-right"></div>
+                </div>
+
+                <div id="duel-fx-banner" class="duel-fx-banner"></div>
+            </div>
+
+            <div class="duel-status-box">
+                <div id="duel-role-banner" class="duel-role-banner">결투 준비!</div>
+                <div id="duel-sub-hint" class="duel-sub-hint">5초 안에 방향을 선택하세요!</div>
+            </div>
+
+            <div id="duel-controls-area" class="duel-choice-row">
+                <button type="button" id="btn-duel-left" class="btn duel-choice-btn atk-mode" onclick="submitDuelChoice('left')">⬅️ 레프트</button>
+                <button type="button" id="btn-duel-right" class="btn duel-choice-btn atk-mode" onclick="submitDuelChoice('right')">➡️ 라이트</button>
+            </div>
+            <button type="button" id="btn-duel-spectator-close" class="btn btn-secondary hidden" style="margin-top:8px;" onclick="closeDuelModalSpectator()">닫기 (배경 관전)</button>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script>
     // --- Toss Guide Navigator ---
@@ -2269,17 +2765,19 @@
                 SNATCHED_GULL: 'snatched',    // 부산갈매기에게 납치됨 (1분 상공 기절/채팅불가)
                 DEAD_MISSILE: 'dead-missile', // 미사일 피격 (30초 의자 반전 기절)
                 DEAD_BOMB: 'dead-bomb',       // 폭탄 폭발 피격 (10초 그을림/머리 삐죽 기절)
-                SALT_FARM: 'salt-farm'        // 염전 납치 노역 (소금 100% 채취 시 복귀)
+                SALT_FARM: 'salt-farm',       // 염전 납치 노역 (소금 100% 채취 시 복귀)
+                DUELING: 'dueling',           // 결투장 링 위에서 1:1 결투 진행 중
+                DEAD_DUEL: 'dead-duel'        // 결투 패배 (30초 의자 눈탱이 밤탱이 기절)
             },
 
-            // 1. 좌석 이탈 상태 목록 (의자에서 튕겨나가 공중, 물속, 심해, 납치, 염전 등 자리를 벗어난 상태)
-            AWAY_STATUSES: ['flying', 'swimming', 'walking', 'dead', 'dead-gator', 'snatched', 'salt-farm'],
+            // 1. 좌석 이탈 상태 목록 (의자에서 튕겨나가 공중, 물속, 심해, 납치, 염전, 결투장 등 자리를 벗어난 상태)
+            AWAY_STATUSES: ['flying', 'swimming', 'walking', 'dead', 'dead-gator', 'snatched', 'salt-farm', 'dueling'],
 
             // 2. 동물 3종(상어/악어/부산갈매기)에게 잡힌 상태 목록
             ANIMAL_CAUGHT_STATUSES: ['dead', 'dead-gator', 'snatched'],
 
-            // 3. 행동 불능/기절 상태 목록 (상어, 악어, 갈매기, 미사일, 폭탄 피격, 염전 노역으로 행동/채팅 불가)
-            INCAPACITATED_STATUSES: ['dead', 'dead-gator', 'snatched', 'dead-missile', 'dead-bomb', 'salt-farm'],
+            // 3. 행동 불능/기절 상태 목록 (상어, 악어, 갈매기, 미사일, 폭탄, 염전, 결투 중/패배 기절로 일반 행동/채팅 불가)
+            INCAPACITATED_STATUSES: ['dead', 'dead-gator', 'snatched', 'dead-missile', 'dead-bomb', 'salt-farm', 'dueling', 'dead-duel'],
 
             // 상태 문자열 안전 추출 헬퍼 (플레이어 객체 또는 문자열 수용)
             _toStatus(p) {
@@ -2288,10 +2786,10 @@
             },
 
             // [1. 착석 상태 체크]
-            // 물리적으로 의자 자리에 위치해 있는가? (정상 idle 착석 또는 미사일/폭탄 피격으로 자리에 남아 있는 상태)
+            // 물리적으로 의자 자리에 위치해 있는가? (정상 idle 착석 또는 미사일/폭탄/결투 패배로 자리에 남아 있는 상태)
             isSeated(p) {
                 const s = this._toStatus(p);
-                return s === this.STATUS.IDLE || s === this.STATUS.DEAD_MISSILE || s === this.STATUS.DEAD_BOMB;
+                return s === this.STATUS.IDLE || s === this.STATUS.DEAD_MISSILE || s === this.STATUS.DEAD_BOMB || s === this.STATUS.DEAD_DUEL;
             },
 
             // 정상적으로 건강하게 착석해 있는가? (디버프 없이 채팅 및 아이템 조준 타깃이 가능한 완전한 idle 상태)
@@ -2351,6 +2849,16 @@
                 return this._toStatus(p) === this.STATUS.SALT_FARM;
             },
 
+            // 결투장 링 위에서 결투 중인가?
+            isDueling(p) {
+                return this._toStatus(p) === this.STATUS.DUELING;
+            },
+
+            // 결투에서 패배하여 눈탱이 밤탱이 상태로 기절 중인가?
+            isKnockedOutByDuel(p) {
+                return this._toStatus(p) === this.STATUS.DEAD_DUEL;
+            },
+
             // [4. 기절 / 행동 불능 상태 체크]
             // 공격을 받거나 동물에게 잡혀 기절 중(채팅/일반행동 불가)인가?
             isIncapacitated(p) {
@@ -2370,7 +2878,12 @@
 
             // 염전으로 보내기 아이템의 타깃이 될 수 있는가? (현재 염전 노역 중이 아닌 상대)
             canBeTargetedBySaltFarm(p) {
-                return !this.isAtSaltFarm(p) && !(p && typeof p === 'object' && p.saltFarm);
+                return !this.isAtSaltFarm(p) && !this.isDueling(p) && !(p && typeof p === 'object' && (p.saltFarm || p.activeDuel));
+            },
+
+            // 결투신청 아이템의 타깃이 될 수 있는가? (건강하게 착석 중이며 폭탄/결투 진행 중이 아닌 대상)
+            canBeTargetedByDuel(p) {
+                return this.isHealthySeated(p) && !(p && typeof p === 'object' && (p.activeBomb || p.activeDuel));
             },
 
             // 채팅을 전송할 수 있는 상태인가? (기절하지 않았고 좌석을 이탈하지 않은 상태)
@@ -2397,6 +2910,8 @@
                     case this.STATUS.DEAD_MISSILE: return '착석 (미사일 기절)';
                     case this.STATUS.DEAD_BOMB: return '착석 (폭탄 피격)';
                     case this.STATUS.SALT_FARM: return '이탈 (염전 소금 채취 중)';
+                    case this.STATUS.DUELING: return '이탈 (결투장 결투 중)';
+                    case this.STATUS.DEAD_DUEL: return '착석 (결투 패배 기절)';
                     default: return '알 수 없음';
                 }
             }
@@ -2419,8 +2934,11 @@
                 isIncapacitated: PlayerState.isIncapacitated(p),
                 canChat: PlayerState.canChat(p),
                 canBeTargetedByMissile: PlayerState.canBeTargetedByMissile(p),
+                isDueling: PlayerState.isDueling(p),
+                isKnockedOutByDuel: PlayerState.isKnockedOutByDuel(p),
                 canBeTargetedByBomb: PlayerState.canBeTargetedByBomb(p),
                 canBeTargetedBySaltFarm: PlayerState.canBeTargetedBySaltFarm(p),
+                canBeTargetedByDuel: PlayerState.canBeTargetedByDuel(p),
                 label: PlayerState.getKoreanLabel(p)
             };
         }
@@ -2532,6 +3050,19 @@
             setTimeout(() => playTone(783.99, 'triangle', 0.16, 0.2), 190);
             setTimeout(() => playTone(1046.5, 'sine', 0.3, 0.22), 300);
         }
+        function playDuelBellSound() {
+            playTone(880, 'triangle', 0.32, 0.22);
+            setTimeout(() => playTone(880, 'triangle', 0.36, 0.24), 140);
+        }
+        function playDuelHitSound() {
+            playTone(110, 'sawtooth', 0.22, 0.38);
+            playTone(68, 'square', 0.28, 0.34);
+            setTimeout(() => playTone(180, 'triangle', 0.14, 0.22), 45);
+        }
+        function playDuelWhooshSound() {
+            playTone(460, 'sine', 0.12, 0.12);
+            setTimeout(() => playTone(680, 'sine', 0.12, 0.10), 60);
+        }
         function playBombExplosionSound() {
             try {
                 if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -2623,8 +3154,85 @@
             return raw.replace(/[-]/g, '').slice(0, 200);
         }
 
-        // --- Room Option Helpers ---
+        // --- Single Source of Truth: Item Catalog & Room Option Helpers ---
+        const ITEM_CATALOG = [
+            { id: 'missile', label: '🚀 미사일' },
+            { id: 'shield', label: '🛡️ 방패' },
+            { id: 'word_change', label: '🃏 변경권' },
+            { id: 'word_add', label: '➕ 추가권' },
+            { id: 'word_delete', label: '✂️ 삭제권' },
+            { id: 'call_shark', label: '🦈 상어부르기' },
+            { id: 'call_gator', label: '🐊 악어부르기' },
+            { id: 'call_gull', label: '🦅 부산갈매기부르기' },
+            { id: 'bomb_defuse', label: '💣 폭탄해체하기' },
+            { id: 'salt_farm', label: '🧂 염전으로 보내기' },
+            { id: 'duel', label: '🥊 결투신청' }
+        ];
+        const ITEM_LABEL_MAP = Object.fromEntries(ITEM_CATALOG.map(it => [it.id, it.label]));
+        const ALL_ITEM_IDS = ITEM_CATALOG.map(it => it.id);
+        window.ITEM_CATALOG = ITEM_CATALOG;
+
         let wordsCountValue = 1;
+
+        function renderItemPoolOptions() {
+            const listEl = document.getElementById('opt-item-pool-list');
+            if (!listEl || listEl.children.length > 0) return;
+            ITEM_CATALOG.forEach(it => {
+                const chip = document.createElement('label');
+                chip.className = 'item-pool-chip selected';
+                chip.dataset.itemId = it.id;
+                chip.title = it.label;
+                chip.innerHTML = `<input type="checkbox" class="opt-item-pool-cb" value="${it.id}" checked onchange="onItemPoolCheckboxChange()"><span class="item-pool-chip-text">${it.label}</span>`;
+                listEl.appendChild(chip);
+            });
+            updateItemPoolCountUI();
+        }
+
+        function getSelectedItemPool() {
+            renderItemPoolOptions();
+            const checkedSet = new Set(
+                Array.from(document.querySelectorAll('#opt-item-pool-list .opt-item-pool-cb:checked')).map(cb => cb.value)
+            );
+            return ALL_ITEM_IDS.filter(id => checkedSet.has(id));
+        }
+
+        function updateItemPoolCountUI() {
+            const checkboxes = Array.from(document.querySelectorAll('#opt-item-pool-list .opt-item-pool-cb'));
+            let selectedCount = 0;
+            checkboxes.forEach(cb => {
+                const chip = cb.closest('.item-pool-chip');
+                if (cb.checked) {
+                    selectedCount++;
+                    if (chip) chip.classList.add('selected');
+                } else if (chip) {
+                    chip.classList.remove('selected');
+                }
+            });
+            const countEl = document.getElementById('opt-item-pool-count');
+            if (countEl) countEl.textContent = `(${selectedCount}/${ALL_ITEM_IDS.length})`;
+            const errEl = document.getElementById('opt-item-pool-error');
+            if (errEl && selectedCount > 0) errEl.classList.add('hidden');
+        }
+
+        function onItemPoolCheckboxChange() {
+            updateItemPoolCountUI();
+        }
+
+        function setAllItemPoolSelection(checked) {
+            renderItemPoolOptions();
+            document.querySelectorAll('#opt-item-pool-list .opt-item-pool-cb').forEach(cb => {
+                cb.checked = !!checked;
+            });
+            updateItemPoolCountUI();
+        }
+
+        function getRoomEnabledItems(room) {
+            if (room && Array.isArray(room.enabledItems)) {
+                const valid = room.enabledItems.filter(id => ALL_ITEM_IDS.includes(id));
+                if (valid.length > 0) return valid;
+            }
+            return ALL_ITEM_IDS.slice();
+        }
 
         function toggleOption(type) {
             if (type === 'words') {
@@ -2636,10 +3244,18 @@
                 if (checked) { el.classList.remove('hidden'); el.style.display = 'flex'; }
                 else { el.classList.add('hidden'); }
             } else if (type === 'item') {
+                renderItemPoolOptions();
                 const checked = document.getElementById('opt-item-check').checked;
                 const el = document.getElementById('opt-item-input');
-                if (checked) { el.classList.remove('hidden'); el.style.display = 'flex'; }
-                else { el.classList.add('hidden'); }
+                const errEl = document.getElementById('opt-item-pool-error');
+                if (checked) {
+                    el.classList.remove('hidden');
+                    el.style.display = 'flex';
+                    updateItemPoolCountUI();
+                } else {
+                    el.classList.add('hidden');
+                    if (errEl) errEl.classList.add('hidden');
+                }
             }
         }
 
@@ -2678,6 +3294,7 @@
             }
             
             let itemSeconds = 300;
+            let enabledItems = ALL_ITEM_IDS.slice();
             if (itemChecked) {
                 const itemInput = document.getElementById('opt-item-secs');
                 itemSeconds = parseInt(itemInput.value, 10);
@@ -2685,9 +3302,17 @@
                     validateMinTime(itemInput);
                     return null;
                 }
+                enabledItems = getSelectedItemPool();
+                const poolErr = document.getElementById('opt-item-pool-error');
+                if (enabledItems.length === 0) {
+                    if (poolErr) poolErr.classList.remove('hidden');
+                    return null;
+                } else if (poolErr) {
+                    poolErr.classList.add('hidden');
+                }
             }
             
-            return { wordsPerPlayer, afkEnabled: afkChecked, afkSeconds, itemEnabled: itemChecked, itemSeconds };
+            return { wordsPerPlayer, afkEnabled: afkChecked, afkSeconds, itemEnabled: itemChecked, itemSeconds, enabledItems };
         }
 
         // --- Network Logic (Socket.io) ---
@@ -2792,6 +3417,7 @@
             if (saltModal) saltModal.classList.add('hidden');
             if (typeof clearAllActiveBombs === 'function') clearAllActiveBombs();
             if (typeof clearAllSaltFarms === 'function') clearAllSaltFarms();
+            if (typeof clearAllActiveDuels === 'function') clearAllActiveDuels();
             pendingItemUse = null;
         }
 
@@ -2818,6 +3444,10 @@
             if (typeof cleanupSaltFarmsForPlayer === 'function') {
                 cleanupSaltFarmsForPlayer(actualId);
                 cleanupSaltFarmsForPlayer(guestId);
+            }
+            if (typeof cleanupDuelsForPlayer === 'function') {
+                cleanupDuelsForPlayer(actualId);
+                cleanupDuelsForPlayer(guestId);
             }
             if (state.disconnectTimeouts[guestId]) {
                 clearTimeout(state.disconnectTimeouts[guestId]);
@@ -2876,7 +3506,7 @@
             if (!options) return; // Validation failed
             
             setCreateRoomLoading(true);
-            const { wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds } = options;
+            const { wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds, enabledItems } = options;
             
             sysChat('서버 연결 중...');
             if (socket) socket.disconnect();
@@ -2919,9 +3549,9 @@
                         hostToken = response.hostToken;
                         currentMode = MODE_HOST;
                         state.myId = 'host';
-                        state.room = { status: 'waiting', title: '멀티플레이 방', wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds };
+                        state.room = { status: 'waiting', title: '멀티플레이 방', wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds, enabledItems };
                         updateBodyState();
-                        state.players = [{ id: state.myId, name: myName, gender: myGender, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0, salt_farm: 0 } }];
+                        state.players = [{ id: state.myId, name: myName, gender: myGender, isBot: false, isReady: false, hasSubmittedWords: false, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0, salt_farm: 0, duel: 0 } }];
                         
                         switchView('room-view');
                         updateRoomUI();
@@ -3140,7 +3770,7 @@
                 
                 if (state.room.status !== 'waiting') return socket.emit('SEND_TO_GUEST', { roomCode, guestId, type: 'REJECT_JOIN', payload: { reason: '이미 게임이 시작되어 입장할 수 없습니다.' } });
                 if (state.players.length >= 6) return socket.emit('SEND_TO_GUEST', { roomCode, guestId, type: 'REJECT_JOIN', payload: { reason: '방이 꽉 찼습니다.' } });
-                state.players.push({ ...data.payload, id: guestId, previousIds: [], isBot: false, isReady: false, hasSubmittedWords: false, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0, salt_farm: 0 } });
+                state.players.push({ ...data.payload, id: guestId, previousIds: [], isBot: false, isReady: false, hasSubmittedWords: false, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0, salt_farm: 0, duel: 0 } });
                 broadcastState();
                 updateRoomUI();
                 renderStage();
@@ -3170,6 +3800,11 @@
                 } else if (data.payload && data.payload.item === 'salt_complete') {
                     if (typeof completeSaltFarmOnHost === 'function') {
                         completeSaltFarmOnHost(guestId);
+                    }
+                } else if (data.payload && data.payload.item === 'duel_choice') {
+                    if (typeof handleDuelChoiceOnHost === 'function') {
+                        const ed = data.payload.extraData || {};
+                        handleDuelChoiceOnHost(ed.duelId, guestId, ed.round, ed.dir);
                     }
                 } else {
                     executeItem(guestId, data.payload.item, data.payload.index, data.payload.targetId, data.payload.extraData);
@@ -3228,6 +3863,7 @@
                         const prevSalt = existing.saltFarm;
                         Object.assign(existing, inc);
                         if (!inc.activeBomb) existing.activeBomb = null;
+                        if (!inc.activeDuel) existing.activeDuel = null;
                         if (!inc.saltFarm) {
                             existing.saltFarm = null;
                         } else if (existing.id === state.myId && typeof saltPanActive === 'boolean' && saltPanActive && prevSalt) {
@@ -3239,6 +3875,7 @@
                     return inc;
                 });
                 if (typeof syncSaltModalFromState === 'function') syncSaltModalFromState();
+                if (typeof syncDuelModalFromState === 'function') syncDuelModalFromState();
                 if (typeof renderSaltProgressHud === 'function') renderSaltProgressHud();
                 if (currentBombModal && !currentBombModal.animating) {
                     const bombTarget = findPlayerById(currentBombModal.targetId);
@@ -3286,10 +3923,10 @@
             state.myId = 'player-local';
             const options = getRoomOptions();
             if (!options) return; // Validation failed
-            const { wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds } = options;
-            state.room = { status: 'waiting', title: '시뮬레이션 방', wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds };
+            const { wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds, enabledItems } = options;
+            state.room = { status: 'waiting', title: '시뮬레이션 방', wordsPerPlayer, afkEnabled, afkSeconds, itemEnabled, itemSeconds, enabledItems };
             updateBodyState();
-            state.players = [{ id: state.myId, name: sanitizeNickname(els.nickname.value.trim(), '게스트'), gender: document.querySelector('input[name="gender"]:checked').value, isBot: false, isReady: true, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0, salt_farm: 0 } }];
+            state.players = [{ id: state.myId, name: sanitizeNickname(els.nickname.value.trim(), '게스트'), gender: document.querySelector('input[name="gender"]:checked').value, isBot: false, isReady: true, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0, salt_farm: 0, duel: 0 } }];
             
             switchView('room-view');
             document.getElementById('guest-controls').classList.add('hidden');
@@ -3308,7 +3945,7 @@
             const botGender = r < 0.33 ? 'M' : (r < 0.66 ? 'F' : 'A');
             state.players.push({
                 id: botId, name: `봇 ${botNum}호`, gender: botGender,
-                isBot: true, isReady: true, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0, salt_farm: 0 }
+                isBot: true, isReady: true, words: {}, assignedWords: [], splashCount: 0, status: 'idle', items: [], stats: { words: {}, shark: 0, gator: 0, gull: 0, missile: 0, bomb: 0, salt_farm: 0, duel: 0 }
             });
             updateRoomUI();
             renderStage();
@@ -3366,18 +4003,20 @@
                         clearCharacterPose(p.id);
                         finalizeIdle(p.id);
                         stateChanged = true;
-                    } else if (p.status === PlayerState.STATUS.DEAD_MISSILE || p.status === PlayerState.STATUS.DEAD_BOMB) {
+                    } else if (p.status === PlayerState.STATUS.DEAD_MISSILE || p.status === PlayerState.STATUS.DEAD_BOMB || p.status === PlayerState.STATUS.DEAD_DUEL) {
                         const remainMs = p.penaltyEndTime - now;
-                        const wasBomb = p.status === PlayerState.STATUS.DEAD_BOMB;
+                        const prevStatus = p.status;
                         if (p.reviveTimeout) clearTimeout(p.reviveTimeout);
                         p.reviveTimeout = setTimeout(() => {
                             if (state.room.status !== 'playing') return;
                             clearCharacterPose(p.id);
                             p.penaltyEndTime = null;
                             p.reviveTimeout = null;
-                            const recoverMsg = wasBomb
+                            const recoverMsg = prevStatus === PlayerState.STATUS.DEAD_BOMB
                                 ? `✨ ${p.name}님이 폭탄 충격에서 회복했습니다!`
-                                : `✨ ${p.name}님이 미사일 기절에서 회복했습니다!`;
+                                : (prevStatus === PlayerState.STATUS.DEAD_DUEL
+                                    ? `✨ ${p.name}님의 눈탱이 밤탱이 부기가 빠져 회복했습니다!`
+                                    : `✨ ${p.name}님이 미사일 기절에서 회복했습니다!`);
                             if (currentMode === MODE_HOST) {
                                 broadcast({ type: 'EVENT_SYS', payload: { text: recoverMsg } });
                             }
@@ -3555,6 +4194,13 @@
                 }
                 if (state.room.itemEnabled) {
                     rules.push(`🔹 아이템 보급: ${state.room.itemSeconds}초 마다`);
+                    const activePool = getRoomEnabledItems(state.room);
+                    if (activePool.length >= ALL_ITEM_IDS.length) {
+                        rules.push(`🔹 사용 아이템: 전체 (${ALL_ITEM_IDS.length}종)`);
+                    } else {
+                        const labels = activePool.map(id => ITEM_LABEL_MAP[id] || id).join(', ');
+                        rules.push(`🔹 사용 아이템 (${activePool.length}종): ${labels}`);
+                    }
                 }
                 
                 if (rules.length > 0) {
@@ -3673,6 +4319,17 @@
                     <circle cx="61" cy="45" r="2.1" fill="#000"/>
                     <ellipse cx="50" cy="59" rx="5.5" ry="4" fill="#111" stroke="#dcdde1" stroke-width="1.5"/>
                 </g>
+                <g class="exp-duel">
+                    <ellipse cx="38" cy="45" rx="11.5" ry="10" fill="rgba(59, 7, 100, 0.85)"/>
+                    <ellipse cx="38" cy="45" rx="8.2" ry="6.8" fill="rgba(109, 40, 217, 0.88)"/>
+                    <path d="M 31 45 Q 38 42 45 46" stroke="#111" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                    <path d="M 57 41 L 65 49 M 65 41 L 57 49" stroke="#111" stroke-width="2.3" stroke-linecap="round"/>
+                    <circle cx="28" cy="54" r="5.2" fill="rgba(220, 38, 38, 0.68)"/>
+                    <rect x="61" y="51" width="11" height="5" rx="2" transform="rotate(-18 66 53)" fill="#fef3c7" stroke="#d97706" stroke-width="0.9"/>
+                    <path d="M 43 59 Q 48 55 53 59 Q 56 61 59 57" stroke="#111" stroke-width="2.1" fill="none" stroke-linecap="round"/>
+                    <text x="27" y="15" font-size="11">⭐</text>
+                    <text x="58" y="13" font-size="10">💫</text>
+                </g>
             </svg>`;
         }
 
@@ -3732,7 +4389,7 @@
             wrap.className = `character-wrapper status-${p.status}` + (keepSaltAbducting ? ' salt-abducting' : '');
             if (p.status === PlayerState.STATUS.DEAD_MISSILE) {
                 applyMissileStunPose(p.id, opts.animate !== false, false);
-            } else if (PlayerState.isHealthySeated(p) || p.status === PlayerState.STATUS.DEAD_BOMB) {
+            } else if (PlayerState.isHealthySeated(p) || p.status === PlayerState.STATUS.DEAD_BOMB || p.status === PlayerState.STATUS.DEAD_DUEL) {
                 clearCharacterPose(p.id);
             }
             if (p.activeBomb) {
@@ -4332,7 +4989,7 @@
                 return;
             }
             
-            const itemTypes = ['missile', 'shield', 'word_change', 'word_add', 'word_delete', 'call_shark', 'call_gator', 'call_gull', 'bomb_defuse', 'salt_farm'];
+            const itemTypes = getRoomEnabledItems(state.room);
             state.players.forEach(p => {
                 const randomItem = itemTypes[Math.floor(Math.random() * itemTypes.length)];
                 if (!p.items) p.items = [];
@@ -4409,19 +5066,6 @@
                 return;
             }
             
-            const itemLabels = {
-                'missile': '🚀 미사일',
-                'shield': '🛡️ 방패',
-                'word_change': '🃏 변경권',
-                'word_add': '➕ 추가권',
-                'word_delete': '✂️ 삭제권',
-                'call_shark': '🦈 상어부르기',
-                'call_gator': '🐊 악어부르기',
-                'call_gull': '🦅 부산갈매기부르기',
-                'bomb_defuse': '💣 폭탄해체하기',
-                'salt_farm': '🧂 염전으로 보내기'
-            };
-            
             const grouped = {};
             me.items.forEach(item => {
                 grouped[item] = (grouped[item] || 0) + 1;
@@ -4430,7 +5074,7 @@
             Object.entries(grouped).forEach(([item, count]) => {
                 const btn = document.createElement('button');
                 btn.className = `item-btn ${item}`;
-                btn.textContent = (itemLabels[item] || item) + (count > 1 ? ` x${count}` : '');
+                btn.textContent = (ITEM_LABEL_MAP[item] || item) + (count > 1 ? ` x${count}` : '');
                 btn.onclick = () => handleItemClick(item);
                 itemsContainer.appendChild(btn);
             });
@@ -4462,7 +5106,7 @@
                 } else {
                     socket.emit('SEND_TO_HOST', { roomCode, type: 'USE_ITEM', payload: { item, index, targetId: null, extraData: null } });
                 }
-            } else if (item === 'missile' || item === 'word_change' || item === 'salt_farm') {
+            } else if (item === 'missile' || item === 'word_change' || item === 'salt_farm' || item === 'duel') {
                 pendingItemUse = { item, index };
                 openTargetModal();
             } else if (item === 'bomb_defuse') {
@@ -4662,6 +5306,8 @@
             if (bombStatEl) bombStatEl.textContent = me.stats.bomb || 0;
             const saltStatEl = document.getElementById('stats-salt');
             if (saltStatEl) saltStatEl.textContent = me.stats.salt_farm || 0;
+            const duelStatEl = document.getElementById('stats-duel');
+            if (duelStatEl) duelStatEl.textContent = me.stats.duel || 0;
             
             // Word counts
             const countsDiv = document.getElementById('stats-word-counts');
@@ -4694,6 +5340,8 @@
                 targets = state.players.filter(p => p.id !== state.myId);
             } else if (item === 'salt_farm') {
                 targets = state.players.filter(p => p.id !== state.myId && PlayerState.canBeTargetedBySaltFarm(p) && !(typeof hasPendingSaltAbduction === 'function' && hasPendingSaltAbduction(p.id)));
+            } else if (item === 'duel') {
+                targets = state.players.filter(p => p.id !== state.myId && PlayerState.canBeTargetedByDuel(p));
             } else {
                 // Missile etc. - Only target those currently healthy and sitting in their chair
                 targets = state.players.filter(p => p.id !== state.myId && PlayerState.canBeTargetedByMissile(p));
@@ -4702,7 +5350,9 @@
             if (targets.length === 0) {
                 const emptyText = item === 'missile'
                     ? '현재 자리에 착석 중인 타깃이 없습니다.'
-                    : (item === 'salt_farm' ? '현재 염전에 보낼 수 있는 타깃이 없습니다.' : '타깃이 없습니다.');
+                    : (item === 'salt_farm'
+                        ? '현재 염전에 보낼 수 있는 타깃이 없습니다.'
+                        : (item === 'duel' ? '현재 결투를 신청할 수 있는 착석 상태의 상대가 없습니다.' : '타깃이 없습니다.'));
                 list.innerHTML = `<span style="color:#aaa; text-align:center; padding: 12px 0;">${emptyText}</span>`;
             } else {
                 targets.forEach(p => {
@@ -4746,6 +5396,13 @@
                 if (!target || !PlayerState.canBeTargetedBySaltFarm(target)) {
                     pendingItemUse = null;
                     alert('해당 플레이어는 이미 염전 노역 중입니다.');
+                    return;
+                }
+            } else if (item === 'duel') {
+                const target = state.players.find(p => p.id === targetId);
+                if (!target || !PlayerState.canBeTargetedByDuel(target)) {
+                    pendingItemUse = null;
+                    alert('해당 플레이어가 자리에 없거나 다른 이벤트 진행 중이어서 결투를 신청할 수 없습니다.');
                     return;
                 }
             }
@@ -4957,6 +5614,18 @@
                     if (targetId === state.myId) renderInventory();
                 }
                 extraData = { ...(extraData || {}), blockedByShield };
+            } else if (item === 'duel') {
+                const target = findPlayerById(targetId);
+                if (!target || target.id === actualSenderId || !PlayerState.canBeTargetedByDuel(sender) || !PlayerState.canBeTargetedByDuel(target) || (typeof isAnyDuelActiveOnHost === 'function' && isAnyDuelActiveOnHost())) {
+                    const msg = '현재 결투를 시작할 수 없는 상태입니다. (상대가 자리에 없거나 다른 결투가 진행 중)';
+                    if (actualSenderId === state.myId) {
+                        sysChat(msg);
+                    } else if (currentMode === MODE_HOST) {
+                        socket.emit('SEND_TO_GUEST', { guestId: actualSenderId, type: 'EVENT_SYS', payload: { text: msg } });
+                    }
+                    return; // Abort without consuming item!
+                }
+                targetId = target.id;
             } else if (item === 'salt_farm') {
                 const target = findPlayerById(targetId);
                 if (!target || target.id === actualSenderId || !PlayerState.canBeTargetedBySaltFarm(target) || (typeof hasPendingSaltAbduction === 'function' && hasPendingSaltAbduction(target.id))) {
@@ -5066,6 +5735,9 @@
             } else if (item === 'salt_farm') {
                 // Silent item use: consume item cleanly and schedule random abduction within 1 minute with ZERO immediate alert.
                 scheduleSilentSaltAbduction(actualSenderId, targetId);
+                return;
+            } else if (item === 'duel') {
+                startDuelOnHost(actualSenderId, targetId);
                 return;
             }
             
@@ -5182,6 +5854,10 @@
             }
             if (item === 'salt_return') {
                 if (typeof handleSaltReturnEvent === 'function') handleSaltReturnEvent(targetId, extraData);
+                return;
+            }
+            if (item === 'duel_start' || item === 'duel_round_resolve' || item === 'duel_next_round' || item === 'duel_finish' || item === 'duel_abort') {
+                if (typeof handleDuelNetworkEvent === 'function') handleDuelNetworkEvent(item, extraData);
                 return;
             }
             const sender = findPlayerById(senderId);
@@ -7048,6 +7724,746 @@
         }
         // ────────────────────────────────────────────────────────────────────────
 
+        // ─── Duel Arena ("결투신청") 3-Round Best-of-3 System ──────────────────
+        const DUEL_ROUND_MS = 5000;
+        const DUEL_SLOWMO_TOTAL_MS = 2400;
+        const DUEL_IMPACT_AT_MS = 780;
+        const DUEL_STUN_MS = 30000;
+
+        const activeDuels = {}; // Host-authoritative duel map
+        let clientDuelState = null; // Active duel rendered on this client
+        let duelTimerRaf = null;
+        let duelClientTimeouts = [];
+
+        function addDuelClientTimeout(fn, ms) {
+            const t = setTimeout(fn, ms);
+            duelClientTimeouts.push(t);
+            return t;
+        }
+
+        function clearDuelClientTimers() {
+            if (duelTimerRaf) {
+                cancelAnimationFrame(duelTimerRaf);
+                duelTimerRaf = null;
+            }
+            while (duelClientTimeouts.length > 0) {
+                clearTimeout(duelClientTimeouts.pop());
+            }
+        }
+
+        function isAnyDuelActiveOnHost() {
+            return Object.keys(activeDuels).length > 0;
+        }
+
+        function clearAllActiveDuels() {
+            Object.keys(activeDuels).forEach(dId => {
+                const d = activeDuels[dId];
+                if (d) {
+                    if (d.roundTimerId) clearTimeout(d.roundTimerId);
+                    if (d.transitionTimerId) clearTimeout(d.transitionTimerId);
+                    (d.botTimers || []).forEach(clearTimeout);
+                }
+                delete activeDuels[dId];
+            });
+            state.players.forEach(p => {
+                if (p.activeDuel) p.activeDuel = null;
+            });
+            clearDuelClientTimers();
+            clientDuelState = null;
+            const modal = document.getElementById('modal-duel-arena');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function cleanupDuelsForPlayer(playerId) {
+            if (!playerId) return;
+            Object.keys(activeDuels).forEach(dId => {
+                const d = activeDuels[dId];
+                if (!d) return;
+                if (d.challengerId === playerId || d.targetId === playerId) {
+                    if (d.roundTimerId) clearTimeout(d.roundTimerId);
+                    if (d.transitionTimerId) clearTimeout(d.transitionTimerId);
+                    (d.botTimers || []).forEach(clearTimeout);
+                    const survivorId = d.challengerId === playerId ? d.targetId : d.challengerId;
+                    delete activeDuels[dId];
+                    const survivor = findPlayerById(survivorId);
+                    if (survivor) {
+                        survivor.activeDuel = null;
+                        if (survivor.status === PlayerState.STATUS.DUELING) {
+                            updateStatus(survivor.id, PlayerState.STATUS.IDLE);
+                        }
+                    }
+                    const extra = { duelId: dId, reason: '상대방이 퇴장하여 결투가 중단되었습니다.' };
+                    if (currentMode === MODE_HOST) {
+                        broadcast({ type: 'EVENT_ITEM', payload: { senderId: state.myId, item: 'duel_abort', targetId: survivorId, extraData: extra } });
+                        broadcastState();
+                    }
+                    handleDuelNetworkEvent('duel_abort', extra);
+                }
+            });
+        }
+
+        function prepareFighterForDuel(p) {
+            p.flySequenceId = (p.flySequenceId || 0) + 1;
+            if (p.flyTimeouts) { p.flyTimeouts.forEach(clearTimeout); p.flyTimeouts = []; }
+            if (p.reviveTimeout) { clearTimeout(p.reviveTimeout); p.reviveTimeout = null; }
+            p.pendingMissileStunMs = 0;
+            p.penaltyEndTime = null;
+            clearCharacterPose(p.id);
+        }
+
+        function buildPublicDuelSnapshot(d) {
+            return {
+                duelId: d.duelId,
+                challengerId: d.challengerId,
+                targetId: d.targetId,
+                challengerName: d.challengerName,
+                targetName: d.targetName,
+                challengerGender: d.challengerGender,
+                targetGender: d.targetGender,
+                round: d.round,
+                challengerWins: d.challengerWins,
+                targetWins: d.targetWins,
+                attackerId: d.attackerId,
+                defenderId: d.defenderId,
+                phase: d.phase,
+                durationMs: DUEL_ROUND_MS
+            };
+        }
+
+        function scheduleDuelBotsOnHost(d) {
+            (d.botTimers || []).forEach(clearTimeout);
+            d.botTimers = [];
+            const atk = findPlayerById(d.attackerId);
+            const def = findPlayerById(d.defenderId);
+            const roundNum = d.round;
+            if (atk && atk.isBot) {
+                d.botTimers.push(setTimeout(() => {
+                    if (!activeDuels[d.duelId] || d.round !== roundNum || d.phase !== 'choosing') return;
+                    handleDuelChoiceOnHost(d.duelId, atk.id, roundNum, Math.random() < 0.5 ? 'left' : 'right');
+                }, 900 + Math.floor(Math.random() * 900)));
+            }
+            if (def && def.isBot) {
+                d.botTimers.push(setTimeout(() => {
+                    if (!activeDuels[d.duelId] || d.round !== roundNum || d.phase !== 'choosing') return;
+                    handleDuelChoiceOnHost(d.duelId, def.id, roundNum, Math.random() < 0.5 ? 'left' : 'right');
+                }, 900 + Math.floor(Math.random() * 900)));
+            }
+        }
+
+        function startDuelOnHost(challengerId, targetId) {
+            const challenger = findPlayerById(challengerId);
+            const target = findPlayerById(targetId);
+            if (!challenger || !target) return;
+
+            prepareFighterForDuel(challenger);
+            prepareFighterForDuel(target);
+
+            const duelId = 'duel-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+            const duel = {
+                duelId,
+                challengerId: challenger.id,
+                targetId: target.id,
+                challengerName: challenger.name,
+                targetName: target.name,
+                challengerGender: challenger.gender,
+                targetGender: target.gender,
+                round: 1,
+                challengerWins: 0,
+                targetWins: 0,
+                attackerId: challenger.id, // Item user attacks first in Round 1
+                defenderId: target.id,
+                phase: 'choosing',
+                attackChoice: null,
+                dodgeChoice: null,
+                roundTimerId: null,
+                transitionTimerId: null,
+                botTimers: []
+            };
+            activeDuels[duelId] = duel;
+
+            const snap = buildPublicDuelSnapshot(duel);
+            challenger.activeDuel = snap;
+            target.activeDuel = snap;
+            challenger.status = PlayerState.STATUS.DUELING;
+            target.status = PlayerState.STATUS.DUELING;
+
+            duel.roundTimerId = setTimeout(() => resolveDuelRoundOnHost(duelId, 1), DUEL_ROUND_MS);
+            scheduleDuelBotsOnHost(duel);
+
+            renderStage();
+            updateChatUI();
+            if (currentMode === MODE_HOST) {
+                broadcastState();
+                broadcast({ type: 'EVENT_ITEM', payload: { senderId: challenger.id, item: 'duel_start', targetId: target.id, extraData: snap } });
+            }
+            handleDuelNetworkEvent('duel_start', snap);
+        }
+
+        function handleDuelChoiceOnHost(duelId, playerId, round, dir) {
+            const d = activeDuels[duelId];
+            if (!d || d.phase !== 'choosing') return;
+            if (typeof round === 'number' && round !== d.round) return;
+            if (dir !== 'left' && dir !== 'right') return;
+            const p = findPlayerById(playerId);
+            const actualId = p ? p.id : playerId;
+            if (actualId === d.attackerId) {
+                d.attackChoice = dir;
+            } else if (actualId === d.defenderId) {
+                d.dodgeChoice = dir;
+            }
+        }
+
+        function resolveDuelRoundOnHost(duelId, expectedRound) {
+            const d = activeDuels[duelId];
+            if (!d || d.phase !== 'choosing' || d.round !== expectedRound) return;
+            if (!state.room || state.room.status !== 'playing') {
+                delete activeDuels[duelId];
+                return;
+            }
+            d.phase = 'resolving';
+            if (d.roundTimerId) { clearTimeout(d.roundTimerId); d.roundTimerId = null; }
+            (d.botTimers || []).forEach(clearTimeout);
+            d.botTimers = [];
+
+            const attackDir = (d.attackChoice === 'left' || d.attackChoice === 'right')
+                ? d.attackChoice
+                : (Math.random() < 0.5 ? 'left' : 'right');
+            const dodgeDir = (d.dodgeChoice === 'left' || d.dodgeChoice === 'right')
+                ? d.dodgeChoice
+                : (Math.random() < 0.5 ? 'left' : 'right');
+
+            // Same direction = defender leaned right into the incoming punch -> HIT!
+            // Opposite direction = defender slipped away from the incoming punch -> DODGE!
+            const hit = (attackDir === dodgeDir);
+            const roundWinnerId = hit ? d.attackerId : d.defenderId;
+            if (roundWinnerId === d.challengerId) d.challengerWins++;
+            else d.targetWins++;
+
+            let matchWinnerId = null;
+            let matchLoserId = null;
+            if (d.challengerWins >= 2) {
+                matchWinnerId = d.challengerId;
+                matchLoserId = d.targetId;
+            } else if (d.targetWins >= 2) {
+                matchWinnerId = d.targetId;
+                matchLoserId = d.challengerId;
+            }
+
+            const resolvePayload = {
+                duelId: d.duelId,
+                round: d.round,
+                attackerId: d.attackerId,
+                defenderId: d.defenderId,
+                attackDir,
+                dodgeDir,
+                hit,
+                roundWinnerId,
+                challengerWins: d.challengerWins,
+                targetWins: d.targetWins,
+                matchWinnerId,
+                matchLoserId
+            };
+
+            const ch = findPlayerById(d.challengerId);
+            const tg = findPlayerById(d.targetId);
+            const updatedSnap = buildPublicDuelSnapshot(d);
+            if (ch) ch.activeDuel = updatedSnap;
+            if (tg) tg.activeDuel = updatedSnap;
+
+            if (currentMode === MODE_HOST) {
+                broadcast({ type: 'EVENT_ITEM', payload: { senderId: d.challengerId, item: 'duel_round_resolve', targetId: d.targetId, extraData: resolvePayload } });
+                broadcastState();
+            }
+            handleDuelNetworkEvent('duel_round_resolve', resolvePayload);
+
+            if (matchWinnerId) {
+                d.transitionTimerId = setTimeout(() => {
+                    finishDuelOnHost(duelId, matchWinnerId, matchLoserId);
+                }, DUEL_SLOWMO_TOTAL_MS + 700);
+            } else {
+                d.transitionTimerId = setTimeout(() => {
+                    advanceDuelRoundOnHost(duelId);
+                }, DUEL_SLOWMO_TOTAL_MS + 250);
+            }
+        }
+
+        function advanceDuelRoundOnHost(duelId) {
+            const d = activeDuels[duelId];
+            if (!d || !state.room || state.room.status !== 'playing') return;
+            d.round += 1;
+            // Alternate attack turn every round: R1 challenger -> R2 target -> R3 challenger
+            const prevAttacker = d.attackerId;
+            d.attackerId = d.defenderId;
+            d.defenderId = prevAttacker;
+            d.attackChoice = null;
+            d.dodgeChoice = null;
+            d.phase = 'choosing';
+
+            const snap = buildPublicDuelSnapshot(d);
+            const ch = findPlayerById(d.challengerId);
+            const tg = findPlayerById(d.targetId);
+            if (ch) ch.activeDuel = snap;
+            if (tg) tg.activeDuel = snap;
+
+            const nextRound = d.round;
+            d.roundTimerId = setTimeout(() => resolveDuelRoundOnHost(duelId, nextRound), DUEL_ROUND_MS);
+            scheduleDuelBotsOnHost(d);
+
+            if (currentMode === MODE_HOST) {
+                broadcast({ type: 'EVENT_ITEM', payload: { senderId: d.challengerId, item: 'duel_next_round', targetId: d.targetId, extraData: snap } });
+                broadcastState();
+            }
+            handleDuelNetworkEvent('duel_next_round', snap);
+        }
+
+        function finishDuelOnHost(duelId, winnerId, loserId) {
+            const d = activeDuels[duelId];
+            if (!d) return;
+            if (d.roundTimerId) clearTimeout(d.roundTimerId);
+            if (d.transitionTimerId) clearTimeout(d.transitionTimerId);
+            (d.botTimers || []).forEach(clearTimeout);
+            delete activeDuels[duelId];
+
+            const winner = findPlayerById(winnerId);
+            const loser = findPlayerById(loserId);
+            if (winner) {
+                winner.activeDuel = null;
+                if (state.room && state.room.status === 'playing') {
+                    updateStatus(winner.id, PlayerState.STATUS.IDLE);
+                }
+            }
+            if (loser) {
+                loser.activeDuel = null;
+                if (state.room && state.room.status === 'playing') {
+                    if (loser.stats) loser.stats.duel = (loser.stats.duel || 0) + 1;
+                    applyDuelStun(loser.id, DUEL_STUN_MS);
+                }
+            }
+
+            const finPayload = {
+                duelId,
+                winnerId: winner ? winner.id : winnerId,
+                loserId: loser ? loser.id : loserId,
+                winnerName: winner ? winner.name : d.challengerName,
+                loserName: loser ? loser.name : d.targetName,
+                challengerWins: d.challengerWins,
+                targetWins: d.targetWins
+            };
+
+            if (currentMode === MODE_HOST) {
+                broadcast({ type: 'EVENT_ITEM', payload: { senderId: finPayload.winnerId, item: 'duel_finish', targetId: finPayload.loserId, extraData: finPayload } });
+                broadcastState();
+            }
+            handleDuelNetworkEvent('duel_finish', finPayload);
+            handleBotDuelReaction(finPayload.winnerId, finPayload.loserId);
+        }
+
+        function applyDuelStun(targetId, stunMs = DUEL_STUN_MS) {
+            const target = findPlayerById(targetId);
+            if (!target) return;
+            target.activeDuel = null;
+            target.flySequenceId = (target.flySequenceId || 0) + 1;
+            if (target.flyTimeouts) { target.flyTimeouts.forEach(clearTimeout); target.flyTimeouts = []; }
+            if (target.reviveTimeout) { clearTimeout(target.reviveTimeout); target.reviveTimeout = null; }
+            target.pendingMissileStunMs = 0;
+
+            clearCharacterPose(target.id);
+            target.penaltyEndTime = Date.now() + stunMs;
+            updateStatus(target.id, PlayerState.STATUS.DEAD_DUEL);
+
+            target.reviveTimeout = setTimeout(() => {
+                if (!state.room || state.room.status !== 'playing') return;
+                clearCharacterPose(target.id);
+                target.penaltyEndTime = null;
+                target.reviveTimeout = null;
+                const msg = `✨ ${target.name}님의 눈탱이 밤탱이 부기가 빠져 회복했습니다!`;
+                if (currentMode === MODE_HOST) {
+                    broadcast({ type: 'EVENT_SYS', payload: { text: msg } });
+                }
+                sysChat(msg);
+                updateStatus(target.id, PlayerState.STATUS.IDLE);
+            }, stunMs);
+        }
+
+        function handleBotDuelReaction(winnerId, loserId) {
+            if (!state.room || state.room.status !== 'playing') return;
+            const winner = findPlayerById(winnerId);
+            const loser = findPlayerById(loserId);
+            if (!winner || !loser) return;
+            if (winner.isBot && PlayerState.isHealthySeated(winner)) {
+                setTimeout(() => {
+                    if (state.room.status === 'playing' && PlayerState.isHealthySeated(winner)) {
+                        sendChat(winner.id, `후후 ${loser.name}님 제 주먹 맛 어때요? 눈탱이 밤탱이 되셨네 🥊ㅋㅋ`);
+                    }
+                }, 700);
+            } else {
+                const idleBots = state.players.filter(p => p.isBot && p.id !== loser.id && PlayerState.isHealthySeated(p));
+                if (idleBots.length > 0 && Math.random() < 0.8) {
+                    const bot = idleBots[Math.floor(Math.random() * idleBots.length)];
+                    setTimeout(() => {
+                        if (state.room.status === 'playing' && PlayerState.isHealthySeated(bot)) {
+                            sendChat(bot.id, `와 ${loser.name}님 결투 져서 눈탱이 밤탱이 된 거 봐요 ㅋㅋㅋㅋ 30초 묵념!`);
+                        }
+                    }, 850);
+                }
+            }
+        }
+
+        // ─── Client Duel Arena UI & Slow-Motion Animation ─────────────────────
+        function handleDuelNetworkEvent(eventType, data) {
+            if (!data) return;
+            if (eventType === 'duel_start') {
+                const ch = findPlayerById(data.challengerId);
+                const tg = findPlayerById(data.targetId);
+                if (ch) { ch.status = PlayerState.STATUS.DUELING; ch.activeDuel = data; }
+                if (tg) { tg.status = PlayerState.STATUS.DUELING; tg.activeDuel = data; }
+                renderStage();
+                updateChatUI();
+                playDuelBellSound();
+                sysChat(`🥊 [결투장 오픈] ${data.challengerName}님이 ${data.targetName}님에게 1:1 결투를 신청했습니다! (3판 2선승)`);
+                openDuelArenaModal(data);
+            } else if (eventType === 'duel_next_round') {
+                if (!clientDuelState || clientDuelState.duelId !== data.duelId) {
+                    openDuelArenaModal(data);
+                    return;
+                }
+                playDuelBellSound();
+                startDuelRoundClientUI(data);
+            } else if (eventType === 'duel_round_resolve') {
+                playDuelSlowMoResolution(data);
+            } else if (eventType === 'duel_finish') {
+                sysChat(`🥊 [결투 종료] ${data.winnerName}님이 (${Math.max(data.challengerWins, data.targetWins)}-${Math.min(data.challengerWins, data.targetWins)}) 승리를 거두었습니다! 패배한 ${data.loserName}님은 눈탱이 밤탱이가 되어 30초간 기절합니다!`);
+                closeDuelArenaModal();
+                renderStage();
+                updateChatUI();
+            } else if (eventType === 'duel_abort') {
+                if (data.reason) sysChat(`[시스템] ${data.reason}`);
+                closeDuelArenaModal();
+                renderStage();
+                updateChatUI();
+            }
+        }
+
+        function openDuelArenaModal(snap) {
+            clearDuelClientTimers();
+            const isParticipant = (state.myId === snap.challengerId || state.myId === snap.targetId);
+            clientDuelState = {
+                ...snap,
+                myChoice: null,
+                animating: false,
+                spectatorClosed: false,
+                isParticipant
+            };
+
+            const p1NameEl = document.getElementById('duel-p1-name');
+            const p2NameEl = document.getElementById('duel-p2-name');
+            const av1 = document.getElementById('duel-avatar-p1');
+            const av2 = document.getElementById('duel-avatar-p2');
+            if (p1NameEl) p1NameEl.textContent = `🥊 ${snap.challengerName}`;
+            if (p2NameEl) p2NameEl.textContent = `${snap.targetName} 🥊`;
+            if (av1) av1.innerHTML = getAvatarSvg(snap.challengerGender || 'M');
+            if (av2) av2.innerHTML = getAvatarSvg(snap.targetGender || 'M');
+
+            const specCloseBtn = document.getElementById('btn-duel-spectator-close');
+            if (specCloseBtn) specCloseBtn.classList.toggle('hidden', isParticipant);
+
+            const modal = document.getElementById('modal-duel-arena');
+            if (modal) modal.classList.remove('hidden');
+
+            startDuelRoundClientUI(snap);
+        }
+
+        function resetDuelRingPositions() {
+            const stage = document.getElementById('duel-ring-stage');
+            const f1 = document.getElementById('duel-fighter-p1');
+            const f2 = document.getElementById('duel-fighter-p2');
+            const slowBadge = document.getElementById('duel-slowmo-badge');
+            const fxBanner = document.getElementById('duel-fx-banner');
+
+            if (stage) {
+                stage.classList.remove('slowmo-mode', 'hit-shake');
+                stage.querySelectorAll('.duel-spark').forEach(el => el.remove());
+            }
+            if (slowBadge) slowBadge.classList.add('hidden');
+            if (fxBanner) {
+                fxBanner.className = 'duel-fx-banner';
+                fxBanner.textContent = '';
+            }
+            [f1, f2].forEach((f, idx) => {
+                if (!f) return;
+                f.className = `duel-fighter ${idx === 0 ? 'left-corner' : 'right-corner'} idle-bob`;
+                f.style.transform = 'none';
+                f.querySelectorAll('.duel-glove').forEach(g => { g.style.transform = 'none'; });
+            });
+        }
+
+        function renderDuelScorePips(cWins, tWins) {
+            const p1Pips = document.querySelectorAll('#duel-p1-pips .duel-pip');
+            const p2Pips = document.querySelectorAll('#duel-p2-pips .duel-pip');
+            p1Pips.forEach((el, i) => el.classList.toggle('won', i < cWins));
+            p2Pips.forEach((el, i) => el.classList.toggle('won', i < tWins));
+        }
+
+        function startDuelRoundClientUI(snap) {
+            clearDuelClientTimers();
+            if (!clientDuelState) return;
+            Object.assign(clientDuelState, snap, {
+                myChoice: null,
+                animating: false,
+                localExpiresAt: Date.now() + (snap.durationMs || DUEL_ROUND_MS)
+            });
+
+            resetDuelRingPositions();
+            renderDuelScorePips(snap.challengerWins || 0, snap.targetWins || 0);
+
+            const roundBadge = document.getElementById('duel-round-badge');
+            if (roundBadge) roundBadge.textContent = `🥊 ROUND ${snap.round} / 3 (3판 2선승)`;
+
+            const p1IsAtk = snap.attackerId === snap.challengerId;
+            const roleP1 = document.getElementById('duel-role-p1');
+            const roleP2 = document.getElementById('duel-role-p2');
+            if (roleP1) {
+                roleP1.className = `duel-role-tag ${p1IsAtk ? 'atk' : 'def'}`;
+                roleP1.textContent = p1IsAtk ? '🔥 공격' : '💨 회피';
+            }
+            if (roleP2) {
+                roleP2.className = `duel-role-tag ${!p1IsAtk ? 'atk' : 'def'}`;
+                roleP2.textContent = !p1IsAtk ? '🔥 공격' : '💨 회피';
+            }
+
+            const controls = document.getElementById('duel-controls-area');
+            const btnL = document.getElementById('btn-duel-left');
+            const btnR = document.getElementById('btn-duel-right');
+            const banner = document.getElementById('duel-role-banner');
+            const hint = document.getElementById('duel-sub-hint');
+
+            if (state.myId === snap.attackerId) {
+                if (controls) controls.classList.remove('hidden');
+                if (banner) banner.textContent = '🔥 나의 공격 차례! (레프트 / 라이트 선택)';
+                if (hint) hint.textContent = '5초 뒤 슬로우모션으로 펀치를 날립니다. 상대가 피할 쪽을 맞추면 직격!';
+                if (btnL) { btnL.disabled = false; btnL.className = 'btn duel-choice-btn atk-mode'; btnL.textContent = '🥊 레프트'; }
+                if (btnR) { btnR.disabled = false; btnR.className = 'btn duel-choice-btn atk-mode'; btnR.textContent = '🥊 라이트'; }
+            } else if (state.myId === snap.defenderId) {
+                if (controls) controls.classList.remove('hidden');
+                if (banner) banner.textContent = '💨 나의 회피 차례! (피하기 레프트 / 라이트 선택)';
+                if (hint) hint.textContent = '5초 뒤 상대의 공격을 예측해 반대 방향으로 피하세요!';
+                if (btnL) { btnL.disabled = false; btnL.className = 'btn duel-choice-btn def-mode'; btnL.textContent = '💨 피하기 레프트'; }
+                if (btnR) { btnR.disabled = false; btnR.className = 'btn duel-choice-btn def-mode'; btnR.textContent = '💨 피하기 라이트'; }
+            } else {
+                if (controls) controls.classList.add('hidden');
+                const atkName = p1IsAtk ? snap.challengerName : snap.targetName;
+                const defName = p1IsAtk ? snap.targetName : snap.challengerName;
+                if (banner) banner.textContent = `👀 관전 중: ${atkName} 공격 vs ${defName} 회피`;
+                if (hint) hint.textContent = '5초 카운트다운 후 슬로우모션 펀치 & 회피가 펼쳐집니다!';
+            }
+
+            const timerText = document.getElementById('duel-timer-text');
+            const timerFill = document.getElementById('duel-timer-fill');
+            const dur = snap.durationMs || DUEL_ROUND_MS;
+
+            const tick = () => {
+                if (!clientDuelState || clientDuelState.animating) return;
+                const remMs = Math.max(0, clientDuelState.localExpiresAt - Date.now());
+                if (timerText) timerText.textContent = `${(remMs / 1000).toFixed(1)}초`;
+                if (timerFill) timerFill.style.width = `${(remMs / dur) * 100}%`;
+                if (remMs > 0) {
+                    duelTimerRaf = requestAnimationFrame(tick);
+                }
+            };
+            duelTimerRaf = requestAnimationFrame(tick);
+        }
+
+        function submitDuelChoice(dir) {
+            if (!clientDuelState || clientDuelState.animating) return;
+            if (dir !== 'left' && dir !== 'right') return;
+            if (state.myId !== clientDuelState.attackerId && state.myId !== clientDuelState.defenderId) return;
+
+            clientDuelState.myChoice = dir;
+            playTone(dir === 'left' ? 620 : 740, 'triangle', 0.06, 0.12);
+
+            const btnL = document.getElementById('btn-duel-left');
+            const btnR = document.getElementById('btn-duel-right');
+            if (btnL) btnL.classList.toggle('selected', dir === 'left');
+            if (btnR) btnR.classList.toggle('selected', dir === 'right');
+
+            const hint = document.getElementById('duel-sub-hint');
+            const label = dir === 'left' ? '레프트' : '라이트';
+            if (hint) hint.textContent = `✅ [${label}] 선택 완료! (5초 종료 전까지 변경 가능)`;
+
+            if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
+                handleDuelChoiceOnHost(clientDuelState.duelId, state.myId, clientDuelState.round, dir);
+            } else if (socket && socket.connected) {
+                socket.emit('SEND_TO_HOST', {
+                    roomCode,
+                    type: 'USE_ITEM',
+                    payload: {
+                        item: 'duel_choice',
+                        index: -1,
+                        targetId: null,
+                        extraData: { duelId: clientDuelState.duelId, round: clientDuelState.round, dir }
+                    }
+                });
+            }
+        }
+
+        function spawnDuelHitSparks(stage, targetFighterEl) {
+            if (!stage || !targetFighterEl) return;
+            const sRect = stage.getBoundingClientRect();
+            const fRect = targetFighterEl.getBoundingClientRect();
+            const cx = fRect.left - sRect.left + fRect.width / 2;
+            const cy = fRect.top - sRect.top + 38;
+            for (let i = 0; i < 10; i++) {
+                const sp = document.createElement('div');
+                sp.className = 'duel-spark';
+                sp.style.left = `${cx - 4}px`;
+                sp.style.top = `${cy - 4}px`;
+                stage.appendChild(sp);
+                const ang = (i / 10) * Math.PI * 2;
+                const dist = 28 + Math.random() * 34;
+                requestAnimationFrame(() => {
+                    sp.style.transform = `translate(${Math.cos(ang) * dist}px, ${Math.sin(ang) * dist}px) scale(0.2)`;
+                    sp.style.opacity = '0';
+                });
+            }
+        }
+
+        function playDuelSlowMoResolution(res) {
+            if (!clientDuelState || clientDuelState.duelId !== res.duelId) return;
+            clearDuelClientTimers();
+            clientDuelState.animating = true;
+
+            const stage = document.getElementById('duel-ring-stage');
+            const slowBadge = document.getElementById('duel-slowmo-badge');
+            const fxBanner = document.getElementById('duel-fx-banner');
+            const timerText = document.getElementById('duel-timer-text');
+            const timerFill = document.getElementById('duel-timer-fill');
+            const btnL = document.getElementById('btn-duel-left');
+            const btnR = document.getElementById('btn-duel-right');
+            const banner = document.getElementById('duel-role-banner');
+            const hint = document.getElementById('duel-sub-hint');
+
+            if (timerText) timerText.textContent = 'SLOW-MO';
+            if (timerFill) timerFill.style.width = '0%';
+            if (btnL) btnL.disabled = true;
+            if (btnR) btnR.disabled = true;
+
+            const p1IsAtk = res.attackerId === clientDuelState.challengerId;
+            const atkEl = document.getElementById(p1IsAtk ? 'duel-fighter-p1' : 'duel-fighter-p2');
+            const defEl = document.getElementById(p1IsAtk ? 'duel-fighter-p2' : 'duel-fighter-p1');
+            const atkName = p1IsAtk ? clientDuelState.challengerName : clientDuelState.targetName;
+            const defName = p1IsAtk ? clientDuelState.targetName : clientDuelState.challengerName;
+            const atkKor = res.attackDir === 'left' ? '레프트' : '라이트';
+            const defKor = res.dodgeDir === 'left' ? '레프트' : '라이트';
+
+            if (stage) stage.classList.add('slowmo-mode');
+            if (slowBadge) slowBadge.classList.remove('hidden');
+            if (banner) banner.textContent = `🎬 ${atkName} [${atkKor} 공격] vs ${defName} [${defKor} 회피]!`;
+            if (hint) hint.textContent = '슬로우모션 판정 중...';
+
+            if (atkEl && defEl) {
+                atkEl.classList.remove('idle-bob');
+                defEl.classList.remove('idle-bob');
+                atkEl.classList.add('slowmo-anim');
+                defEl.classList.add('slowmo-anim');
+
+                const lungeX = p1IsAtk ? 92 : -92;
+                const laneOffsetY = res.attackDir === 'left' ? -10 : 8;
+                const dodgeShiftX = res.dodgeDir === 'left' ? -28 : 28;
+                const dodgeTilt = res.dodgeDir === 'left' ? -16 : 16;
+
+                const punchGlove = atkEl.querySelector(res.attackDir === 'left' ? '.duel-glove.g-left' : '.duel-glove.g-right');
+                requestAnimationFrame(() => {
+                    atkEl.style.transform = `translate(${lungeX}px, ${laneOffsetY}px) scale(1.08)`;
+                    if (punchGlove) {
+                        const gloveExtendX = (p1IsAtk ? 42 : -42) + (res.attackDir === 'left' ? -12 : 12);
+                        punchGlove.style.transform = `translate(${gloveExtendX}px, -8px) scale(1.65)`;
+                    }
+                    defEl.style.transform = `translate(${dodgeShiftX}px, 4px) rotate(${dodgeTilt}deg)`;
+                });
+            }
+
+            // Impact / Dodge moment inside slow-motion
+            addDuelClientTimeout(() => {
+                if (!clientDuelState || clientDuelState.duelId !== res.duelId) return;
+                renderDuelScorePips(res.challengerWins, res.targetWins);
+
+                if (res.hit) {
+                    playDuelHitSound();
+                    if (stage) stage.classList.add('hit-shake');
+                    if (defEl) {
+                        defEl.classList.add('hit-stunned');
+                        const recoilX = p1IsAtk ? 38 : -38;
+                        defEl.style.transform = `translate(${recoilX}px, -8px) rotate(${p1IsAtk ? 22 : -22}deg)`;
+                        spawnDuelHitSparks(stage, defEl);
+                    }
+                    if (fxBanner) {
+                        fxBanner.className = 'duel-fx-banner hit show';
+                        fxBanner.textContent = `💥 ${atkKor} 직격 명중!!`;
+                    }
+                    if (banner) banner.textContent = `💥 공격 성공! ${atkName} 라운드 득점!`;
+                } else {
+                    playDuelWhooshSound();
+                    if (fxBanner) {
+                        fxBanner.className = 'duel-fx-banner dodge show';
+                        fxBanner.textContent = `💨 ${defKor} 회피 성공!!`;
+                    }
+                    if (banner) banner.textContent = `💨 완벽한 예측 회피! ${defName} 라운드 득점!`;
+
+                    // If defender clinched match win (2 wins) on a dodge, deliver a crisp counter-jab KO!
+                    if (res.matchWinnerId && res.matchWinnerId === res.defenderId && atkEl) {
+                        addDuelClientTimeout(() => {
+                            playDuelHitSound();
+                            if (stage) stage.classList.add('hit-shake');
+                            atkEl.classList.add('hit-stunned');
+                            spawnDuelHitSparks(stage, atkEl);
+                            if (fxBanner) {
+                                fxBanner.className = 'duel-fx-banner hit show';
+                                fxBanner.textContent = '⚡ 카운터 펀치 KO!!';
+                            }
+                        }, 480);
+                    }
+                }
+
+                if (res.matchWinnerId) {
+                    const winName = res.matchWinnerId === clientDuelState.challengerId
+                        ? clientDuelState.challengerName
+                        : clientDuelState.targetName;
+                    if (hint) hint.textContent = `🏆 ${winName} 최종 승리! 패배자는 30초 눈탱이 밤탱이 기절!`;
+                } else {
+                    if (hint) hint.textContent = '잠시 후 공수가 교대되어 다음 라운드가 시작됩니다...';
+                }
+            }, DUEL_IMPACT_AT_MS);
+        }
+
+        function closeDuelModalSpectator() {
+            if (!clientDuelState || clientDuelState.isParticipant) return;
+            clientDuelState.spectatorClosed = true;
+            const modal = document.getElementById('modal-duel-arena');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function closeDuelArenaModal() {
+            clearDuelClientTimers();
+            clientDuelState = null;
+            const modal = document.getElementById('modal-duel-arena');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function syncDuelModalFromState() {
+            const duelPlayer = state.players.find(p => p.activeDuel);
+            if (!duelPlayer) {
+                if (clientDuelState && !clientDuelState.animating) {
+                    closeDuelArenaModal();
+                }
+                return;
+            }
+            const snap = duelPlayer.activeDuel;
+            if (!clientDuelState && (state.myId === snap.challengerId || state.myId === snap.targetId)) {
+                openDuelArenaModal(snap);
+            }
+        }
+        // ────────────────────────────────────────────────────────────────────────
+
         // ─── Roaming Waiting Animals System (Single Source of Truth) ─────────
         function getWaitingAnimalsSkyLayer() {
             let layer = document.getElementById('waiting-animals-sky-layer');
@@ -8242,6 +9658,10 @@
                 } else if (PlayerState.isAtSaltFarm(me)) {
                     const pct = (me.saltFarm && typeof me.saltFarm.progress === 'number') ? me.saltFarm.progress : 0;
                     els.chatInput.placeholder = `🧂 염전에서 소금을 채취해야 복귀할 수 있습니다 (${pct}%)`;
+                } else if (PlayerState.isDueling(me)) {
+                    els.chatInput.placeholder = '🥊 결투장 링 위에서 1:1 결투 진행 중입니다...';
+                } else if (PlayerState.isKnockedOutByDuel(me)) {
+                    els.chatInput.placeholder = `🥊 결투에서 패배해 눈탱이 밤탱이로 기절 중...${remainText}`;
                 }
             } else if (PlayerState.isAway(me)) {
                 els.chatInput.disabled = true; els.chatSend.disabled = true;
@@ -8278,7 +9698,7 @@
             const wrap = document.getElementById(`char-wrap-${actualId}`);
             if (wrap) {
                 wrap.className = `character-wrapper status-${newStatus}`;
-                if (PlayerState.isHealthySeated(newStatus) || newStatus === PlayerState.STATUS.DEAD_BOMB) {
+                if (PlayerState.isHealthySeated(newStatus) || newStatus === PlayerState.STATUS.DEAD_BOMB || newStatus === PlayerState.STATUS.DEAD_DUEL) {
                     // Force clear any lingering inline styles from interrupted animations
                     clearCharacterPose(actualId);
                 } else if (newStatus === PlayerState.STATUS.DEAD_MISSILE) {
@@ -8738,6 +10158,8 @@
         window.leaveRoom = leaveRoom;
         window.setViewMode = setViewMode;
         window.toggleOption = toggleOption;
+        window.onItemPoolCheckboxChange = onItemPoolCheckboxChange;
+        window.setAllItemPoolSelection = setAllItemPoolSelection;
         window.validateMinTime = validateMinTime;
         window.changeWords = changeWords;
         window.createMultiplayerRoom = createMultiplayerRoom;
@@ -8753,6 +10175,8 @@
         window.closeBombSetupModal = closeBombSetupModal;
         window.submitBombWireCut = submitBombWireCut;
         window.closeBombDefuseModal = closeBombDefuseModal;
+        window.submitDuelChoice = submitDuelChoice;
+        window.closeDuelModalSpectator = closeDuelModalSpectator;
         window.closeWordAddModal = closeWordAddModal;
         window.submitWordAdd = submitWordAdd;
         window.closeWordChangeModal = closeWordChangeModal;
@@ -8948,6 +10372,7 @@
             if (MOBILE_LAYOUT_MQ.addEventListener) MOBILE_LAYOUT_MQ.addEventListener('change', onLayoutModeChange);
             else if (MOBILE_LAYOUT_MQ.addListener) MOBILE_LAYOUT_MQ.addListener(onLayoutModeChange);
         }
+        renderItemPoolOptions();
         initKeyboardResponsive();
 
         // Initial 1-time pre-fetch of top 100 taboo words for client-side zero-overhead rolling

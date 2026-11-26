@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>아이템 도감 & 밸런스 분석 - 위험한 초대 (플라잉 체어)</title>
-    <meta name="description" content="'위험한 초대 - 실시간 플라잉 체어'의 10종 전략 특수 아이템(유도 미사일, 폭탄해체하기, 염전으로 보내기, 방패, 단어 변경/추가/삭제, 상어/악어/부산갈매기 소환)의 스펙, 기절 시간 누적, 예약 타격 및 카운터 상성 전략 완벽 가이드.">
-    <meta name="keywords" content="플라잉체어아이템, 위험한초대아이템, 웹게임아이템, 게임도감, 유도미사일, 폭탄해체하기, 염전으로보내기, 방패, 금기어변경, 상어부르기, 악어부르기, 부산갈매기부르기, 게임공략">
+    <meta name="description" content="'위험한 초대 - 실시간 플라잉 체어'의 11종 전략 특수 아이템(유도 미사일, 결투신청, 폭탄해체하기, 염전으로 보내기, 방패, 단어 변경/추가/삭제, 상어/악어/부산갈매기 소환)의 스펙, 기절 시간 누적, 예약 타격 및 카운터 상성 전략 완벽 가이드.">
+    <meta name="keywords" content="플라잉체어아이템, 위험한초대아이템, 웹게임아이템, 게임도감, 유도미사일, 결투신청, 폭탄해체하기, 염전으로보내기, 방패, 금기어변경, 상어부르기, 악어부르기, 부산갈매기부르기, 게임공략">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://flying-chair.com/guide/items">
 
@@ -14,7 +14,7 @@
     <!-- Open Graph -->
     <meta property="og:type" content="article">
     <meta property="og:title" content="아이템 도감 & 밸런스 분석 - 위험한 초대">
-    <meta property="og:description" content="전세를 단숨에 뒤집는 10가지 특수 아이템의 상세 스펙과 카운터 전략 완벽 분석.">
+    <meta property="og:description" content="전세를 단숨에 뒤집는 11가지 특수 아이템의 상세 스펙과 카운터 전략 완벽 분석.">
     <meta property="og:url" content="https://flying-chair.com/guide/items">
 
     <!-- Pretendard Font -->
@@ -25,7 +25,7 @@
     {
       "@context": "https://schema.org",
       "@type": "Article",
-      "headline": "전략 특수 아이템 10종 도감 & 밸런스 분석 - 위험한 초대",
+      "headline": "전략 특수 아이템 11종 도감 & 밸런스 분석 - 위험한 초대",
       "description": "유도 미사일, 폭탄해체하기, 염전으로 보내기, 이지스 방패, 금기어 조작권 및 3종 동물 소환 트랩의 상세 메커니즘과 상성 분석.",
       "author": {
         "@type": "Organization",
@@ -186,9 +186,9 @@
         <!-- Doc Header -->
         <section class="doc-header">
             <span class="doc-badge">🎒 ITEM COMPENDIUM</span>
-            <h1 class="doc-title">전략 특수 아이템 10종 도감 & 밸런스 분석</h1>
+            <h1 class="doc-title">전략 특수 아이템 11종 도감 & 밸런스 분석</h1>
             <p class="doc-desc">
-                아이템 모드 활성화 시 주기적으로 인벤토리에 보급되는 10가지 특수 아이템의 상세 스펙과 발동 조건,
+                아이템 모드 활성화 시 주기적으로 인벤토리에 보급되는 11가지 특수 아이템의 상세 스펙과 발동 조건,
                 기절 시간 누적 메커니즘, 그리고 상대를 카운터치기 위한 실전 밸런스 분석을 제공합니다.
             </p>
         </section>
@@ -466,6 +466,35 @@
             </div>
         </article>
 
+        <!-- Item 11: 결투신청 -->
+        <article class="item-detail-card">
+            <div class="item-top">
+                <div class="item-icon-circle red">🥊</div>
+                <div class="item-title-group">
+                    <h2>결투신청 (Duel Arena)</h2>
+                    <div class="item-badge-row">
+                        <span class="badge attack">1:1 결투형</span>
+                        <span class="badge mindgame">3판 2선승 심리전</span>
+                    </div>
+                </div>
+            </div>
+            <p style="color: var(--toss-text-sub); font-size: 0.95rem;">
+                원하는 상대 1명에게 1:1 복싱 결투를 신청하여 내 캐릭터와 상대 캐릭터가 그대로 <strong>결투장 링</strong> 위에 오릅니다!
+                아이템을 사용한 유저가 1라운드 선공을 가져가며, 매 라운드 공수를 교대하는 <strong>3라운드(3판 2선승제)</strong>로 승부를 가립니다.
+            </p>
+            <table class="specs-table">
+                <tr><th>발동 및 선공</th><td>정상 착석(<code>idle</code>) 상대 1명 지목 → 양측 캐릭터가 링에 입장하며 <strong>아이템 사용자가 1라운드 선공</strong> (2라운드 공수 교대, 1:1 동점 시 3라운드 최종전)</td></tr>
+                <tr><th>선택 제한 시간</th><td>라운드당 <strong>5초</strong> 동안 공격자는 <code>레프트 / 라이트</code> 공격을, 수비자는 <code>피하기 레프트 / 피하기 라이트</code>를 선택</td></tr>
+                <tr><th>슬로우모션 판정</th><td>5초 종료 시 <strong>슬로우모션</strong>으로 펀치와 회피가 동시에 펼쳐지며, 공격 성공 시 강렬한 <strong>피격 이펙트</strong>와 함께 공격자 득점 / 예측 회피 성공 시 수비자 득점</td></tr>
+                <tr><th>패배 페널티</th><td>3판 2선승 패배자는 의자로 돌아와 <strong>눈탱이 밤탱이가 된 상태(<code>dead-duel</code>)로 30초간 기절</strong> (채팅·행동 불가)</td></tr>
+                <tr><th>방패 관통 판정</th><td>이지스 방패(Shield)로 자동 방어되지 않으며 오직 링 위의 실력·심리전으로 승패가 결정됨</td></tr>
+            </table>
+            <div class="strategy-block">
+                <h4>🥊 실전 운용 전략</h4>
+                <p>선공권을 쥔 1라운드를 적중시키면 2라운드 수비에서 한 번만 피해도 곧바로 2:0 스트레이트 승리를 거둘 수 있습니다. 반대로 패배하면 본인이 눈탱이 밤탱이가 되어 30초 기절하므로 상대의 좌우 습관을 읽고 신중하게 도전하세요!</p>
+            </div>
+        </article>
+
         <!-- Balance Matrix Section -->
         <article class="matrix-section">
             <h3>⚖️ 아이템 상성 및 밸런스 매트릭스</h3>
@@ -474,6 +503,7 @@
                     <tr><th>아이템</th><th>유리한 상황</th><th>불리한/카운터 상황</th></tr>
                 </thead>
                 <tbody>
+                    <tr><td>🥊 결투신청</td><td>방패 무시 1:1 강제 호출, 선공 이점으로 30초 눈탱이 밤탱이 기절 유발</td><td>역으로 예측당해 2선승을 내주면 신청한 본인이 30초간 기절함</td></tr>
                     <tr><td>🚀 유도 미사일</td><td>독주자 제압, 연속 발사로 기절 시간(+30초) 중첩 누적</td><td>이지스 방패 보유자에게 차단당함</td></tr>
                     <tr><td>💣 폭탄해체하기</td><td>방패 보유자 압박, 심리전 블러핑으로 10초 침묵·그을림 유발</td><td>50% 확률로 상대가 해제선을 맞추면 무효화됨</td></tr>
                     <tr><td>🧂 염전으로 보내기</td><td>사용 알림 없는 랜덤 기습 납치, 방패 무시 격리 + 드래그 노동 강요</td><td>이미 염전 노역 중인 대상에게는 중첩 사용 불가, 빠른 손놀림 유저는 비교적 빨리 복귀</td></tr>
