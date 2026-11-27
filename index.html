@@ -4196,7 +4196,7 @@
                 } else if (data.payload && data.payload.item === 'octopus_grab') {
                     if (typeof handleOctopusGrabOnHost === 'function') {
                         const ed = data.payload.extraData || {};
-                        handleOctopusGrabOnHost(ed.huntId, guestId);
+                        handleOctopusGrabOnHost(ed.huntId, guestId, ed);
                     }
                 } else {
                     executeItem(guestId, data.payload.item, data.payload.index, data.payload.targetId, data.payload.extraData);
@@ -9682,6 +9682,7 @@
         let octopusClientTimers = [];
         let octopusGrabCooldownUntil = 0;
         let lastOctopusGrabInputPerf = 0;
+        let lastOctopusPointerDownPerf = 0;
 
         function addOctopusClientTimer(fn, ms) {
             const id = setTimeout(() => {
@@ -9721,6 +9722,7 @@
                 missedAttempts: [...(h.missedAttempts || [])],
                 peeking: !!h.peeking,
                 peekKind: h.peekKind || 'octopus',
+                peekSeq: h.peekSeq || 0,
                 peekDurationMs: h.peekDurationMs || 0,
                 explodedByBomb: !!h.explodedByBomb
             };
@@ -9795,6 +9797,8 @@
                 missedAttempts: [],
                 peeking: false,
                 peekKind: 'octopus',
+                peekSeq: 0,
+                lastExpiredPeekSeq: 0,
                 peekStartAt: 0,
                 peekDurationMs: 0,
                 peekGraceMs: 75,
@@ -9897,6 +9901,7 @@
             }
 
             h.peekKind = peekKind;
+            h.peekSeq = (h.peekSeq || 0) + 1;
             h.peeking = true;
             h.peekStartAt = Date.now();
             h.peekDurationMs = peekMs;
@@ -9912,10 +9917,12 @@
             if (h.peekTimerId) clearTimeout(h.peekTimerId);
             const currentAttempt = h.attempt;
             const expectedStartAt = h.peekStartAt;
+            const isRemoteGuestDiver = (target.id !== state.myId && !target.isBot);
+            const hostRelayBufferMs = isRemoteGuestDiver ? 560 : 0;
             h.peekTimerId = setTimeout(() => {
                 h.peekTimerId = null;
                 onOctopusPeekExpiredOnHost(huntId, currentAttempt, peekKind, expectedStartAt);
-            }, peekMs + graceMs);
+            }, peekMs + graceMs + hostRelayBufferMs);
 
             if (target.isBot) {
                 if (peekKind === 'octopus') {
@@ -9945,6 +9952,7 @@
             const h = activeOctopuses[huntId];
             if (!h || h.phase !== 'underwater' || h.caught || h.explodedByBomb || h.peekStartAt !== expectedStartAt) return;
             h.peeking = false;
+            h.lastExpiredPeekSeq = h.peekSeq || 0;
 
             if (peekKind === 'bomb') {
                 // Bomb dodged cleanly: does NOT consume any of the 3 real octopus attempts
@@ -9977,17 +9985,28 @@
             }
         }
 
-        function handleOctopusGrabOnHost(huntId, playerId) {
+        function handleOctopusGrabOnHost(huntId, playerId, grabMeta) {
             const h = activeOctopuses[huntId];
             if (!h || h.phase !== 'underwater' || h.caught || h.explodedByBomb || h.diverId !== playerId || !state.room || state.room.status !== 'playing') return;
             const now = Date.now();
-            const grace = h.peekGraceMs || 75;
-            if (h.peeking && (now - h.peekStartAt <= h.peekDurationMs + grace)) {
+            const grace = h.peekGraceMs || (h.peekKind === 'bomb' ? 95 : 110);
+            const target = findPlayerById(playerId);
+            const isRemoteGuest = (playerId !== state.myId && !(target && target.isBot));
+            const elapsedOnHost = now - h.peekStartAt;
+            const hostDirectHit = h.peeking && (elapsedOnHost <= h.peekDurationMs + grace);
+            const guestLagCompHit = isRemoteGuest && h.peeking && (elapsedOnHost <= h.peekDurationMs + grace + 560) &&
+                grabMeta && grabMeta.clientPeeking === true && grabMeta.peekSeq === h.peekSeq &&
+                typeof grabMeta.clientElapsedMs === 'number' && grabMeta.clientElapsedMs >= 0 &&
+                grabMeta.clientElapsedMs <= h.peekDurationMs + grace;
+            if (hostDirectHit || guestLagCompHit) {
                 if (h.peekKind === 'bomb') {
                     resolveOctopusBombDeathOnHost(huntId);
                     return;
                 }
                 resolveOctopusCatchOnHost(huntId);
+                return;
+            }
+            if (grabMeta && grabMeta.clientPeeking && grabMeta.peekSeq && grabMeta.peekSeq === h.lastExpiredPeekSeq) {
                 return;
             }
             // Early whiff when pipe is empty
@@ -10156,6 +10175,8 @@
                 if (clientOctopusState && clientOctopusState.huntId === data.huntId) {
                     clientOctopusState.attempt = data.attempt;
                     clientOctopusState.peekKind = data.peekKind || 'octopus';
+                    clientOctopusState.peekSeq = data.peekSeq || 0;
+                    clientOctopusState.grabbedPeekSeq = 0;
                     clientOctopusState.peeking = true;
                     clientOctopusState.peekStartAt = performance.now();
                     clientOctopusState.peekDurationMs = data.peekDurationMs || (clientOctopusState.peekKind === 'bomb' ? 430 : 400);
@@ -10223,9 +10244,9 @@
                 }
             } else if (eventType === 'octopus_whiff') {
                 if (clientOctopusState && clientOctopusState.huntId === data.huntId) {
-                    const alreadyPlayingLocalGrab = clientOctopusState.isDiver && (clientOctopusState.whiffUntil > performance.now() + 60);
-                    if (!alreadyPlayingLocalGrab) {
-                        clientOctopusState.whiffUntil = performance.now() + 340;
+                    // Diver already played 0-frame grab locally in submitOctopusGrab; only replay for spectators
+                    if (!clientOctopusState.isDiver) {
+                        clientOctopusState.whiffUntil = performance.now() + 280;
                         if (arena3D) arena3D.triggerWhiff();
                         playTone(340, 'sine', 0.08, 0.1);
                     }
@@ -10456,10 +10477,28 @@
             if (ev && ev.type === 'pointerdown' && typeof ev.button === 'number' && ev.button !== 0) return;
             if (!clientOctopusState || !clientOctopusState.isDiver || clientOctopusState.caught || clientOctopusState.failed) return;
             const nowPerf = performance.now();
+            if (ev && ev.type === 'pointerdown') {
+                lastOctopusPointerDownPerf = nowPerf;
+            } else if (ev && ev.type === 'click' && ev.detail > 0 && (nowPerf - lastOctopusPointerDownPerf < 800)) {
+                return;
+            }
             if (nowPerf - lastOctopusGrabInputPerf < 65) return;
+            if (clientOctopusState.peeking && clientOctopusState.peekSeq && clientOctopusState.grabbedPeekSeq === clientOctopusState.peekSeq) return;
             if (!clientOctopusState.peeking && nowPerf < octopusGrabCooldownUntil) return;
             lastOctopusGrabInputPerf = nowPerf;
-            if (!clientOctopusState.peeking) {
+
+            const clientElapsedMs = clientOctopusState.peeking
+                ? Math.max(0, Math.round(nowPerf - (clientOctopusState.peekStartAt || nowPerf)))
+                : -1;
+            const peekGrace = (clientOctopusState.peekKind === 'bomb') ? 95 : 110;
+            const clientPeeking = !!(
+                clientOctopusState.peeking &&
+                clientElapsedMs >= 0 &&
+                clientElapsedMs <= (clientOctopusState.peekDurationMs || 400) + peekGrace
+            );
+            if (clientPeeking) {
+                clientOctopusState.grabbedPeekSeq = clientOctopusState.peekSeq || -1;
+            } else {
                 octopusGrabCooldownUntil = nowPerf + 200;
             }
 
@@ -10482,8 +10521,15 @@
             }
             try { playTone(460, 'triangle', 0.045, 0.09); } catch (e) {}
 
+            const grabMeta = {
+                huntId: clientOctopusState.huntId,
+                peekSeq: clientOctopusState.peekSeq || 0,
+                clientPeeking,
+                clientElapsedMs
+            };
+
             if (currentMode === MODE_HOST || currentMode === MODE_BOT) {
-                handleOctopusGrabOnHost(clientOctopusState.huntId, state.myId);
+                handleOctopusGrabOnHost(clientOctopusState.huntId, state.myId, grabMeta);
             } else if (socket && socket.connected) {
                 socket.emit('SEND_TO_HOST', {
                     roomCode,
@@ -10492,7 +10538,7 @@
                         item: 'octopus_grab',
                         index: -1,
                         targetId: null,
-                        extraData: { huntId: clientOctopusState.huntId }
+                        extraData: grabMeta
                     }
                 });
             }

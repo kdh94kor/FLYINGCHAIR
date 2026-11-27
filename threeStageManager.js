@@ -4106,11 +4106,38 @@
             metalness: 0.08
         });
 
-        // Single gripped tentacle held in fist at origin (0, 0, 0) hanging downward
-        const gripLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.044, 0.036, 0.36, 8), bodyMat);
-        gripLeg.position.set(0, -0.17, 0);
-        g.add(gripLeg);
-        [-0.08, -0.18, -0.27].forEach(sy => {
+        // Protruding gripped tentacle tip sticking up from the fist (coated with chojang & bitten off at max pull)
+        const gripLegUpper = new THREE.Group();
+        const upperCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.044, 0.28, 8), bodyMat);
+        upperCyl.position.set(0, 0.13, 0);
+        gripLegUpper.add(upperCyl);
+        [0.08, 0.19].forEach(sy => {
+            const s = new THREE.Mesh(new THREE.SphereGeometry(0.021, 6, 6), suckerMat);
+            s.position.set(0.028, sy, 0.026);
+            gripLegUpper.add(s);
+        });
+        const legCoatMesh = new THREE.Group();
+        legCoatMesh.visible = false;
+        const legGlaze = new THREE.Mesh(new THREE.CylinderGeometry(0.039, 0.049, 0.25, 8), chojangGlazeMat);
+        legGlaze.position.set(0, 0.13, 0);
+        legCoatMesh.add(legGlaze);
+        [0.07, 0.17].forEach((sy, idx) => {
+            const d = new THREE.Mesh(new THREE.SphereGeometry(0.030, 6, 6), chojangGlazeMat);
+            d.position.set((idx === 0 ? -0.025 : 0.025), sy, 0.032);
+            legCoatMesh.add(d);
+        });
+        gripLegUpper.add(legCoatMesh);
+        g.add(gripLegUpper);
+
+        const gripAnchor = new THREE.Object3D();
+        gripAnchor.position.set(0, 0.16, 0);
+        g.add(gripAnchor);
+
+        // Lower part of gripped tentacle hanging straight down from fist to body
+        const gripLegLower = new THREE.Mesh(new THREE.CylinderGeometry(0.044, 0.036, 0.30, 8), bodyMat);
+        gripLegLower.position.set(0, -0.14, 0);
+        g.add(gripLegLower);
+        [-0.08, -0.19].forEach(sy => {
             const s = new THREE.Mesh(new THREE.SphereGeometry(0.022, 6, 6), suckerMat);
             s.position.set(0.032, sy, 0.028);
             g.add(s);
@@ -4118,7 +4145,7 @@
 
         // Dangling body + remaining 7 tentacles hanging straight down under gravity
         const danglePivot = new THREE.Group();
-        danglePivot.position.set(0, -0.34, 0);
+        danglePivot.position.set(0, -0.28, 0);
         g.add(danglePivot);
 
         const head = new THREE.Mesh(new THREE.SphereGeometry(0.235, 14, 12), bodyMat);
@@ -4171,11 +4198,11 @@
         }
         danglePivot.add(chojangCoatGroup);
 
-        g.userData = { danglePivot, limpTentacles, chojangCoatGroup };
+        g.userData = { danglePivot, limpTentacles, chojangCoatGroup, gripLegUpper, legCoatMesh, gripAnchor };
         return g;
     }
 
-    function buildEatMouthRig3D() {
+    function buildEatMouthRig3D(skinMat) {
         const g = new THREE.Group();
         const cavity = new THREE.Mesh(
             new THREE.SphereGeometry(0.118, 10, 8),
@@ -4210,7 +4237,23 @@
         biteChunk.visible = false;
         g.add(biteChunk);
 
-        g.userData = { cavity, upperTeeth, lowerJaw, biteChunk };
+        // Closed-mouth chewing lip bar + one-sided bulging cheek pouch
+        const closedMouthMesh = new THREE.Mesh(
+            new THREE.BoxGeometry(0.155, 0.034, 0.036),
+            createMat(0xa83232, 0.4, 0.05)
+        );
+        closedMouthMesh.position.set(0, 0, 0.012);
+        closedMouthMesh.visible = false;
+        g.add(closedMouthMesh);
+
+        const cheekBulgeMat = skinMat ? skinMat.clone() : createMat(0xffdbac, 0.55, 0.02);
+        const cheekBulgeMesh = new THREE.Mesh(new THREE.SphereGeometry(0.175, 14, 12), cheekBulgeMat);
+        cheekBulgeMesh.position.set(0.27, 0.02, -0.07);
+        cheekBulgeMesh.scale.set(1.0, 0.92, 0.92);
+        cheekBulgeMesh.visible = false;
+        g.add(cheekBulgeMesh);
+
+        g.userData = { cavity, upperTeeth, lowerJaw, biteChunk, closedMouthMesh, cheekBulgeMesh };
         return g;
     }
 
@@ -4267,8 +4310,8 @@
         });
         const sprite = new THREE.Sprite(mat);
         sprite.scale.set(4.1, 1.6, 1);
-        sprite.position.set(0, 2.7, 0);
-        sprite.renderOrder = 22;
+        sprite.position.set(0, 3.35, 0.65);
+        sprite.renderOrder = 950;
         return sprite;
     }
 
@@ -4340,6 +4383,10 @@
         nozzle.position.y = 0.52;
         g.add(nozzle);
 
+        const nozzleTip = new THREE.Object3D();
+        nozzleTip.position.set(0, 0.61, 0);
+        g.add(nozzleTip);
+
         const squirt = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 8), createMat(0xe11d48, 0.15, 0.05));
         squirt.position.y = 0.64;
         squirt.visible = false;
@@ -4355,6 +4402,7 @@
 
         g.userData.squirt = squirt;
         g.userData.squirtStream = squirtStream;
+        g.userData.nozzleTip = nozzleTip;
 
         return g;
     }
@@ -4404,15 +4452,33 @@
             anim.eatMouthGroup.parent.remove(anim.eatMouthGroup);
             disposeObjectGroup(anim.eatMouthGroup);
         }
+        if (anim.sauceStreamMesh && anim.sauceStreamMesh.parent) {
+            anim.sauceStreamMesh.parent.remove(anim.sauceStreamMesh);
+            disposeObjectGroup(anim.sauceStreamMesh);
+        }
+        if (anim.stretchBridgeMesh && anim.stretchBridgeMesh.parent) {
+            anim.stretchBridgeMesh.parent.remove(anim.stretchBridgeMesh);
+            disposeObjectGroup(anim.stretchBridgeMesh);
+        }
         if (slot) {
+            if (slot.charGroup) slot.charGroup.rotation.order = 'XYZ';
             if (slot.avatarMeshes) {
                 if (slot.avatarMeshes.normalMouth) slot.avatarMeshes.normalMouth.visible = true;
                 if (slot.avatarMeshes.cheeks) {
-                    slot.avatarMeshes.cheeks.forEach(c => c.scale.set(1.25, 0.72, 0.4));
+                    slot.avatarMeshes.cheeks.forEach((c, idx) => {
+                        c.scale.set(1.25, 0.72, 0.4);
+                        c.position.set((idx === 0 ? -1 : 1) * 0.34, -0.11, 0.455);
+                    });
                 }
                 if (slot.avatarMeshes.headGroup) slot.avatarMeshes.headGroup.rotation.set(0, 0, 0);
-                if (slot.avatarMeshes.leftArm) slot.avatarMeshes.leftArm.rotation.set(0, 0, 0);
-                if (slot.avatarMeshes.rightArm) slot.avatarMeshes.rightArm.rotation.set(0, 0, 0);
+                if (slot.avatarMeshes.leftArm) {
+                    slot.avatarMeshes.leftArm.rotation.set(0, 0, 0);
+                    slot.avatarMeshes.leftArm.scale.set(1, 1, 1);
+                }
+                if (slot.avatarMeshes.rightArm) {
+                    slot.avatarMeshes.rightArm.rotation.set(0, 0, 0);
+                    slot.avatarMeshes.rightArm.scale.set(1, 1, 1);
+                }
                 if (slot.avatarMeshes.leftLeg) slot.avatarMeshes.leftLeg.rotation.set(0, 0, 0);
                 if (slot.avatarMeshes.rightLeg) slot.avatarMeshes.rightLeg.rotation.set(0, 0, 0);
             }
@@ -4500,8 +4566,23 @@
         const scale = Math.max(0.05, Number(window.__TEST_OCTOPUS_SHOW_SCALE) || 1);
         const octoMesh = buildDanglingOctopus3D();
         const chojangMesh = buildChojangBottle3D();
-        const eatMouthGroup = buildEatMouthRig3D();
+        const eatMouthGroup = buildEatMouthRig3D(slot.avatarMeshes ? slot.avatarMeshes.skinMat : null);
         const ceremonySprite = createOctopusShoutSprite('아싸!! 🐙');
+
+        // Dynamic red chojang stream & bitten-tentacle stretch bridge aligned in charGroup space
+        const sauceStreamMesh = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.016, 0.032, 1.0, 8),
+            createMat(0xe11d48, 0.15, 0.08)
+        );
+        sauceStreamMesh.visible = false;
+        slot.charGroup.add(sauceStreamMesh);
+
+        const stretchBridgeMesh = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.032, 0.040, 1.0, 8),
+            createMat(0xe11d48, 0.18, 0.06)
+        );
+        stretchBridgeMesh.visible = false;
+        slot.charGroup.add(stretchBridgeMesh);
 
         if (slot.avatarMeshes && slot.avatarMeshes.rightArm) {
             octoMesh.position.set(0, -0.76, 0.06);
@@ -4547,6 +4628,8 @@
             chojangMesh,
             eatMouthGroup,
             ceremonySprite,
+            sauceStreamMesh,
+            stretchBridgeMesh,
             phaseName: 'ceremony',
             cameraReleased: false,
             ceremonyBurstDone: false,
@@ -4582,6 +4665,30 @@
         }
     }
 
+    let _octoVecA = null, _octoVecB = null, _octoLocalA = null, _octoLocalB = null, _octoDir = null, _octoYAxis = null;
+    function alignCharLocalBridge(mesh, charGroup, worldFrom, worldTo) {
+        if (!_octoVecA) {
+            _octoVecA = new THREE.Vector3();
+            _octoVecB = new THREE.Vector3();
+            _octoLocalA = new THREE.Vector3();
+            _octoLocalB = new THREE.Vector3();
+            _octoDir = new THREE.Vector3();
+            _octoYAxis = new THREE.Vector3(0, 1, 0);
+        }
+        charGroup.worldToLocal(_octoLocalA.copy(worldFrom));
+        charGroup.worldToLocal(_octoLocalB.copy(worldTo));
+        _octoDir.subVectors(_octoLocalB, _octoLocalA);
+        const len = _octoDir.length();
+        if (len < 0.025) {
+            mesh.visible = false;
+            return;
+        }
+        mesh.visible = true;
+        mesh.position.copy(_octoLocalA).add(_octoLocalB).multiplyScalar(0.5);
+        mesh.scale.set(1, len, 1);
+        mesh.quaternion.setFromUnitVectors(_octoYAxis, _octoDir.divideScalar(len));
+    }
+
     function updateActiveOctopusAnims(time, delta) {
         if (activeOctopusAnims.length === 0) return;
         const CHAR_GROUND_STAND_OFFSET = 0.84; // Foot soles sit at y = -0.83 relative to charGroup
@@ -4603,6 +4710,7 @@
             if (anim.mode === 'dive') {
                 if (t < 1.1) {
                     // Phase 1: Walk down beach to shoreline wearing mask, snorkel & catch bag
+                    slot.charGroup.rotation.order = 'XYZ';
                     const p = clamp01(t / 1.1);
                     const px = slot.x;
                     const pz = THREE.MathUtils.lerp(slot.z + 0.1, anim.shoreZ, p);
@@ -4621,22 +4729,28 @@
                         }
                     }
                 } else if (t < 2.9) {
-                    // Phase 2: Swim out to deep sea
+                    // Phase 2: Horizontal belly-down freestyle swim out to deep sea (matching triggerSwimAndReturn)
                     if (!anim.splashEntryDone) {
                         anim.splashEntryDone = true;
                         createWaterSplash(anim.shoreX, 0.2, anim.shoreZ - 1.2, 1.1);
                     }
                     const p = clamp01((t - 1.1) / 1.8);
+                    const startSwimZ = anim.shoreZ - 0.6;
                     const px = THREE.MathUtils.lerp(anim.shoreX, anim.deepX, p);
-                    const pz = THREE.MathUtils.lerp(anim.shoreZ - 0.6, anim.deepZ, p);
-                    const bob = Math.sin(t * 8) * 0.12;
-                    slot.charGroup.position.set(px, -0.05 + bob, pz);
-                    slot.charGroup.lookAt(anim.deepX, -0.05, anim.deepZ - 4);
+                    const pz = THREE.MathUtils.lerp(startSwimZ, anim.deepZ, p);
+                    const swimY = 0.06 + Math.sin(t * 3.5) * 0.05;
+                    const swimYaw = Math.atan2(anim.deepX - anim.shoreX, anim.deepZ - startSwimZ);
+                    slot.charGroup.position.set(px, swimY, pz);
+                    slot.charGroup.rotation.order = 'YXZ';
+                    slot.charGroup.rotation.set(Math.PI * 0.42, swimYaw, 0);
                     if (m) {
-                        m.leftArm.rotation.set(t * 6.2, 0, 0.15);
-                        m.rightArm.rotation.set(t * 6.2 + Math.PI, 0, -0.15);
-                        m.leftLeg.rotation.x = Math.sin(t * 13) * 0.42;
-                        m.rightLeg.rotation.x = -Math.sin(t * 13) * 0.42;
+                        m.leftArm.rotation.set(t * 5.6, 0, 0.12);
+                        m.rightArm.rotation.set(t * 5.6 + Math.PI, 0, -0.12);
+                        m.leftLeg.rotation.set(Math.sin(t * 10.0) * 0.35, 0, 0);
+                        m.rightLeg.rotation.set(-Math.sin(t * 10.0) * 0.35, 0, 0);
+                    }
+                    if (Math.random() < 0.22) {
+                        createWaterSplash(px, 0.05, pz + 0.5, 0.28);
                     }
                 } else if (t < 4.1) {
                     // Phase 3: Vertical duck dive (몸을 거꾸로 세워 물속 잠수)
@@ -4647,9 +4761,10 @@
                     const p = clamp01((t - 2.9) / 1.2);
                     const ease = p * p * (3 - 2 * p);
                     const py = p < 0.35
-                        ? THREE.MathUtils.lerp(0.05, 0.65, p / 0.35)
+                        ? THREE.MathUtils.lerp(0.06, 0.65, p / 0.35)
                         : THREE.MathUtils.lerp(0.65, -2.35, (p - 0.35) / 0.65);
                     slot.charGroup.position.set(anim.deepX, py, anim.deepZ);
+                    slot.charGroup.rotation.order = 'XYZ';
                     slot.charGroup.rotation.set(ease * Math.PI * 0.92, Math.PI, 0);
                     if (m) {
                         m.leftArm.rotation.set(-2.6, 0, 0.2);
@@ -4666,13 +4781,15 @@
                     anim.surfaceSplashDone = true;
                     createWaterSplash(anim.deepX, 0.2, anim.deepZ, 1.25);
                 }
+                if (anim.sauceStreamMesh) anim.sauceStreamMesh.visible = false;
+                if (anim.stretchBridgeMesh) anim.stretchBridgeMesh.visible = false;
 
                 if (t < 2.3) {
                     // Phase 1: Surface "아싸!" skyward ceremony with zoomed-in all-player camera
                     anim.phaseName = 'ceremony';
-                    const p = clamp01(t / 2.3);
                     const py = t < 0.42 ? THREE.MathUtils.lerp(-1.2, 0.42, t / 0.42) : 0.32 + Math.sin(t * 7) * 0.10;
                     slot.charGroup.position.set(anim.deepX, py, anim.deepZ);
+                    slot.charGroup.rotation.order = 'XYZ';
                     slot.charGroup.rotation.set(0, 0, 0);
                     cameraFocusState.focusLookAt.x = anim.deepX;
                     cameraFocusState.focusLookAt.y = py + 0.95;
@@ -4680,6 +4797,7 @@
                     if (m) {
                         if (m.headGroup) m.headGroup.rotation.set(-0.30 + Math.sin(t * 8) * 0.05, 0, Math.sin(t * 5) * 0.05);
                         m.rightArm.rotation.set(-2.92, 0, -0.18);
+                        m.rightArm.scale.set(1, 1, 1);
                         m.leftArm.rotation.set(-2.28, 0, 0.52);
                     }
                     if (anim.ceremonySprite) {
@@ -4692,7 +4810,7 @@
                         createWaterSplash(anim.deepX, 0.3, anim.deepZ, 1.45);
                     }
                 } else if (t < 3.7) {
-                    // Phase 2: Release camera smoothly back to normal view & swim/walk onto sand center
+                    // Phase 2: Release camera smoothly & belly-down swim back to shore, then stand up onto beach sand
                     anim.phaseName = 'return_shore';
                     if (!anim.cameraReleased) {
                         anim.cameraReleased = true;
@@ -4704,68 +4822,91 @@
                     const px = THREE.MathUtils.lerp(anim.deepX, anim.centerX, ease);
                     const pz = THREE.MathUtils.lerp(anim.deepZ, anim.centerZ, ease);
                     let py;
+                    const swimPitch = THREE.MathUtils.lerp(Math.PI * 0.40, 0, smoothstep(1.2, 2.5, pz));
                     if (pz < 2.1) {
-                        py = 0.15 + Math.sin(t * 8) * 0.08;
+                        py = 0.08 + Math.sin(t * 3.5) * 0.05;
                     } else {
                         const landBlend = smoothstep(2.1, 3.2, pz);
                         const walkStandY = getBeachHeight(px, pz) + CHAR_GROUND_STAND_OFFSET + Math.abs(Math.sin(t * 12)) * 0.09;
-                        py = THREE.MathUtils.lerp(0.15, walkStandY, landBlend);
+                        py = THREE.MathUtils.lerp(0.08, walkStandY, landBlend);
                     }
                     slot.charGroup.position.set(px, py, pz);
-                    slot.charGroup.rotation.set(0, 0, 0);
+                    slot.charGroup.rotation.order = 'XYZ';
+                    slot.charGroup.rotation.set(swimPitch, 0, 0);
                     if (m) {
                         if (m.headGroup) m.headGroup.rotation.set(0, 0, 0);
+                        m.rightArm.scale.set(1, 1, 1);
                         m.rightArm.rotation.set(-2.05, 0, -0.25);
-                        m.leftArm.rotation.set(Math.sin(t * 9) * 0.3, 0, 0.2);
-                        m.leftLeg.rotation.set(Math.sin(t * 12) * 0.5, 0, 0);
-                        m.rightLeg.rotation.set(-Math.sin(t * 12) * 0.5, 0, 0);
+                        m.leftArm.rotation.set(pz < 2.2 ? (t * 5.2) : (Math.sin(t * 9) * 0.3), 0, 0.15);
+                        m.leftLeg.rotation.set(Math.sin(t * 11) * 0.45, 0, 0);
+                        m.rightLeg.rotation.set(-Math.sin(t * 11) * 0.45, 0, 0);
                     }
                 } else if (t < 11.3) {
-                    // Phase 3: Center front on flat sand — 2x prolonged Dangle 1 tentacle, squirt red chojang, bite & tear diagonally, wild chew
+                    // Phase 3: Center front on flat sand — Hold 1 tentacle, squirt red chojang directly onto that leg,
+                    // insert into mouth through max backward head tilt then snap off, then closed-mouth "오물오물" chew!
                     const centerStandY = getBeachHeight(anim.centerX, anim.centerZ) + CHAR_GROUND_STAND_OFFSET;
                     slot.charGroup.position.set(anim.centerX, centerStandY, anim.centerZ);
+                    slot.charGroup.rotation.order = 'XYZ';
                     slot.charGroup.rotation.set(0, 0, 0);
                     if (m) {
                         m.leftLeg.rotation.set(0, 0, 0);
                         m.rightLeg.rotation.set(0, 0, 0);
 
                         if (t < 5.9) {
-                            // 3a: Hold by 1 tentacle, dangle downward, squirt red chojang all over it (2.2s)
+                            // 3a: Hold single tentacle forward-inward & squirt chojang directly onto that tentacle (2.2s)
                             anim.phaseName = 'chojang_squirt';
                             const sub = clamp01((t - 3.7) / 2.2);
-                            m.rightArm.rotation.set(-1.55, -0.22, 0.18);
-                            m.leftArm.rotation.set(-1.62, 0.42, -0.35);
-                            if (m.headGroup) m.headGroup.rotation.set(0.12, -0.1, 0);
+                            m.rightArm.scale.set(1, 1, 1);
+                            m.rightArm.rotation.set(-1.92, 0, -0.68);
+                            m.leftArm.rotation.set(-2.08 + Math.sin(t * 6) * 0.04, 0, 0.64);
+                            if (m.headGroup) m.headGroup.rotation.set(0.14, 0.04, 0);
+                            if (anim.octoMesh && anim.octoMesh.userData.gripLegUpper) {
+                                anim.octoMesh.userData.gripLegUpper.visible = true;
+                            }
                             if (anim.chojangMesh) {
                                 anim.chojangMesh.visible = true;
-                                anim.chojangMesh.rotation.set(0.35, 0, -2.05);
-                                if (anim.chojangMesh.userData.squirt) {
-                                    anim.chojangMesh.userData.squirt.visible = true;
-                                }
-                                if (anim.chojangMesh.userData.squirtStream) {
-                                    const ss = anim.chojangMesh.userData.squirtStream;
-                                    ss.visible = sub > 0.08;
-                                    ss.scale.set(0.85 + Math.sin(t * 28) * 0.22, 1.0, 0.85 + Math.cos(t * 28) * 0.22);
-                                }
+                                anim.chojangMesh.rotation.set(0.42, 0, -2.18);
+                                if (anim.chojangMesh.userData.squirt) anim.chojangMesh.userData.squirt.visible = true;
+                                if (anim.chojangMesh.userData.squirtStream) anim.chojangMesh.userData.squirtStream.visible = false;
+                            }
+                            if (anim.octoMesh && anim.octoMesh.userData.legCoatMesh) {
+                                anim.octoMesh.userData.legCoatMesh.visible = sub > 0.10;
+                                anim.octoMesh.userData.legCoatMesh.scale.setScalar(0.35 + sub * 0.68);
                             }
                             if (anim.octoMesh && anim.octoMesh.userData.chojangCoatGroup) {
                                 const coat = anim.octoMesh.userData.chojangCoatGroup;
-                                coat.visible = sub > 0.12;
+                                coat.visible = sub > 0.24;
                                 coat.scale.setScalar(0.25 + sub * 0.78);
                             }
-                            if (sub > 0.10 && (nowPerf - anim.lastSauceDropPerf > 90 * s)) {
-                                anim.lastSauceDropPerf = nowPerf;
-                                spawnChojangDrop(
-                                    anim.centerX + 0.18 + (Math.random() - 0.5) * 0.25,
-                                    centerStandY + 0.95,
-                                    anim.centerZ + 0.65,
-                                    (Math.random() - 0.5) * 0.9,
-                                    -0.6 - Math.random() * 0.8,
-                                    (Math.random() - 0.5) * 0.9
-                                );
+
+                            // Update dangling orientation first so exact world coords match this frame
+                            if (anim.octoMesh) {
+                                anim.octoMesh.quaternion.copy(m.rightArm.quaternion).invert();
+                            }
+                            slot.charGroup.updateMatrixWorld(true);
+                            if (anim.sauceStreamMesh && anim.chojangMesh && anim.chojangMesh.userData.nozzleTip && anim.octoMesh && anim.octoMesh.userData.gripAnchor && sub > 0.08) {
+                                if (!_octoVecA) _octoVecA = new THREE.Vector3();
+                                if (!_octoVecB) _octoVecB = new THREE.Vector3();
+                                anim.chojangMesh.userData.nozzleTip.getWorldPosition(_octoVecA);
+                                anim.octoMesh.userData.gripAnchor.getWorldPosition(_octoVecB);
+                                alignCharLocalBridge(anim.sauceStreamMesh, slot.charGroup, _octoVecA, _octoVecB);
+                                const pulse = 0.88 + Math.sin(t * 28) * 0.18;
+                                anim.sauceStreamMesh.scale.x = pulse;
+                                anim.sauceStreamMesh.scale.z = pulse;
+                                if (nowPerf - anim.lastSauceDropPerf > 90 * s) {
+                                    anim.lastSauceDropPerf = nowPerf;
+                                    spawnChojangDrop(
+                                        _octoVecB.x + (Math.random() - 0.5) * 0.14,
+                                        _octoVecB.y,
+                                        _octoVecB.z + (Math.random() - 0.5) * 0.14,
+                                        (Math.random() - 0.5) * 0.8,
+                                        -0.7 - Math.random() * 0.7,
+                                        (Math.random() - 0.5) * 0.8
+                                    );
+                                }
                             }
                         } else if (t < 8.7) {
-                            // 3b: Clamp teeth onto sauced octopus, yank head UP-LEFT & hand DOWN-RIGHT to tear flesh (2.8s)
+                            // 3b: Insert sauced tentacle into mouth -> stay clamped in teeth until MAX backward head tilt -> snap off! (2.8s)
                             anim.phaseName = 'bite_tear';
                             const u = clamp01((t - 5.9) / 2.8);
                             if (anim.chojangMesh) {
@@ -4777,79 +4918,141 @@
                             if (m.normalMouth) m.normalMouth.visible = false;
                             if (anim.eatMouthGroup) {
                                 anim.eatMouthGroup.visible = true;
-                                anim.eatMouthGroup.userData.biteChunk.visible = u >= 0.22;
+                                anim.eatMouthGroup.userData.cavity.visible = true;
+                                anim.eatMouthGroup.userData.upperTeeth.visible = true;
+                                anim.eatMouthGroup.userData.lowerJaw.visible = true;
+                                anim.eatMouthGroup.userData.closedMouthMesh.visible = false;
+                                anim.eatMouthGroup.userData.cheekBulgeMesh.visible = false;
+                                anim.eatMouthGroup.userData.biteChunk.visible = u >= 0.20;
                             }
 
-                            if (u < 0.28) {
-                                // Bring sauced octopus right up to mouth and clamp teeth
-                                const c = smoothstep(0, 0.28, u);
+                            if (u < 0.24) {
+                                // Bring hand directly up to open mouth & clamp teeth around tentacle tip
+                                const c = smoothstep(0, 0.24, u);
                                 m.rightArm.rotation.set(
-                                    THREE.MathUtils.lerp(-1.55, -1.72, c),
-                                    THREE.MathUtils.lerp(-0.22, -0.62, c),
-                                    THREE.MathUtils.lerp(0.18, -0.05, c)
+                                    THREE.MathUtils.lerp(-1.92, -2.22, c),
+                                    0,
+                                    THREE.MathUtils.lerp(-0.68, -0.74, c)
                                 );
-                                if (m.headGroup) m.headGroup.rotation.set(-0.10 * c, -0.08 * c, 0);
-                                if (anim.octoMesh) anim.octoMesh.scale.setScalar(1.05);
-                            } else if (u < 0.84) {
-                                // Vigorous opposite-diagonal tear (head UP-LEFT vs hand DOWN-RIGHT)
-                                const pull = smoothstep(0.28, 0.82, u);
-                                const jit = Math.sin(t * 52) * 0.045 * pull;
-                                if (m.headGroup) {
-                                    m.headGroup.rotation.set(-0.12 - pull * 0.45 + jit, -pull * 0.34, pull * 0.38 + jit);
-                                }
-                                m.rightArm.rotation.set(
-                                    -1.72 + pull * 1.07,
-                                    -0.62 + pull * 0.98,
-                                    -0.05 + pull * 0.38 + jit
-                                );
+                                m.rightArm.scale.set(1, THREE.MathUtils.lerp(1.0, 1.16, c), 1);
+                                if (m.headGroup) m.headGroup.rotation.set(THREE.MathUtils.lerp(0.14, 0.20, c), 0.04 * c, -0.04 * c);
                                 if (anim.octoMesh) {
-                                    anim.octoMesh.scale.set(1.05 - pull * 0.16, 1.05 + pull * 0.36, 1.05 - pull * 0.16);
+                                    anim.octoMesh.scale.setScalar(1.05);
+                                    if (anim.octoMesh.userData.gripLegUpper) anim.octoMesh.userData.gripLegUpper.visible = true;
                                 }
                                 if (anim.eatMouthGroup) {
-                                    anim.eatMouthGroup.userData.lowerJaw.position.y = -0.025;
+                                    anim.eatMouthGroup.userData.lowerJaw.position.y = THREE.MathUtils.lerp(-0.068, -0.024, smoothstep(0.16, 0.24, u));
+                                }
+                            } else if (u < 0.84) {
+                                // Leg stays inside teeth while head tilts back to maximum (-0.76 rad) & hand pulls down
+                                const pull = smoothstep(0.24, 0.84, u);
+                                const jit = Math.sin(t * 50) * 0.038 * pull;
+                                if (m.headGroup) {
+                                    m.headGroup.rotation.set(THREE.MathUtils.lerp(0.20, -0.76, pull) + jit, -0.22 * pull, 0.28 * pull + jit);
+                                }
+                                m.rightArm.rotation.set(
+                                    THREE.MathUtils.lerp(-2.22, -0.88, pull),
+                                    0,
+                                    THREE.MathUtils.lerp(-0.74, -0.18, pull) + jit
+                                );
+                                m.rightArm.scale.set(1, THREE.MathUtils.lerp(1.16, 1.0, pull), 1);
+                                if (anim.octoMesh) {
+                                    anim.octoMesh.scale.set(1.05 - pull * 0.16, 1.05 + pull * 0.34, 1.05 - pull * 0.16);
+                                    if (anim.octoMesh.userData.gripLegUpper) anim.octoMesh.userData.gripLegUpper.visible = false;
+                                }
+                                if (anim.eatMouthGroup) {
+                                    anim.eatMouthGroup.userData.lowerJaw.position.y = -0.024;
+                                }
+                                if (anim.octoMesh) {
+                                    anim.octoMesh.quaternion.copy(m.rightArm.quaternion).invert();
+                                }
+                                slot.charGroup.updateMatrixWorld(true);
+                                if (anim.stretchBridgeMesh && anim.octoMesh && anim.eatMouthGroup) {
+                                    if (!_octoVecA) _octoVecA = new THREE.Vector3();
+                                    if (!_octoVecB) _octoVecB = new THREE.Vector3();
+                                    _octoVecA.set(0, 0.02, 0);
+                                    anim.octoMesh.localToWorld(_octoVecA);
+                                    _octoVecB.set(0, -0.01, 0.048);
+                                    anim.eatMouthGroup.localToWorld(_octoVecB);
+                                    alignCharLocalBridge(anim.stretchBridgeMesh, slot.charGroup, _octoVecA, _octoVecB);
                                 }
                             } else {
-                                // Snap-off! Flesh tears free with chojang splatter
+                                // At max backward head tilt: tentacle snaps cleanly off inside mouth!
+                                if (anim.octoMesh) {
+                                    anim.octoMesh.scale.setScalar(1.05);
+                                    if (anim.octoMesh.userData.gripLegUpper) anim.octoMesh.userData.gripLegUpper.visible = false;
+                                }
+                                if (anim.stretchBridgeMesh) anim.stretchBridgeMesh.visible = false;
+                                m.rightArm.scale.set(1, 1, 1);
+                                m.rightArm.rotation.set(-0.76, 0, -0.15);
+                                if (m.headGroup) m.headGroup.rotation.set(-0.70, -0.18, 0.22);
                                 if (!anim.tearSplatterDone) {
                                     anim.tearSplatterDone = true;
+                                    slot.charGroup.updateMatrixWorld(true);
+                                    const mx = anim.centerX + 0.05;
+                                    let my = centerStandY + 1.25;
+                                    let mz = anim.centerZ + 0.55;
+                                    if (anim.eatMouthGroup) {
+                                        if (!_octoVecA) _octoVecA = new THREE.Vector3();
+                                        anim.eatMouthGroup.getWorldPosition(_octoVecA);
+                                        my = _octoVecA.y;
+                                        mz = _octoVecA.z;
+                                    }
                                     for (let k = 0; k < 6; k++) {
                                         spawnChojangDrop(
-                                            anim.centerX + 0.1,
-                                            centerStandY + 1.15,
-                                            anim.centerZ + 0.65,
+                                            mx, my, mz,
                                             (Math.random() - 0.5) * 2.2,
-                                            0.5 + Math.random() * 1.8,
-                                            1.2 + Math.random() * 1.4
+                                            0.5 + Math.random() * 1.6,
+                                            1.0 + Math.random() * 1.4
                                         );
                                     }
                                 }
-                                if (anim.octoMesh) anim.octoMesh.scale.setScalar(1.05);
-                                m.rightArm.rotation.set(-0.72, 0.28, 0.35);
-                                if (m.headGroup) m.headGroup.rotation.set(-0.44, -0.2, 0.22);
                             }
                         } else {
-                            // 3c: Wild chomping chew with big jaw & cheek movement (2.6s)
+                            // 3c: Closed-mouth "오물오물" chewing with one-sided bulging cheek (2.6s)
                             anim.phaseName = 'chew';
+                            m.rightArm.scale.set(1, 1, 1);
                             m.rightArm.rotation.set(-1.18, -0.08, 0.25);
                             m.leftArm.rotation.set(-0.55, 0, 0.32);
-                            if (anim.octoMesh) anim.octoMesh.scale.setScalar(1.05);
+                            if (anim.octoMesh) {
+                                anim.octoMesh.scale.setScalar(1.05);
+                                if (anim.octoMesh.userData.gripLegUpper) anim.octoMesh.userData.gripLegUpper.visible = false;
+                            }
                             if (m.normalMouth) m.normalMouth.visible = false;
                             if (anim.eatMouthGroup) {
                                 anim.eatMouthGroup.visible = true;
-                                anim.eatMouthGroup.userData.biteChunk.visible = t < 10.9;
-                                const chew = 0.5 + 0.5 * Math.sin(t * 20);
-                                anim.eatMouthGroup.userData.cavity.scale.set(1.15 + chew * 0.22, 0.42 + chew * 1.15, 0.38);
-                                anim.eatMouthGroup.userData.lowerJaw.position.y = -0.025 - chew * 0.075;
-                                if (m.cheeks) {
-                                    const ck = 1.0 + (1 - chew) * 0.35;
-                                    m.cheeks.forEach(c => c.scale.set(1.25 * ck, 0.72 * ck, 0.4));
+                                anim.eatMouthGroup.userData.cavity.visible = false;
+                                anim.eatMouthGroup.userData.upperTeeth.visible = false;
+                                anim.eatMouthGroup.userData.lowerJaw.visible = false;
+                                anim.eatMouthGroup.userData.biteChunk.visible = false;
+                                anim.eatMouthGroup.userData.closedMouthMesh.visible = true;
+                                anim.eatMouthGroup.userData.cheekBulgeMesh.visible = true;
+
+                                const omul = Math.sin(t * 18);
+                                const bulge = 1.0 + 0.14 * Math.sin(t * 18 + 0.8);
+                                anim.eatMouthGroup.userData.closedMouthMesh.position.set(
+                                    0.03 + Math.sin(t * 9) * 0.022,
+                                    -0.005 + omul * 0.014,
+                                    0.012
+                                );
+                                anim.eatMouthGroup.userData.closedMouthMesh.scale.set(
+                                    0.92 + Math.cos(t * 18) * 0.14,
+                                    0.85 + Math.abs(omul) * 0.35,
+                                    1
+                                );
+                                anim.eatMouthGroup.userData.closedMouthMesh.rotation.z = Math.sin(t * 11) * 0.12;
+                                anim.eatMouthGroup.userData.cheekBulgeMesh.scale.set(1.08 * bulge, 0.96 * bulge, 1.02 * bulge);
+                                if (m.cheeks && m.cheeks[1]) {
+                                    m.cheeks[1].position.set(0.40, -0.10, 0.52);
+                                    m.cheeks[1].scale.set(1.25 * bulge, 0.72 * bulge, 0.4);
                                 }
                             }
                             if (m.headGroup) {
+                                const omul = Math.sin(t * 18);
                                 m.headGroup.rotation.set(
-                                    0.06 + Math.sin(t * 20) * 0.14,
-                                    Math.sin(t * 9) * 0.08,
-                                    Math.sin(t * 10) * 0.10
+                                    0.06 + omul * 0.07,
+                                    0.05 + Math.sin(t * 9) * 0.06,
+                                    Math.sin(t * 9) * 0.06
                                 );
                             }
                         }
@@ -4861,10 +5064,23 @@
                     const ease = p * p * (3 - 2 * p);
                     if (anim.chojangMesh) anim.chojangMesh.visible = false;
                     if (anim.octoMesh) anim.octoMesh.visible = false;
-                    if (anim.eatMouthGroup) anim.eatMouthGroup.visible = false;
+                    if (anim.eatMouthGroup) {
+                        anim.eatMouthGroup.visible = false;
+                        anim.eatMouthGroup.userData.cavity.visible = true;
+                        anim.eatMouthGroup.userData.upperTeeth.visible = true;
+                        anim.eatMouthGroup.userData.lowerJaw.visible = true;
+                        anim.eatMouthGroup.userData.closedMouthMesh.visible = false;
+                        anim.eatMouthGroup.userData.cheekBulgeMesh.visible = false;
+                    }
                     if (m) {
+                        m.rightArm.scale.set(1, 1, 1);
                         if (m.normalMouth) m.normalMouth.visible = true;
-                        if (m.cheeks) m.cheeks.forEach(c => c.scale.set(1.25, 0.72, 0.4));
+                        if (m.cheeks) {
+                            m.cheeks.forEach((c, idx) => {
+                                c.scale.set(1.25, 0.72, 0.4);
+                                c.position.set((idx === 0 ? -1 : 1) * 0.34, -0.11, 0.455);
+                            });
+                        }
                     }
                     const px = THREE.MathUtils.lerp(anim.centerX, slot.x, ease);
                     const pz = THREE.MathUtils.lerp(anim.centerZ, slot.z + 0.1, ease);
@@ -4907,8 +5123,12 @@
                     phaseName: anim.phaseName,
                     ceremonySpriteVisible: !!(anim.ceremonySprite && anim.ceremonySprite.visible),
                     chojangCoatVisible: !!(anim.octoMesh && anim.octoMesh.userData.chojangCoatGroup && anim.octoMesh.userData.chojangCoatGroup.visible),
-                    squirtStreamVisible: !!(anim.chojangMesh && anim.chojangMesh.userData.squirtStream && anim.chojangMesh.userData.squirtStream.visible),
+                    legCoatVisible: !!(anim.octoMesh && anim.octoMesh.userData.legCoatMesh && anim.octoMesh.userData.legCoatMesh.visible),
+                    squirtStreamVisible: !!(anim.sauceStreamMesh && anim.sauceStreamMesh.visible),
+                    stretchBridgeVisible: !!(anim.stretchBridgeMesh && anim.stretchBridgeMesh.visible),
                     eatMouthVisible: !!(anim.eatMouthGroup && anim.eatMouthGroup.visible),
+                    closedMouthVisible: !!(anim.eatMouthGroup && anim.eatMouthGroup.userData.closedMouthMesh && anim.eatMouthGroup.userData.closedMouthMesh.visible),
+                    cheekBulgeVisible: !!(anim.eatMouthGroup && anim.eatMouthGroup.userData.cheekBulgeMesh && anim.eatMouthGroup.userData.cheekBulgeMesh.visible),
                     biteChunkVisible: !!(anim.eatMouthGroup && anim.eatMouthGroup.userData.biteChunk && anim.eatMouthGroup.userData.biteChunk.visible),
                     octoScaleY: anim.octoMesh ? Number(anim.octoMesh.scale.y.toFixed(3)) : 1,
                     headRotX: (m && m.headGroup) ? Number(m.headGroup.rotation.x.toFixed(3)) : 0,
